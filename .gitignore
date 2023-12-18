@@ -1,4 +1,10 @@
 .DS_Store
-spot-detector/palette_exp_manon.csv
-spot-detector/palette_HG_traite.csv
-spot-detector/old_code.py
+spot_detector/.DS_Store
+spot_detector/palette_exp_manon.csv
+spot_detector/palette_HG_traite.csv
+spot_detector/old_code.py
+spot_detector/__pycache__/*
+tests/__pycache__/*
+.idea/*
+venv/*
+
