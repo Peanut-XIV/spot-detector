@@ -1,0 +1,4 @@
+./.DS_Store
+./spot-detector/palette_exp_manon.csv
+./spot-detector/palette_HG_traite.csv
+./spot-detector/old_code.py
