@@ -1,8 +1,10 @@
 # Python standard library
 from typing import TypeAlias
+from time import sleep
 import multiprocessing as mp
 # Project files
-from spot_detector.process_chains import count_spots_third_method, count_spots_fourth_method, load_params
+from spot_detector.process_chains import (
+        count_spots_fourth_method, load_params)
 from spot_detector.config import ColorAndParams, DetParams
 # Other dependancies
 import cv2 as cv
@@ -13,7 +15,9 @@ ImageElement: TypeAlias = tuple[int, int, str]
 
 def init_workers(count: int,
                  color_and_params: ColorAndParams,
-                 ) -> list[mp.Process, mp.Queue, mp.Queue]:
+                 in_queue: mp.Queue,
+                 out_queue: mp.Queue,
+                 ) -> list[mp.Process]:
     """
     Créée un ensemble d'objets `multiprocessing.Process` mais n'invoque pas
     leur méthode `.start()`.
@@ -23,11 +27,11 @@ def init_workers(count: int,
                  simplifier les images. C'est une liste de liste
                  d'entiers et pas un array numpy car la table doit
                  être pickleable.
+       `in_queue`: L'objet qui apporte les ImageElements aux processus.
+      `out_queue`: L'objet qui réccupère les données produites par les
+                 processus.
          `return`: La liste des Process.
     """
-    mp.set_start_method("spawn")
-    in_queue = mp.Queue()
-    out_queue = mp.Queue()
     # TODO create detectors from
     workers_list = []
     for i in range(count):
@@ -36,7 +40,7 @@ def init_workers(count: int,
             args=(in_queue, out_queue, color_and_params)
         )
         workers_list.append(worker)
-    return workers_list, in_queue, out_queue
+    return workers_list
 
 
 def img_processer(in_queue: mp.Queue,
@@ -58,13 +62,20 @@ def img_processer(in_queue: mp.Queue,
          `return`: Rien.
     """
     color_table = np.array(color_and_params["color_data"]["table"])
-    # detectors = init_detectors(color_and_params["det_params"],
-    #                            len(color_table))
-    for job in iter(in_queue.get, 'STOP'):
-        folder_row, depth_col, path = job
-        img = cv.imread(path)
-        values = count_spots_fourth_method(img, color_table, color_and_params["det_params"])
-        out_queue.put((folder_row, depth_col, values))
+    parent = mp.parent_process()
+    while parent.is_alive():
+        if in_queue.empty():
+            sleep(1)
+        else:
+            job = in_queue.get()
+            if job == "STOP":
+                break
+            folder_row, depth_col, path = job
+            img = cv.imread(path)
+            values = count_spots_fourth_method(img,
+                                               color_table,
+                                               color_and_params["det_params"])
+            out_queue.put((folder_row, depth_col, values))
 
 
 def init_detectors(detection_params: DetParams,

@@ -1,4 +1,5 @@
 # Python standard library
+from multiprocessing import Queue, Process
 from pathlib import Path
 from typing import TypeAlias, Union, Optional
 import csv
@@ -275,12 +276,13 @@ def ask_regex(default_value: Optional[str]) -> str:
 def fill_data_points(table: DataTable,
                      data_points: tuple[int, int, list[int]],
                      depth_count: int,
+                     color_count: int,
                      ) -> None:
     row, col, values = data_points
     for i, value in enumerate(values):
         table[row][col + i * depth_count] = value
     table[row][col + len(values) * depth_count] = sum(values)
-    try_line_completion(table[row], depth_count)
+    try_line_completion(table[row], depth_count, color_count)
 
 
 def try_line_completion(current_row: DataRow,
@@ -302,6 +304,11 @@ def try_line_completion(current_row: DataRow,
         current_row[middle + start, middle + stop] = part2
 
 
+def any_alive(worker_list: list[Process]):
+    status_list = map(lambda x: x.is_alive(), worker_list)
+    return any(status_list)
+
+
 def main(image_dir: str | Path,
          depths: list[str],
          csv_path: str | Path,
@@ -317,21 +324,27 @@ def main(image_dir: str | Path,
     sub_dirs = sorted_sub_dirs(image_dir)
     csv_file = fetch_csv(csv_path, depths, colors, sub_dirs)
     images = unprocessed_images(sub_dirs, csv_file, depths, colors, regex)
+    print(f"{len(images)} à traiter")
 
-    workers, in_queue, out_queue = init_workers(0, cap)
+    in_queue, out_queue = Queue(), Queue()
     for img in images:
         in_queue.put(img)
+
+    workers = init_workers(1, cap, in_queue, out_queue)
     for worker in workers:
         in_queue.put("STOP")
         worker.start()
     table = read_csv(csv_file)
-    print("HEY")
-    while True:
+    print("starting loop")
+    while any_alive(workers):
         if out_queue.empty():
             time.sleep(1)
-        # put values in table
-        data_points = out_queue.get()
-        fill_data_points(table, data_points, len(depths))
-        write_csv(csv_file, table)
+            print("waiting...", end='\r')
+        else:
+            # put values in table
+            print("output detected", end='\r')
+            data_points = out_queue.get()
+            fill_data_points(table, data_points, len(depths), len(colors))
+            write_csv(csv_file, table)
     in_queue.close()
     out_queue.close()

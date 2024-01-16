@@ -96,22 +96,23 @@ def count_spots_third_method(img: np.ndarray,
 
 
 def count_spots_fourth_method(img: np.ndarray,
-                             color_table: np.ndarray,
-                             det_params,
-                             ):
+                              color_table: np.ndarray,
+                              det_params,
+                              ):
     img = crop_to_main_circle(img)
+    cv.imwrite("/Users/louis/Desktop/test/crop.jpg", img)
     labeled = label_img_fastest(img, color_table)
+    cv.imwrite("/Users/louis/Desktop/test/labeled.jpg", labeled)
     values = []
     for i, settings in enumerate(det_params):
-        detector = cv.SimpleBlobDetector.create(load_params(settings, len(color_table)))
-        if detector.empty():
-            values.append(0)
-            continue
-        i += 1  # 0 is the bg
-        isolated_color = isolate_categories(color_table, [i])
+        detector = cv.SimpleBlobDetector.create(
+                load_params(settings, len(color_table)))
+        j = i + 1  # 0 is the bg
+        isolated_color = isolate_categories(color_table, [j])
         gs_palette = evenly_spaced_gray_palette(isolated_color)
         gs_img = gs_palette[labeled.flatten()]
-        gs_img = gs_img.reshape(labeled.shape)
+        gs_img = np.uint8(gs_img.reshape(labeled.shape))
+        cv.imwrite(f"/Users/louis/Desktop/test/test{j}.jpg", gs_img)
         key_points = detector.detect(gs_img)
         values.append(len(key_points))
     return values

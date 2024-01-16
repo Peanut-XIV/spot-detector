@@ -225,12 +225,27 @@ def label_img_faster(img: np.ndarray, color_table: np.ndarray) -> np.ndarray:
     return labeled_img
 
 
-def label_img_fastest(im, palette):
-    palette = palette[:, 0:3]
-    return np.linalg.norm(im[:, :, None].astype(np.float32)
-                          - palette[None, None, :].astype(np.float32), axis=3)\
-                    .argmin(axis=2)\
-                    .astype(np.uint8)
+def label_img_fastest(im, color_table):
+    """
+    Broadcasting is necessary to iterate over each shade
+    |---------|-----------|-----------|-----------|-----------|
+    | axes    |     0     |     1     |     2     |     3     |
+    |---------|-----------|-----------|-----------|-----------|
+    |col_table|   shade   |     4     |    ---    |    ---    |
+    | palette |     1     |     1     |   shade   |     3     |
+    |---------|-----------|-----------|-----------|-----------|
+    | im      |     Y     |     X     |     3     |    ---    |
+    | BCast   |     Y     |     X     |     1     |     3     |
+    |---------|-----------|-----------|-----------|-----------|
+    | norm    |     Y     |     X     |  shades   |    ---    |
+    | simp    |     Y     |     X     |    ---    |    ---    |
+    |---------|-----------|-----------|-----------|-----------|
+    """
+    palette = color_table[None, None, :, 0:3].astype(np.float32)
+    im = im[:, :, None, :].astype(np.float32)
+    norm = np.linalg.norm(im - palette, axis=3)
+    simplified = norm.argmin(axis=2).astype(np.uint8)
+    return simplified
 
 
 def label_img_ludicrous(img, color_table):
@@ -327,7 +342,7 @@ def evenly_spaced_gray_palette(palette):
             if shade == cur_shade:
                 output_palette[i] = new_shades[j]
                 break
-    return output_palette
+    return np.uint8(output_palette)
 
 
 def evenly_spaced_values(gs_palette: np.ndarray):
