@@ -1,19 +1,27 @@
+# Python standard library
 import string
 from pathlib import Path
-import numpy as np
 import csv
 import re
+# Other dependancies
+import numpy as np
 
 
-def check_img_count(expected: int, dossiers: [Path]) -> (bool, list[int]):
-    image_counts = [0] * len(dossiers)
-    doesnt_match = False
-    for i, folder in enumerate(dossiers):
-        n = len([e for e in folder.iterdir() if e.is_file()])
-        image_counts[i] = n
-        if n != expected:
-            doesnt_match = True
-    return doesnt_match, image_counts
+im_ext = re.compile(r".+\.(jpe?g|JPE?G|png|PNG)")
+
+
+def is_im_file(obj: Path) -> bool:
+    return bool(obj.is_file() and im_ext.match(obj.name))
+
+
+def count_images(dir: Path):
+    return sum(map(is_im_file, dir.iterdir()))
+
+
+def check_img_count(expected: int, dossiers: [Path]) -> (int, list[int]):
+    image_counts = list(map(count_images, dossiers))
+    mismatches = len(list(filter(lambda n_im: n_im != expected, image_counts)))
+    return mismatches, image_counts
 
 
 def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
@@ -27,7 +35,7 @@ def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
         color_table = color_table[1: -1]
     else:
         color_table = color_table[1:]
-    color_table = map(lambda _list: list(map(int, _list)), color_table)
+    color_table = map(lambda L: list(map(int, L)), color_table)
     color_table = np.array(list(color_table))
     return color_table
 
@@ -36,12 +44,10 @@ def get_unprocessed_directories(csv_path, main_dir):
     if not Path(csv_path).exists():
         dirs = [subd for subd in Path(main_dir).iterdir() if subd.is_dir()]
         return False, dirs
-    
     processed_directories = []
     csv_exists = False
     if Path(csv_path).exists():
         csv_exists = True
-    
         with open(csv_path, "r", newline='') as tableur:
             reader = csv.reader(tableur)
             reader.__next__()
@@ -56,14 +62,9 @@ def get_unprocessed_directories(csv_path, main_dir):
     return csv_exists, unprocessed_directories
 
 
-def match_dir_items(directory: str | Path, pattern: str, inserted_value: str):
-    full_pattern = string.Template(pattern)\
-                         .substitute(value=re.escape(inserted_value))
-    regex = re.compile(full_pattern)
-    matching_items = []
-    if isinstance(directory, str):
-        directory = Path(directory)
-    for item in directory.iterdir():
-        if regex.fullmatch(item.name):
-            matching_items.append(item)
-    return matching_items
+def match_dir_items(dir: str | Path, pattern: str, inserted_value: str):
+    pattern = string.Template(pattern)
+    pattern = pattern.substitute(value=re.escape(inserted_value))
+    regex = re.compile(pattern)
+    dir = Path(dir)
+    return list(filter(lambda x: regex.fullmatch(x.name), dir.iterdir()))

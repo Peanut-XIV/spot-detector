@@ -1,7 +1,8 @@
+# Python standard library
+from time import perf_counter
 import cv2 as cv
 import numpy as np
 from scipy import signal
-from time import perf_counter
 
 
 def keep_red_yellow(array: np.ndarray) -> np.ndarray:
@@ -249,7 +250,6 @@ def label_img_ludicrous(img, color_table):
     print("argmin ", end='')
     labeled_img = deltas.argmin(axis=2)
     return labeled_img
-    
 
 
 def get_k_means(img: np.ndarray,

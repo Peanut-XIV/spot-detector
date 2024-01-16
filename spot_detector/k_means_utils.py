@@ -1,8 +1,11 @@
-import cv2 as cv
-import numpy as np
+# Python standard library
 from pathlib import Path
 import csv
-from image_process import get_k_means
+# Project files
+from spot_detector.image_process import get_k_means
+# other dependancies
+import cv2 as cv
+import numpy as np
 
 
 class ImageView:
