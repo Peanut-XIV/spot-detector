@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+spot_detector/__init__.py
+spot_detector/cli.py
+spot_detector/config.py
+spot_detector/file_utils.py
+spot_detector/image_process.py
+spot_detector/k_means_utils.py
+spot_detector/main.py
+spot_detector/multi_core.py
+spot_detector/process_chains.py
+spot_detector.egg-info/PKG-INFO
+spot_detector.egg-info/SOURCES.txt
+spot_detector.egg-info/dependency_links.txt
+spot_detector.egg-info/requires.txt
+spot_detector.egg-info/top_level.txt
+tests/test_suite_1.py

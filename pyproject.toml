@@ -1,0 +1,37 @@
+[project]
+name="spot_detector"
+version = "2024.0.0"
+requires-python = ">= 3.11"
+dependencies = ["opencv-python",
+				"numpy",
+				"scipy",
+				"pydantic",
+				"click",
+				"tomlkit"]
+authors = [{name = "Louis Lanoy", email = "louis.lanoy@icloud.com"}]
+description = """
+FR: Spot-detector est un programme en interface en ligne de commande (CLI) qui\
+compte les luminophores dans un ensemble d'images, et qui range les résultats\
+dans un fichier .csv. Il est configurable afin de compter plusieurs couleurs\
+simultanément, de filter les luminophores selon leur forme et d'enregister des\
+paramètres par défaut.
+Il est également doté d'un outil en interface graphique pour configurer\
+certains paramètres de couleur.
+
+EN: Spot-detector is a command-line interface (CLI) program that counts\
+luminophors in a set of images and store the results in a csv file. It is\
+configurable to count several colors at once, to filter luminophors by shape\
+and to register default parameters.
+It is also equipped with a graphical user interface tool to edit some color\
+parameters."""
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://github.com/Peanut-XIV/spot-detector"
+Issues = "https://github.com/Peanut-XIV/spot-detector/issues"
+
+
+[build-system]
+requires = ["setuptools>=61.0", "opencv-python", "numpy",
+			"scipy", "pydantic", "click", "tomlkit"]
+build-backend = "setuptools.build_meta"

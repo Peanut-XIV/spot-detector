@@ -1,0 +1,6 @@
+opencv-python
+numpy
+scipy
+pydantic
+click
+tomlkit

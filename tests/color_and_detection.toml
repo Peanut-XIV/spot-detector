@@ -1,0 +1,21 @@
+[color_data]
+names = ['orange', 'vert']
+table = [[0x00, 0x00, 0x00, 0],
+		 [0x00, 0x68, 0xFF, 1],
+	     [0x00, 0x00, 0xFF, 2],
+		 [0xFF, 0x00, 0x00, 0]]
+
+[[det_params]]
+	color_name = 'orange'  # Le nom
+	thresh = {automatic = true, mini = 0, maxi = 255, step = 32}
+	area = {enabled = true, mini = 4, maxi = 800}
+	circ = {enabled = true, mini = 0.01}
+	convex = {enabled = true, mini = 0.21}
+	min_dist = 0.5
+
+[[det_params]]
+	color_name = 'green'
+	thresh = {automatic = true, mini = 0, maxi = 255, step = 32}
+	area = {enabled = true, mini = 10}
+	circ = {enabled = true, mini = 0.01}
+	convex = {enabled = true, mini = 0.1}
