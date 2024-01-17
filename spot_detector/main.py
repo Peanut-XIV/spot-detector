@@ -315,6 +315,7 @@ def main(image_dir: str | Path,
          csv_path: str | Path,
          regex: str,
          config: str | Path,
+         proc: int,
          ) -> None:
     # TODO: if the csv file already exists, check for coherence between
     #       number of colors, depths and dimensions of the csv file
@@ -332,7 +333,7 @@ def main(image_dir: str | Path,
     for img in images:
         in_queue.put(img)
 
-    workers = init_workers(9, cap, in_queue, out_queue)
+    workers = init_workers(proc, cap, in_queue, out_queue)
     for worker in workers:
         in_queue.put("STOP")
         worker.start()
