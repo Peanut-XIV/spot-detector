@@ -86,10 +86,13 @@ def cli():
     type=click.Path(file_okay=True, dir_okay=False), default=None,
     help="La localisation du fichier csv de résultat.",
 )
-# @option(
-#     "-j", "--nbr-proc", "--proc-count",
-#     type=click.INT
-# )
+@option(
+    "-j", "--nbr-proc", "--proc-count", "proc",
+    type=click.INT, default=1,
+    help="le nombre de processus qui traitent les images. Un processus par "
+         "cœur de CPU ou moins pour des performances optimales. Peut être "
+         "limité par la mémoire vive.",
+)
 @option("-y", is_flag=True, flag_value=True, default=False)
 def spot_detector(dir: str,
                   config: str,
@@ -99,6 +102,7 @@ def spot_detector(dir: str,
                   regex: str,
                   csv_path: str,
                   y: bool,
+                  proc: int,
                   ) -> None:
     if not no_default:
         defaults = get_defaults_or_error(defaults_file)
@@ -130,7 +134,7 @@ def spot_detector(dir: str,
                  f" que {len(depths)} étaient attendues.")
         confirm("Continuer ?", abort=True)
 
-    main(dir, depths, csv_path, regex, config)
+    main(dir, depths, csv_path, regex, config, proc)
 
 
 if __name__ == "__main__":
