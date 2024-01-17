@@ -14,7 +14,8 @@ class ImageView:
                  is_alt_image: bool = False,
                  x: int = 0,
                  y: int = 0,
-                 scale: int = 1):
+                 scale: int = 1,
+                 ) -> None:
         self.width: int = img_shape[1]
         self.height: int = img_shape[0]
         self.is_alt_img: bool = is_alt_image
@@ -32,52 +33,52 @@ class ImageView:
         self.scale: int = scale
 
     @property
-    def scaled_width(self):
+    def scaled_width(self) -> int:
         return int(self.width // self.scale)
 
     @property
-    def scaled_height(self):
+    def scaled_height(self) -> int:
         return int(self.height // self.scale)
 
-    def zoom_in(self):
+    def zoom_in(self) -> None:
         if self.scaled_height > 64:
             self.scale *= 2
             self.move_right(5)
             self.move_down(5)
 
-    def zoom_out(self):
+    def zoom_out(self) -> None:
         if self.scale > 1:
             self.scale /= 2
             self.move_up(2.5)
             self.move_left(2.5)
 
-    def move_left(self, n=1.):
+    def move_left(self, n: float = 1.) -> None:
         if self.x > 0:
             self.x -= int(self.scaled_width * 0.1 * n)
         if self.x < 0:
             self.x = 0
 
-    def move_right(self, n=1.):
+    def move_right(self, n: float = 1.) -> None:
         scaled_width = self.scaled_width
         if self.x + scaled_width < self.width:
             self.x += int(scaled_width * 0.1 * n)
         if self.x + scaled_width >= self.width:
             self.x = self.width - scaled_width
 
-    def move_up(self, n=1.):
+    def move_up(self, n: float = 1.) -> None:
         if self.y > 0:
             self.y -= int(self.scaled_height * 0.1 * n)
         if self.y < 0:
             self.y = 0
 
-    def move_down(self, n=1.):
+    def move_down(self, n: float = 1.) -> None:
         scaled_height = self.scaled_height
         if self.y + scaled_height < self.height:
             self.y += int(scaled_height * 0.1 * n)
         if self.y + scaled_height >= self.height:
             self.y = self.height - scaled_height
 
-    def window_action(self, key):
+    def window_action(self, key: int):
         if key == ord(' '):
             self.is_alt_img = not self.is_alt_img
         elif key == ord('i'):
@@ -111,7 +112,7 @@ def reshape_image(img: np.ndarray, img_view: ImageView) -> np.ndarray:
     return reshaped
 
 
-def palette_maker():
+def palette_maker() -> None:
     img = input_img()
     k = input_means()
     lut, output, labels = get_k_means(img, k)
@@ -157,7 +158,8 @@ def palette_maker():
 def other_actions(key: int,
                   index: int,
                   max_index: int,
-                  color_categories: list) -> tuple[int, list]:
+                  color_categories: list,
+                  ) -> tuple[int, list]:
     if key == ord('a'):
         index = (index - 1) % max_index
     elif key == ord('e'):
@@ -178,7 +180,8 @@ def other_actions(key: int,
 def draw_palette(img: np.ndarray,
                  lut: np.ndarray,
                  index: int,
-                 color_categories: list) -> np.ndarray:
+                 color_categories: list,
+                 ) -> np.ndarray:
     for i in range(lut.shape[0]):
         offset = 20 + i * 120
         if i == index:
@@ -194,7 +197,7 @@ def draw_palette(img: np.ndarray,
     return img
 
 
-def input_img():
+def input_img() -> np.ndarray:
     _str = input("chemin de l'image : ")
     _path = Path(_str)
     if _str == "":
@@ -209,7 +212,7 @@ def input_img():
     return _image
 
 
-def input_means():
+def input_means() -> int:
     _k = input("Nombre de moyennes : ")
     if _k == '':
         return 18

@@ -1,27 +1,25 @@
 # Python standard library
-from typing import TypeAlias
 from time import sleep
-import multiprocessing as mp
+from multiprocessing import Queue, Process, parent_process
+from typing import Union
 # Project files
 from spot_detector.process_chains import (
         count_spots_fourth_method, load_params)
 from spot_detector.config import ColorAndParams, DetParams
+from spot_detector.types import DataElement, ImageElement
 # Other dependancies
 import cv2 as cv
 import numpy as np
 
-ImageElement: TypeAlias = tuple[int, int, str]
-
 
 def init_workers(count: int,
                  color_and_params: ColorAndParams,
-                 in_queue: mp.Queue,
-                 out_queue: mp.Queue,
-                 ) -> list[mp.Process]:
+                 in_queue: Queue,
+                 out_queue: Queue,
+                 ) -> list[Process]:
     """
     Créée un ensemble d'objets `multiprocessing.Process` mais n'invoque pas
     leur méthode `.start()`.
-
           `count`: Le nombre de Process à créer.
     `color_table`: La table contenant les informations nécessaire pour
                  simplifier les images. C'est une liste de liste
@@ -35,7 +33,7 @@ def init_workers(count: int,
     # TODO create detectors from
     workers_list = []
     for i in range(count):
-        worker = mp.Process(
+        worker = Process(
             target=img_processer,
             args=(in_queue, out_queue, color_and_params)
         )
@@ -43,15 +41,14 @@ def init_workers(count: int,
     return workers_list
 
 
-def img_processer(in_queue: mp.Queue,
-                  out_queue: mp.Queue,
+def img_processer(in_queue: Queue,
+                  out_queue: Queue,
                   color_and_params: ColorAndParams,
                   ) -> None:
     """
     La fonction qui attend les instructions et traites les `ImageElements` qui
     lui sont transmis par la `in_queue` et renvoie le résultat par la
     `out_queue`.
-
        `in_queue`: L'objet `multiprocessing.Queue` depuis lequel arrive les
                  les `ImageElements`.
       `out_queue`: L'objet `multiprocessing.Queue` dans lequel les valeurs
@@ -62,12 +59,12 @@ def img_processer(in_queue: mp.Queue,
          `return`: Rien.
     """
     color_table = np.array(color_and_params["color_data"]["table"])
-    parent = mp.parent_process()
+    parent = parent_process()
     while parent.is_alive():
         if in_queue.empty():
             sleep(1)
         else:
-            job = in_queue.get()
+            job: Union[str, ImageElement] = in_queue.get()
             if job == "STOP":
                 break
             folder_row, depth_col, path = job
@@ -75,12 +72,16 @@ def img_processer(in_queue: mp.Queue,
             values = count_spots_fourth_method(img,
                                                color_table,
                                                color_and_params["det_params"])
-            out_queue.put((folder_row, depth_col, values))
+            result: DataElement = (folder_row, depth_col, values)
+            out_queue.put(result)
 
 
 def init_detectors(detection_params: DetParams,
                    shades_count: int,
                    ) -> list[cv.SimpleBlobDetector]:
+    """
+    Broken, do not use!
+    """
     detectors = []
     for setting in detection_params:
         params = load_params(setting, shades_count)

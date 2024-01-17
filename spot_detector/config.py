@@ -1,21 +1,23 @@
 # Python standard library
 from pathlib import Path
-from typing import TypeAlias, Optional
+from typing import Optional
+# Project files
+from spot_detector.types import ColorTable
 # Other modules
 from tomlkit import load
 from pydantic import (Field, BaseModel, TypeAdapter,
                       ValidationError, field_validator)
 from pydantic_core.core_schema import FieldValidationInfo
 
-RawColorTable: TypeAlias = list[list[int]]
-
 
 class ColorData(BaseModel):
     names: list[str]
-    table: list[list[int]]
+    table: ColorTable
 
     @field_validator("table")
-    def table_values_are_chars(cls, table):
+    def table_values_are_chars(cls,
+                               table: ColorTable,
+                               ) -> ColorTable:
         for i, row in enumerate(table):
             for j, value in enumerate(row):
                 if type(value) is not int:
@@ -31,7 +33,10 @@ class Threshold(BaseModel):
     step: int = Field(ge=0, le=255, default=16)
 
     @field_validator("maxi")
-    def maxi_greater_than_mini(cls, maxi, info: FieldValidationInfo):
+    def maxi_greater_than_mini(cls,
+                               maxi: int,
+                               info: FieldValidationInfo,
+                               ) -> int:
         if maxi <= info.data["mini"]:
             raise ValueError("maxi must be greater than mini")
         return maxi
@@ -43,12 +48,13 @@ class SimpleParam(BaseModel):
     maxi: Optional[float] = None
 
     @field_validator("maxi")
-    def maxi_greater_than_mini(cls, maxi, info: FieldValidationInfo):
-        maxi_does_exist = (
-            info.data["enabled"]
-            and (maxi is not None)
-            and maxi
-        )
+    def maxi_greater_than_mini(cls,
+                               maxi: Optional[float],
+                               info: FieldValidationInfo,
+                               ) -> Optional[float]:
+        maxi_does_exist = bool(info.data["enabled"]
+                               and (maxi is not None)
+                               and maxi)
         try:
             if maxi_does_exist and (maxi <= info.data["mini"]):
                 raise ValueError("maxi must be greater than mini")
@@ -78,13 +84,15 @@ class CLIDefaults(BaseModel):
     regex: Optional[str] = None
 
 
-def incoherent_file(file_path: str, should_exist: bool):
+def incoherent_file(file_path: str | Path,
+                    should_exist: bool,
+                    ) -> bool:
     obj = Path(file_path)
     is_file = obj.exists() and obj.is_file()
     return is_file == should_exist
 
 
-def get_color_and_params(file_path) -> dict:
+def get_color_and_params(file_path: str | Path) -> ColorAndParams:
     content = None
     with open(file_path, "r", encoding="UTF-8") as cfg_file:
         content: dict = load(cfg_file)
@@ -96,7 +104,7 @@ def get_color_and_params(file_path) -> dict:
     return content
 
 
-def get_cli_defaults(file_path) -> dict:
+def get_cli_defaults(file_path: str | Path) -> CLIDefaults:
     content = None
     with open(file_path, "r") as cfg_file:
         content = load(cfg_file).get("CLI")
@@ -108,7 +116,7 @@ def get_cli_defaults(file_path) -> dict:
     return content
 
 
-def get_det_params_defaults(file_path) -> dict:
+def get_det_params_defaults(file_path: str | Path) -> DetParams:
     content = None
     with open(file_path, "r") as cfg_file:
         content = load(cfg_file).get("det_params")

@@ -8,11 +8,14 @@ from spot_detector.image_process import (
     keep_green_cyan, setup_green_params, setup_green_params_faster,
     label_img_fastest, isolate_categories, evenly_spaced_gray_palette,
 )
+from spot_detector.config import ColorAndParams, DetParams
+from numpy.types import NDArray
 import numpy as np
 import cv2 as cv
 
 
-def count_spots_first_method(_path: str | Path):
+# Obsolete
+def count_spots_first_method(_path: str | Path) -> tuple[int, int]:
     if isinstance(_path, Path):
         _path = str(_path)
     original = cv.imread(_path)  # Pixel format is BGR
@@ -39,7 +42,8 @@ def count_spots_first_method(_path: str | Path):
     return len(orange_keypoints), len(green_keypoints)
 
 
-def count_spots_second_method(_path: str | Path, color_table):
+# Obsolete
+def count_spots_second_method(_path: str | Path, color_table: NDArray):
     if isinstance(_path, Path):
         _path = str(_path)
     img = cv.imread(_path)  # Pixel format is BGR
@@ -74,8 +78,9 @@ def count_spots_second_method(_path: str | Path, color_table):
     return len(orange_kp), len(green_kp)
 
 
-def count_spots_third_method(img: np.ndarray,
-                             color_table: np.ndarray,
+# Obsolete
+def count_spots_third_method(img: NDArray,
+                             color_table: NDArray,
                              detectors: list,
                              ):
     img = crop_to_main_circle(img)
@@ -95,10 +100,10 @@ def count_spots_third_method(img: np.ndarray,
     return values
 
 
-def count_spots_fourth_method(img: np.ndarray,
-                              color_table: np.ndarray,
-                              det_params,
-                              ):
+def count_spots_fourth_method(img: NDArray,
+                              color_table: NDArray,
+                              det_params: list[DetParams],
+                              ) -> list[int]:
     img = crop_to_main_circle(img)
     cv.imwrite("/Users/louis/Desktop/test/crop.jpg", img)
     labeled = label_img_fastest(img, color_table)
@@ -118,7 +123,9 @@ def count_spots_fourth_method(img: np.ndarray,
     return values
 
 
-def load_params(det_params, shades_count):
+def load_params(det_params: DetParams,
+                shades_count: int,
+                ) -> cv.SimpleBlobDetector.Params:
     params = cv.SimpleBlobDetector.Params()
     params.blobColor = 255
     if shades_count != 0:

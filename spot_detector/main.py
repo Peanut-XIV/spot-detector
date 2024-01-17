@@ -1,24 +1,25 @@
 # Python standard library
 from multiprocessing import Queue, Process
 from pathlib import Path
-from typing import TypeAlias, Union, Optional
+from typing import Optional
 import csv
 import time
 # Project files
 from spot_detector.file_utils import match_dir_items
 from spot_detector.multi_core import init_workers
 from spot_detector.config import get_color_and_params, ColorAndParams
-
-ImageElement: TypeAlias = tuple[int, int, str]
-DataRow:      TypeAlias = list[Union[str, int, float]]
-DataTable:    TypeAlias = list[DataRow]
+from spot_detector.types import (
+        DataRow,
+        DataTable,
+        ImageElement,
+        DataElement,
+)
 
 
 def read_csv(csv_file: str | Path) -> DataTable:
     """
     Lit le fichier csv `csv_file` et retourne son contenu, à partir de la 3ème
     ligne, dans une liste de liste.
-
     `csv_file`: Objet de chemin du fichier csv.
       `return`: la table, qui est une liste de liste de chaines de caractères.
     """
@@ -35,7 +36,6 @@ def write_csv(csv_file: str | Path,
               ) -> None:
     """
     Enregistre les valeurs du tableau `table` dans le fichier csv donné.
-
     `csv_file`: L'objet de chemin du fichier en question.
        `table`: La liste de listes de chaines de caractères qui seront
               enregistrées dans le fichier csv.
@@ -53,7 +53,6 @@ def first_two_rows(depths: list[str],
     Créée les deux premières ligne du document csv.
     La première indique la catégorie de donnée (couleur, total - nbr, %tage).
     La seconde indique la valeur de profondeur associée à chaque colonne.
-
     `depths`: Liste des valeurs de profondeur.
     `colors`: Liste des noms de couleurs.
     `return`: Les deux lignes sous forme de listes de chaines de caractères.
@@ -70,7 +69,10 @@ def first_two_rows(depths: list[str],
     return label_row_1, label_row_2
 
 
-def is_valid_csv(file, expected_rows, expected_cols):
+def is_valid_csv(file: str | Path,
+                 expected_rows: int,
+                 expected_cols: int,
+                 ) -> bool:
     contents = []
     with open(file, "r", newline="") as io_stream:
         reader = csv.reader(io_stream)
@@ -96,7 +98,6 @@ def fetch_csv(csv_path: str | Path,
                 dossiers => `sub_directories`
              profondeurs => `depths`
     l'enregistre dans le système de fichiers et retourne son objet de chemin.
-
            `csv_path`: La chaine de charactères correspondant au chemin du csv.
              `depths`: Les différentes profondeurs traitées par le tableau csv.
              `colors`: Les différentes couleurs traitées par le tableau csv.
@@ -135,7 +136,6 @@ def map_folder_to_row(table: DataTable) -> dict[str, int]:
     Le comptage des lignes commence à partir de 0 mais les deux premières
     lignes sont exclues car ce sont des étiquettes.
     Le plus petit numéro est donc 2.
-
      `table`: liste de listes de valeurs textuelles
     `return`: un dictionnaire aux entrées de la forme
             {"nom_dossier": num_ligne}
@@ -147,7 +147,7 @@ def map_folder_to_row(table: DataTable) -> dict[str, int]:
 
 
 def unprocessed_images(sub_directories: list[Path],
-                       csv_file: Path,
+                       csv_file: str | Path,
                        depths: list[str],
                        colors: list[str],
                        regex: str,
@@ -274,7 +274,7 @@ def ask_regex(default_value: Optional[str]) -> str:
 
 
 def fill_data_points(table: DataTable,
-                     data_points: tuple[int, int, list[int]],
+                     data_points: DataElement,
                      depth_count: int,
                      color_count: int,
                      ) -> None:
@@ -305,7 +305,7 @@ def try_line_completion(current_row: DataRow,
         current_row[middle + start: middle + stop] = part2
 
 
-def any_alive(worker_list: list[Process]):
+def any_alive(worker_list: list[Process]) -> bool:
     status_list = map(lambda x: x.is_alive(), worker_list)
     return any(status_list)
 
@@ -346,7 +346,7 @@ def main(image_dir: str | Path,
             # put values in table
             print(f"{remaining} images restantes."
                   " Écriture en cours...  ", end='\r')
-            data_points = out_queue.get()
+            data_points: DataElement = out_queue.get()
             fill_data_points(table, data_points, len(depths), len(colors))
             write_csv(csv_file, table)
             remaining -= 1

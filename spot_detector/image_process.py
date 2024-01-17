@@ -3,15 +3,18 @@ from time import perf_counter
 import cv2 as cv
 import numpy as np
 from scipy import signal
+from typing import TypeVar
+
+T = TypeVar('T')
 
 
+# Obsolete
 def keep_red_yellow(array: np.ndarray) -> np.ndarray:
     """
     Makes a binary mask from the hue component of an image,
     coded from 0 to 255. The mask's pixels are of value 1
     where the hue is smaller than 120 or larger than 200.
     Otherwise, pixels are of value 0.
-
     :param array: uint8 ndarray of shape (x,y).
     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
     """
@@ -19,12 +22,12 @@ def keep_red_yellow(array: np.ndarray) -> np.ndarray:
                                   np.greater(array, 200)))
 
 
+# Obsolete
 def keep_green_cyan(array: np.ndarray) -> np.ndarray:
     """
     Makes a binary mask from the hue component of an image,
     coded from 0 to 255. The mask's pixels are of value 1
     where the hue is between 90 and 150. Otherwise, pixels are of value 0.
-
     :param array: uint8 ndarray of shape (x,y).
     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
     """
@@ -32,12 +35,12 @@ def keep_green_cyan(array: np.ndarray) -> np.ndarray:
                                    np.less(array, 140)))
 
 
+# Obsolete
 def normalize(array: np.ndarray) -> np.ndarray:
     """
     Does a linear interpolation of the values of an array,
     in such a way that 0 is mapped to 0 and the maximum positive
     value is mapped to 255.
-
     :param array: uint8 ndarray of shape (x,y,z)
     :return:  uint8 ndarray of shape (x,y,z)
     """
@@ -48,14 +51,15 @@ def normalize(array: np.ndarray) -> np.ndarray:
     return np.uint8(np.multiply(array, k))
 
 
+# Obsolete
 def diff_of_gaussian(array: np.ndarray,
                      rad_in: float,
-                     rad_out: float) -> np.ndarray:
+                     rad_out: float,
+                     ) -> np.ndarray:
     """
     The Difference of an image with itself at two
     different gaussian blur strength. Used to eliminate
     details outside a defined spatial frequency range.
-
     :param array: ndarray
     :param rad_in:
     :param rad_out:
@@ -70,7 +74,8 @@ def diff_of_gaussian(array: np.ndarray,
     return output
 
 
-def setup_green_params():
+# Obsolete
+def setup_green_params() -> cv.SimpleBlobDetector.Params:
     params = cv.SimpleBlobDetector.Params()
     params.filterByArea = True
     params.minArea = 20
@@ -85,7 +90,9 @@ def setup_green_params():
     return params
 
 
-def setup_green_params_faster(shades_count):
+# Obsolete
+def setup_green_params_faster(
+        shades_count: int) -> cv.SimpleBlobDetector.Params:
     thresh_step = 255 // (shades_count - 1)
     params = cv.SimpleBlobDetector.Params()
     params.filterByArea = True
@@ -101,7 +108,8 @@ def setup_green_params_faster(shades_count):
     return params
 
 
-def setup_orange_params():
+# Obsolete
+def setup_orange_params() -> cv.SimpleBlobDetector.Params:
     params = cv.SimpleBlobDetector.Params()
     params.filterByArea = True
     params.minArea = 1
@@ -117,7 +125,9 @@ def setup_orange_params():
     return params
 
 
-def setup_orange_params_faster(shades_count):
+# Obsolete
+def setup_orange_params_faster(
+        shades_count: int) -> cv.SimpleBlobDetector.Params:
     thresh_step = 255 // shades_count
     params = cv.SimpleBlobDetector.Params()
     params.filterByArea = True
@@ -135,9 +145,8 @@ def setup_orange_params_faster(shades_count):
     return params
 
 
-def crop_to_main_circle(src):
-    # crop to only the petri-dish
-    #TODO: Make it not as dumb !!!
+def crop_to_main_circle(src: np.ndarray) -> np.ndarray:
+    # TODO: Make it not as dumb !!!
     if len(src.shape) == 3:
         gray = diff_of_gaussian(src[:, :, 0], 10, 50)
     else:
@@ -177,8 +186,10 @@ def crop_to_main_circle(src):
     return src[top:bottom, left:right, :] * mask[:, :, None]
 
 
+# Obsolete
 def extract_colors(img: np.ndarray,
-                   color_table: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+                   color_table: np.ndarray,
+                   ) -> tuple[np.ndarray, np.ndarray]:
     color1 = isolate_categories(color_table, (1, 3))
     color2 = isolate_categories(color_table, (2, 3))
     labeled_img = label_img(img, color_table)
@@ -189,7 +200,7 @@ def extract_colors(img: np.ndarray,
     return mask1, mask2
 
 
-def isolate_categories(color_table: np.ndarray, categories: [int]):
+def isolate_categories(color_table: np.ndarray, categories: list[int]):
     color = np.uint8(color_table[:, 0:3].copy())
     for i in range(color_table.shape[0]):
         if color_table[i, 3] not in categories:
@@ -225,31 +236,45 @@ def label_img_faster(img: np.ndarray, color_table: np.ndarray) -> np.ndarray:
     return labeled_img
 
 
-def label_img_fastest(im, color_table):
+def label_img_fastest(im: np.ndarray, color_table: np.ndarray) -> np.ndarray:
     """
-    Broadcasting is necessary to iterate over each shade
-    |---------|-----------|-----------|-----------|-----------|
-    | axes    |     0     |     1     |     2     |     3     |
-    |---------|-----------|-----------|-----------|-----------|
-    |col_table|   shade   |     4     |    ---    |    ---    |
-    | palette |     1     |     1     |   shade   |     3     |
-    |---------|-----------|-----------|-----------|-----------|
-    | im      |     Y     |     X     |     3     |    ---    |
-    | BCast   |     Y     |     X     |     1     |     3     |
-    |---------|-----------|-----------|-----------|-----------|
-    | norm    |     Y     |     X     |  shades   |    ---    |
-    | simp    |     Y     |     X     |    ---    |    ---    |
-    |---------|-----------|-----------|-----------|-----------|
+    Broadcasting is necessary to iterate over each shade.
+    |----------|-----------|-----------|-----------|-----------|
+    | axes     |     0     |     1     |     2     |     3     |
+    |==========|===========|===========|===========|===========|
+    |col_table |   shade   |     4     |    -/-    |    -/-    |
+    |->palette |     1     |     1     |   shade   |     3     |
+    |----------|-----------|-----------|-----------|-----------|
+    | im       |     Y     |     X     |     3     |    -/-    |
+    |->im      |     Y     |     X     |     1     |     3     |
+    |----------|-----------|-----------|-----------|-----------|
     """
     palette = color_table[None, None, :, 0:3].astype(np.float32)
     im = im[:, :, None, :].astype(np.float32)
+    """
+    Now Both palette and im have broadcastable shapes.
+    |----------|-----------|-----------|-----------|-----------|
+    | palette  |     1     |     1     |  [shade]  |    -3-    |
+    | im       |    [Y]    |    [X]    |     1     |    -3-    |
+    |----------|-----------|-----------|-----------|-----------|
+    which allows us to compute the distance between to bgr colors.
+    |----------|-----------|-----------|-----------|
+    | norm     |     Y     |     X     |  shades   |
+    |----------|-----------|-----------|-----------|
+    """
     norm = np.linalg.norm(im - palette, axis=3)
-    simplified = norm.argmin(axis=2).astype(np.uint8)
-    return simplified
+    """
+    And get the index of the lowest along axis 2 as value
+    |----------|-----------|-----------|
+    | labeled  |     Y     |     X     |
+    |----------|-----------|-----------|
+    """
+    labeled = norm.argmin(axis=2).astype(np.uint8)
+    return labeled
 
 
-def label_img_ludicrous(img, color_table):
-    img = img.astype(np.float32)
+def label_img_ludicrous(im: np.ndarray, color_table: np.ndarray) -> np.ndarray:
+    img = im.astype(np.float32)
     color_table = color_table.astype(np.float32)
     table_size = color_table.shape[0]
     height, width = img.shape[0:2]
@@ -270,7 +295,8 @@ def label_img_ludicrous(img, color_table):
 def get_k_means(img: np.ndarray,
                 k: int,
                 epsilon: float = 1e-4,
-                max_iter: int = 60):
+                max_iter: int = 60,
+                ) -> tuple[np.ndarray, np.ndarray, list[list[int]]]:
     flags = 0
     if epsilon:
         flags += cv.TERM_CRITERIA_MAX_ITER
@@ -292,7 +318,9 @@ def get_k_means(img: np.ndarray,
     return LUT, output, labels
 
 
-def gaussian_kernel(sigma: float, kernel_size: int):
+def gaussian_kernel(sigma: float,
+                    kernel_size: int,
+                    ) -> np.ndarray:
     if kernel_size < 0:
         kernel_size = - kernel_size
     if kernel_size % 2 == 0:
@@ -305,7 +333,10 @@ def gaussian_kernel(sigma: float, kernel_size: int):
     return kernel
 
 
-def laplacian_of_gaussian(img: np.ndarray, sigma: float, kernel_size: int):
+def laplacian_of_gaussian(img: np.ndarray,
+                          sigma: float,
+                          kernel_size: int,
+                          ) -> np.ndarray:
     kernel = gaussian_kernel(sigma, kernel_size)
     filtered = signal.convolve2d(img, kernel)
     sobel_kernel = np.array([[0, 1,  0],
@@ -315,7 +346,9 @@ def laplacian_of_gaussian(img: np.ndarray, sigma: float, kernel_size: int):
     return laplacian * sigma
 
 
-def chg_domain(img: np.ndarray, new_domain: tuple[float, float]) -> np.ndarray:
+def chg_domain(img: np.ndarray,
+               new_domain: tuple[float, float],
+               ) -> np.ndarray:
     # noinspection PyArgumentList
     mini_p, maxi_p = img.min(), img.max()
     mini_n, maxi_n = new_domain
@@ -324,7 +357,7 @@ def chg_domain(img: np.ndarray, new_domain: tuple[float, float]) -> np.ndarray:
     return new_img
 
 
-def unique_values(values) -> list:
+def unique_values(values: list[T]) -> list[T]:
     acc = []
     for e in values:
         if e not in acc:
@@ -332,7 +365,7 @@ def unique_values(values) -> list:
     return acc
 
 
-def evenly_spaced_gray_palette(palette):
+def evenly_spaced_gray_palette(palette: np.ndarray) -> np.ndarray:
     lum = np.array([0.0722, 0.7152, 0.2126])
     new_palette = np.sum(palette * lum, axis=1)
     current_shades, new_shades = evenly_spaced_values(new_palette)
@@ -345,7 +378,7 @@ def evenly_spaced_gray_palette(palette):
     return np.uint8(output_palette)
 
 
-def evenly_spaced_values(gs_palette: np.ndarray):
+def evenly_spaced_values(gs_palette: np.ndarray) -> np.ndarray:
     u_vals = sorted(unique_values(gs_palette))
     u_vals = np.array(u_vals)
     index = np.arange(u_vals.size)

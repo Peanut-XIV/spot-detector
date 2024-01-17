@@ -14,16 +14,19 @@ def is_im_file(obj: Path) -> bool:
     return bool(obj.is_file() and im_ext.match(obj.name))
 
 
-def count_images(dir: Path):
+def count_images(dir: Path) -> int:
     return sum(map(is_im_file, dir.iterdir()))
 
 
-def check_img_count(expected: int, dossiers: [Path]) -> (int, list[int]):
+def check_img_count(expected: int,
+                    dossiers: list[Path],
+                    ) -> tuple[int, list[int]]:
     image_counts = list(map(count_images, dossiers))
     mismatches = len(list(filter(lambda n_im: n_im != expected, image_counts)))
     return mismatches, image_counts
 
 
+# Not used
 def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
     color_table = []
     with open(path, "r", newline='') as file:
@@ -40,7 +43,10 @@ def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
     return color_table
 
 
-def get_unprocessed_directories(csv_path, main_dir):
+# Obsolete
+def get_unprocessed_directories(csv_path: str | Path,
+                                main_dir: str | Path,
+                                ) -> tuple[bool, list[Path]]:
     if not Path(csv_path).exists():
         dirs = [subd for subd in Path(main_dir).iterdir() if subd.is_dir()]
         return False, dirs
@@ -62,7 +68,10 @@ def get_unprocessed_directories(csv_path, main_dir):
     return csv_exists, unprocessed_directories
 
 
-def match_dir_items(dir: str | Path, pattern: str, inserted_value: str):
+def match_dir_items(dir: str | Path,
+                    pattern: str,
+                    inserted_value: str,
+                    ) -> list[Path]:
     pattern = string.Template(pattern)
     pattern = pattern.substitute(value=re.escape(inserted_value))
     regex = re.compile(pattern)

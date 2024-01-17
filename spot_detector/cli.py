@@ -1,7 +1,7 @@
 # Python standard library
 from pathlib import Path
 # Project files
-from spot_detector.config import get_cli_defaults
+from spot_detector.config import get_cli_defaults, CLIDefaults
 from spot_detector.file_utils import check_img_count
 from spot_detector.main import main
 # Other dependancies
@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from click import BadParameter, group, argument, option, echo, confirm, STRING
 
 
-def fit_elements(elements: list[str]):
+def fit_elements(elements: list[str]) -> list[str]:
     output = []
     line = ""
     for element in elements:
@@ -23,7 +23,7 @@ def fit_elements(elements: list[str]):
     return output
 
 
-def get_defaults_or_error(defaults_file):
+def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
     try:
         defaults = get_cli_defaults(defaults_file)
     except ValidationError as e:
@@ -86,6 +86,10 @@ def cli():
     type=click.Path(file_okay=True, dir_okay=False), default=None,
     help="La localisation du fichier csv de résultat.",
 )
+# @option(
+#     "-j", "--nbr-proc", "--proc-count",
+#     type=click.INT
+# )
 @option("-y", is_flag=True, flag_value=True, default=False)
 def spot_detector(dir: str,
                   config: str,
