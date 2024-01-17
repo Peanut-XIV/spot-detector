@@ -280,8 +280,9 @@ def fill_data_points(table: DataTable,
                      ) -> None:
     row, col, values = data_points
     for i, value in enumerate(values):
-        table[row][col + i * depth_count] = value
-    table[row][col + len(values) * depth_count] = sum(values)
+        table[row][1 + col + i * depth_count] = value
+    table[row][1 + col + len(values) * depth_count] = sum(values)
+    # Fill part1
     try_line_completion(table[row], depth_count, color_count)
 
 
@@ -291,17 +292,17 @@ def try_line_completion(current_row: DataRow,
                         ) -> None:
     if "" in current_row[1: depth_count + 1]:
         return
-    middle = (1 + color_count) * depth_count
+    middle = 1 + (1 + color_count) * depth_count
     for i in range(color_count + 1):
-        start = 1 + i * depth_count
+        start = i * depth_count
         stop = start + depth_count
-        part1 = current_row[start, stop]
-        sum1 = sum(part1)
+        part1 = current_row[1 + start: 1 + stop]
+        sum1 = sum(map(int, part1))
         if sum1:
-            part2 = [100 * v / sum1 for v in part1]
+            part2 = [100 * int(v) / sum1 for v in part1]
         else:
             part2 = [float("nan")] * len(part1)
-        current_row[middle + start, middle + stop] = part2
+        current_row[middle + start: middle + stop] = part2
 
 
 def any_alive(worker_list: list[Process]):
@@ -324,27 +325,30 @@ def main(image_dir: str | Path,
     sub_dirs = sorted_sub_dirs(image_dir)
     csv_file = fetch_csv(csv_path, depths, colors, sub_dirs)
     images = unprocessed_images(sub_dirs, csv_file, depths, colors, regex)
-    print(f"{len(images)} à traiter")
+    remaining = len(images)
+    print(f"{remaining} à traiter")
 
     in_queue, out_queue = Queue(), Queue()
     for img in images:
         in_queue.put(img)
 
-    workers = init_workers(1, cap, in_queue, out_queue)
+    workers = init_workers(9, cap, in_queue, out_queue)
     for worker in workers:
         in_queue.put("STOP")
         worker.start()
     table = read_csv(csv_file)
-    print("starting loop")
-    while any_alive(workers):
+    while any_alive(workers) or not out_queue.empty():
         if out_queue.empty():
             time.sleep(1)
-            print("waiting...", end='\r')
+            print(f"{remaining} images restantes."
+                  " En attente de données.", end='\r')
         else:
             # put values in table
-            print("output detected", end='\r')
+            print(f"{remaining} images restantes."
+                  " Écriture en cours...  ", end='\r')
             data_points = out_queue.get()
             fill_data_points(table, data_points, len(depths), len(colors))
             write_csv(csv_file, table)
+            remaining -= 1
     in_queue.close()
     out_queue.close()
