@@ -13,7 +13,7 @@ import numpy as np
 
 
 def init_workers(count: int,
-                 color_and_params: ColorAndParams,
+                 config: ColorAndParams,
                  in_queue: Queue,
                  out_queue: Queue,
                  ) -> list[Process]:
@@ -35,7 +35,7 @@ def init_workers(count: int,
     for i in range(count):
         worker = Process(
             target=img_processer,
-            args=(in_queue, out_queue, color_and_params)
+            args=(in_queue, out_queue, config)
         )
         workers_list.append(worker)
     return workers_list
@@ -43,7 +43,7 @@ def init_workers(count: int,
 
 def img_processer(in_queue: Queue,
                   out_queue: Queue,
-                  color_and_params: ColorAndParams,
+                  config: ColorAndParams,
                   ) -> None:
     """
     La fonction qui attend les instructions et traites les `ImageElements` qui
@@ -58,7 +58,7 @@ def img_processer(in_queue: Queue,
                  et pas un array Numpy car la table doit être pickleable.
          `return`: Rien.
     """
-    color_table = np.array(color_and_params["color_data"]["table"])
+    color_table = np.array(config["color_data"]["table"])
     parent = parent_process()
     while parent.is_alive():
         if in_queue.empty():
@@ -71,7 +71,7 @@ def img_processer(in_queue: Queue,
             img = cv.imread(path)
             values = count_spots_fourth_method(img,
                                                color_table,
-                                               color_and_params["det_params"])
+                                               config["det_params"])
             result: DataElement = (folder_row, depth_col, values)
             out_queue.put(result)
 

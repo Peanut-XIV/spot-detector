@@ -1,13 +1,35 @@
 # Python standard library
 from pathlib import Path
+from os import mkdir
 # Project files
-from spot_detector.config import get_cli_defaults, CLIDefaults
+from spot_detector.config import (get_cli_defaults, get_color_and_params,
+                                  CLIDefaults, create_new_config,
+                                  )
 from spot_detector.file_utils import check_img_count
-from spot_detector.main import main
+from spot_detector.main import main, edit_config_file
 # Other dependancies
 import click
+from tomlkit import TOMLDocument
+from tomlkit.toml_file import TOMLFile
 from pydantic import ValidationError
-from click import BadParameter, group, argument, option, echo, confirm, STRING
+from click import (BadParameter, FileError, group, argument,
+                   option, echo, confirm, STRING,
+                   )
+
+
+def confirm_new_cfg_file(path):
+    if path.exists():
+        if not path.is_file():
+            raise FileError("Le chemin ne désigne pas un fichier.")
+        confirm("Ce fichier existe déjà. "
+                "Souhaitez-vous écrire par dessus ?",
+                abort=True)
+    else:
+        if not path.parent.exists():
+            confirm("Ce chemin n'existe pas encore. "
+                    "Créer les dossiers manquants ?",
+                    abort=True)
+            mkdir(path.parent)
 
 
 def fit_elements(elements: list[str]) -> list[str]:
@@ -46,11 +68,11 @@ def cli():
 )
 @argument(
     "config",
-    type=click.Path(file_okay=False,
+    type=click.Path(file_okay=True,
                     dir_okay=True,
                     resolve_path=True,
                     path_type=Path),
-    default=str(Path.home().joinpath(".spot-detector/")),
+    default=str(Path.home().joinpath(".spot-detector/config.toml")),
 )
 @option(
     "-n", "--sans-defaut", "--no-default", "no_default",
@@ -135,6 +157,75 @@ def spot_detector(dir: str,
         confirm("Continuer ?", abort=True)
 
     main(dir, depths, csv_path, regex, config, proc)
+
+
+@cli.command
+@argument(
+    "path", type=click.Path(file_okay=True, dir_okay=False),
+)
+@option(
+    "-c", "--create", "--creer", is_flag=True, default=False,
+    help="Créée un ficher de configuration au chemin indiqué."
+)
+@option(
+    "-e", "--edit", "--editer",
+    is_flag=False, flag_value=1, default=0, type=click.INT,
+    help="Modifie la palette contenue dans le fichier indiqué. "
+         "Indiquer une valeur après l'option permet de changer le nombre de "
+         "nuances dans la palette. Une valeur de 1 reviens à ne pas indiquer "
+         "de valeur, et réutilise le nombre de nuances de l'ancienne palette. "
+         "Cette option est compatible avec l'option `-i`. Utiliser cette "
+         "option avec un fichier nouvellement créé nécessite l'option `-i`.",
+)
+@option(
+    "-i", "--from-image", "--depuis-image",
+    type=click.Path(),
+    help="Indique le chemin de l'image de référence de la palette. "
+         "Ne fonctionne que si l'option `-e` est activée.",
+)
+@option(
+    "-d", "--duplicate", "--dupliquer",
+    type=click.Path(file_okay=True, dir_okay=False),
+    help="Duplique le fichier du premier chemin indiqué vers le second. Si "
+         "cette option est utilisée avec l'option `e`, alors seul le "
+         "fichier de destination sera modifié. Cette option n'est pas "
+         "compatible avec l'option `-c`.",
+)
+def palette_editor(path,
+                   create,
+                   edit,
+                   from_image,
+                   duplicate,
+                   ):
+    # Abort in case of misuse
+    path = Path(path)
+    if duplicate is not None:
+        duplicate = Path(duplicate)
+        if not path.exists():
+            raise FileNotFoundError("Le fichier source n'existe pas")
+        if duplicate.suffix != ".toml":
+            raise FileError(
+                    "Le fichier de destination n'est pas un fichier .toml.")
+    if from_image is not None and not edit:
+        raise BadParameter("`-i` utilisé sans `-e`.")
+    if duplicate and create:
+        raise BadParameter("`-c utilisé avec `-d`.")
+    if path.suffix != '.toml':
+        raise FileError("Le fichier source n'est pas un fichier .toml.")
+    # HAPPY PATH
+    if create:
+        # aborts if user doesn't want to overwrite
+        confirm_new_cfg_file(path)
+        config: TOMLDocument = create_new_config()
+        TOMLFile(path).write(config)
+    elif duplicate:
+        # aborts if user doesn't want to overwrite
+        confirm_new_cfg_file(duplicate)
+        config: TOMLDocument = get_color_and_params(path)
+        TOMLFile(duplicate).write(config)
+        path = duplicate
+    if edit:
+        edit_config_file(edit, path, from_image)
 
 
 if __name__ == "__main__":

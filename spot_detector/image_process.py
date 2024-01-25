@@ -159,10 +159,10 @@ def crop_to_main_circle(src: NDArray) -> NDArray:
                                       minRadius=1000, maxRadius=1500)
             if circles is not None:
                 break
-            print(">", end='')
+            # print(">", end='')
         if circles is not None:
             break
-        print("_", end='')
+        # print("_", end='')
     if circles is None:
         return src
     x, y, radius = circles[0][0]

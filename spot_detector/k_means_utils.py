@@ -5,7 +5,7 @@ import csv
 from spot_detector.image_process import get_k_means
 # other dependancies
 import cv2 as cv
-import numpy as np
+from numpy.typing import NDArray
 
 
 class ImageView:
@@ -98,24 +98,66 @@ class ImageView:
         return self
 
 
-def reshape_image(img: np.ndarray, img_view: ImageView) -> np.ndarray:
+def reshape_image(img: NDArray, img_view: ImageView) -> NDArray:
     if img_view.scale == 1:
         return img
-    crop: np.ndarray = img[img_view.y: img_view.y + img_view.scaled_height,
-                           img_view.x: img_view.x + img_view.scaled_width]
-    reshaped = cv.resize(crop,
-                         [0, 0],
-                         None,
-                         img_view.scale,
-                         img_view.scale,
-                         cv.INTER_NEAREST)
+    crop: NDArray = img[img_view.y: img_view.y + img_view.scaled_height,
+                        img_view.x: img_view.x + img_view.scaled_width]
+    try:
+        reshaped = cv.resize(crop,
+                             None,
+                             None,
+                             img_view.scale,
+                             img_view.scale,
+                             cv.INTER_NEAREST)
+    except cv.error as e:
+        new_error = cv.error(
+                f"\nIMAGE: shape = {crop.shape}, type = {crop.dtype}"
+                f"\nCROP:  shape = {crop.shape}, type = {crop.dtype}")
+        raise new_error from e
     return reshaped
+
+
+def run_gui(labeled_img: NDArray, palette: NDArray) -> list[int]:
+    ct_size = palette.shape[0]
+    img_shape = [labeled_img.shape[0], labeled_img.shape[1], 3]
+    index = 0
+    image_view = ImageView(img_shape)
+    color_categories = [-1] * ct_size
+    highlighted_palette = palette.copy()
+    highlighted_palette[index, :] = [0, 0, 255]
+    img1 = palette[labeled_img.flatten()]
+    img1 = img1.reshape(img_shape)
+    img2 = highlighted_palette[labeled_img.flatten()]
+    img2 = img2.reshape(img_shape)
+    mem_index = index
+    while index >= 0:
+        if mem_index != index:
+            highlighted_palette = palette.copy()
+            highlighted_palette[index, :] = [0, 0, 255]
+            img2 = highlighted_palette[labeled_img.flatten()]
+            img2 = img2.reshape(img_shape)
+            mem_index = index
+        shown_img = img2 if image_view.is_alt_img else img1
+        shown_img = reshape_image(shown_img, image_view)
+        shown_img = draw_palette(shown_img,
+                                 palette,
+                                 index,
+                                 color_categories)
+        cv.imshow("palette tool", shown_img)
+        key = cv.waitKey()
+        image_view.window_action(key)
+        index, color_categories = other_actions(key,
+                                                index,
+                                                ct_size,
+                                                color_categories)
+    return color_categories
 
 
 def palette_maker() -> None:
     img = input_img()
     k = input_means()
-    lut, output, labels = get_k_means(img, k)
+    lut, _, labels = get_k_means(img, k)
     lut_size = lut.shape[0]
     index = 0
     image_view = ImageView(img.shape)
@@ -127,7 +169,6 @@ def palette_maker() -> None:
     img2 = lut2[labels.flatten()]
     img2 = img2.reshape(img.shape)
     mem_index = index
-
     while index >= 0:
         if mem_index != index:
             lut2 = lut.copy()
@@ -135,19 +176,16 @@ def palette_maker() -> None:
             img2 = lut2[labels.flatten()]
             img2 = img2.reshape(img.shape)
             mem_index = index
-
         shown_img = img2 if image_view.is_alt_img else img1
         shown_img = reshape_image(shown_img, image_view)
         shown_img = draw_palette(shown_img, lut, index, color_categories)
         cv.imshow("palette tool", shown_img)
-
         key = cv.waitKey()
         image_view.window_action(key)
         index, color_categories = other_actions(key,
                                                 index,
                                                 lut_size,
                                                 color_categories)
-
     with open("data.csv", 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['blue', 'green', 'red', 'category'])
@@ -177,15 +215,15 @@ def other_actions(key: int,
     return index, color_categories
 
 
-def draw_palette(img: np.ndarray,
-                 lut: np.ndarray,
+def draw_palette(img: NDArray,
+                 lut: NDArray,
                  index: int,
                  color_categories: list,
-                 ) -> np.ndarray:
+                 ) -> NDArray:
     for i in range(lut.shape[0]):
         offset = 20 + i * 120
         if i == index:
-            img[10: 130, offset - 10: offset + 110] = [0, 0, 255]
+            img[10: 130, offset - 10: offset + 110] = [255, 255, 255]
         img[20: 120, offset: offset + 100] = lut[i]
         cv.putText(img,
                    str(color_categories[i]),
@@ -194,10 +232,11 @@ def draw_palette(img: np.ndarray,
                    2,
                    [255, 255, 255],
                    thickness=4)
+
     return img
 
 
-def input_img() -> np.ndarray:
+def input_img() -> NDArray:
     _str = input("chemin de l'image : ")
     _path = Path(_str)
     if _str == "":
