@@ -1,9 +1,3 @@
-# Python standard library
-from pathlib import Path
-import csv
-# Project files
-from spot_detector.image_process import get_k_means
-# other dependancies
 import cv2 as cv
 from numpy.typing import NDArray
 
@@ -119,26 +113,21 @@ def reshape_image(img: NDArray, img_view: ImageView) -> NDArray:
 
 
 def run_gui(labeled_img: NDArray, palette: NDArray) -> list[int]:
-    ct_size = palette.shape[0]
+    palette_size = palette.shape[0]
     img_shape = [labeled_img.shape[0], labeled_img.shape[1], 3]
     index = 0
     image_view = ImageView(img_shape)
-    color_categories = [-1] * ct_size
+    color_categories = [-1] * palette_size
     highlighted_palette = palette.copy()
     highlighted_palette[index, :] = [0, 0, 255]
-    img1 = palette[labeled_img.flatten()]
-    img1 = img1.reshape(img_shape)
-    img2 = highlighted_palette[labeled_img.flatten()]
-    img2 = img2.reshape(img_shape)
-    mem_index = index
+    original = palette[labeled_img.flatten()]
+    original = original.reshape(img_shape)
+    hl_images = draw_all_highlights(labeled_img, palette)
     while index >= 0:
-        if mem_index != index:
-            highlighted_palette = palette.copy()
-            highlighted_palette[index, :] = [0, 0, 255]
-            img2 = highlighted_palette[labeled_img.flatten()]
-            img2 = img2.reshape(img_shape)
-            mem_index = index
-        shown_img = img2 if image_view.is_alt_img else img1
+        if image_view.is_alt_img:
+            shown_img = hl_images[index].copy()
+        else:
+            shown_img = original.copy()
         shown_img = reshape_image(shown_img, image_view)
         shown_img = draw_palette(shown_img,
                                  palette,
@@ -149,48 +138,21 @@ def run_gui(labeled_img: NDArray, palette: NDArray) -> list[int]:
         image_view.window_action(key)
         index, color_categories = other_actions(key,
                                                 index,
-                                                ct_size,
+                                                palette_size,
                                                 color_categories)
     return color_categories
 
 
-def palette_maker() -> None:
-    img = input_img()
-    k = input_means()
-    lut, _, labels = get_k_means(img, k)
-    lut_size = lut.shape[0]
-    index = 0
-    image_view = ImageView(img.shape)
-    color_categories = [-1] * lut_size
-    lut2 = lut.copy()
-    lut2[index, :] = [0, 0, 255]
-    img1 = lut[labels.flatten()]
-    img1 = img1.reshape(img.shape)
-    img2 = lut2[labels.flatten()]
-    img2 = img2.reshape(img.shape)
-    mem_index = index
-    while index >= 0:
-        if mem_index != index:
-            lut2 = lut.copy()
-            lut2[index, :] = [0, 0, 255]
-            img2 = lut2[labels.flatten()]
-            img2 = img2.reshape(img.shape)
-            mem_index = index
-        shown_img = img2 if image_view.is_alt_img else img1
-        shown_img = reshape_image(shown_img, image_view)
-        shown_img = draw_palette(shown_img, lut, index, color_categories)
-        cv.imshow("palette tool", shown_img)
-        key = cv.waitKey()
-        image_view.window_action(key)
-        index, color_categories = other_actions(key,
-                                                index,
-                                                lut_size,
-                                                color_categories)
-    with open("data.csv", 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['blue', 'green', 'red', 'category'])
-        for i in range(lut_size):
-            writer.writerow(list(lut[i, :]) + [color_categories[i]])
+def draw_all_highlights(labeled_img: NDArray, palette: NDArray):
+    images = []
+    for i in range(palette.shape[0]):
+        hl_palette = palette.copy()
+        hl_palette[i, :] = [0, 0, 255]  # 100% Red
+        hl_img = hl_palette[labeled_img.flatten()]
+        hl_img = hl_img.reshape((labeled_img.shape[0],
+                                 labeled_img.shape[1], 3))
+        images.append(hl_img)
+    return images
 
 
 def other_actions(key: int,
@@ -202,14 +164,8 @@ def other_actions(key: int,
         index = (index - 1) % max_index
     elif key == ord('e'):
         index = (index + 1) % max_index
-    elif key == ord('0'):
-        color_categories[index] = 0
-    elif key == ord('1'):
-        color_categories[index] = 1
-    elif key == ord('2'):
-        color_categories[index] = 2
-    elif key == ord('3'):
-        color_categories[index] = 3
+    elif key >= ord('0') and key <= ord('9'):
+        color_categories[index] = key - ord('0')
     elif key == ord('_'):
         index = -1
     return index, color_categories
@@ -220,6 +176,7 @@ def draw_palette(img: NDArray,
                  index: int,
                  color_categories: list,
                  ) -> NDArray:
+    img[:200, : 40 + lut.shape[0] * 120] = [127, 127, 127]
     for i in range(lut.shape[0]):
         offset = 20 + i * 120
         if i == index:
@@ -227,41 +184,9 @@ def draw_palette(img: NDArray,
         img[20: 120, offset: offset + 100] = lut[i]
         cv.putText(img,
                    str(color_categories[i]),
-                   (offset, 160),
+                   (offset, 180),
                    cv.FONT_HERSHEY_DUPLEX,
                    2,
                    [255, 255, 255],
                    thickness=4)
-
     return img
-
-
-def input_img() -> NDArray:
-    _str = input("chemin de l'image : ")
-    _path = Path(_str)
-    if _str == "":
-        return cv.imread('/Users/Louis/Desktop/test.JPG')
-    if not _path.is_file():
-        print(f"'{_path.stem}' n'est pas un fichier !\nFin de l'exécution.")
-        quit()
-    _image = cv.imread(str(_path))
-    if _image is None:
-        print(f"'{_path.stem}' n'est pas une image !\nFin de l'exécution.")
-        quit()
-    return _image
-
-
-def input_means() -> int:
-    _k = input("Nombre de moyennes : ")
-    if _k == '':
-        return 18
-    try:
-        _k = int(_k)
-    except ValueError:
-        print(f"{_k} n'est pas un entier !\nFin de l'exécution")
-        quit()
-    return _k
-
-
-if __name__ == "__main__":
-    palette_maker()

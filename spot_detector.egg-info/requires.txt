@@ -1,6 +1,6 @@
-opencv-python
-numpy
-scipy
-pydantic
-click
-tomlkit
+opencv-python>=4.9.0.80
+numpy>=1.26.3
+scipy>=1.11.4
+pydantic>=2.5.3
+click>=8.1.7
+tomlkit>=0.11.3

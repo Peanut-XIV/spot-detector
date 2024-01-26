@@ -10,6 +10,7 @@ from tomlkit.toml_document import TOMLDocument
 from pydantic import (Field, BaseModel, TypeAdapter,
                       ValidationError, field_validator)
 from pydantic_core.core_schema import FieldValidationInfo
+from click import BadParameter
 
 
 class ColorData(BaseModel):
@@ -175,3 +176,14 @@ def create_new_config() -> TOMLDocument:
     det_params.extend([default_det_params("lighter")])
     config.add("det_params", det_params)
     return config
+
+
+def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
+    try:
+        defaults = get_cli_defaults(defaults_file)
+    except ValidationError as e:
+        e2 = BadParameter("Le fichier de valeurs par"
+                          " défaut n'est pas valide",
+                          param_hint=["-d"])
+        raise e2 from e
+    return defaults

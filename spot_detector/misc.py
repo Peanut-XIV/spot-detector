@@ -1,5 +1,7 @@
 from typing import Optional
 from pathlib import Path
+from numpy.typing import NDArray
+import cv2 as cv
 
 
 def ask_img_dir(default_value: Optional[str]) -> Path:
@@ -42,3 +44,43 @@ def ask_regex(default_value: Optional[str]) -> str:
     if motif == "":
         motif = default_value
     return motif
+
+
+def fit_elements(elements: list[str]) -> list[str]:
+    output = []
+    line = ""
+    for element in elements:
+        if len(line) + len(element) > 80:
+            output.append(line)
+            line = ""
+        line += element
+        line += (20 - (len(line) % 20)) * " "
+    output.append(line)
+    return output
+
+
+def input_img() -> NDArray:
+    _str = input("chemin de l'image : ")
+    _path = Path(_str)
+    if _str == "":
+        return cv.imread('/Users/Louis/Desktop/test.JPG')
+    if not _path.is_file():
+        print(f"'{_path.stem}' n'est pas un fichier !\nFin de l'exécution.")
+        quit()
+    _image = cv.imread(str(_path))
+    if _image is None:
+        print(f"'{_path.stem}' n'est pas une image !\nFin de l'exécution.")
+        quit()
+    return _image
+
+
+def input_means() -> int:
+    _k = input("Nombre de moyennes : ")
+    if _k == '':
+        return 18
+    try:
+        _k = int(_k)
+    except ValueError:
+        print(f"{_k} n'est pas un entier !\nFin de l'exécution")
+        quit()
+    return _k

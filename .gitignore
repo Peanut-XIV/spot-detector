@@ -7,4 +7,5 @@ spot_detector/__pycache__/*
 tests/__pycache__/*
 .idea/*
 venv/*
+scripts/*
 

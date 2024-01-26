@@ -1,0 +1,2 @@
+[console_scripts]
+spot-detector = spot_detector.__main__:cli

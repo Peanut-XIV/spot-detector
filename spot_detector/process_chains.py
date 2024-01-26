@@ -1,9 +1,25 @@
 # Python standard library
 from pathlib import Path
-from time import perf_counter
+from time import perf_counter, sleep
+from multiprocessing import Queue, Process, parent_process
+from typing import Union
 # Project files
-import spot_detector.image_process as proc
-from spot_detector.config import DetParams
+from .config import DetParams, ColorAndParams
+from .types import DataElement, ImageElement
+from .transformations import (
+        diff_of_gaussian,
+        crop_to_main_circle,
+        keep_green_cyan,
+        keep_red_yellow,
+        setup_green_params,
+        setup_orange_params,
+        setup_green_params_faster,
+        setup_orange_params_faster,
+        label_img_fastest,
+        isolate_categories,
+        evenly_spaced_gray_palette,
+)
+# Other
 from numpy.typing import NDArray
 import numpy as np
 import cv2 as cv
@@ -17,21 +33,21 @@ def count_spots_first_method(_path: str | Path,
     _path = str(_path)
     original = cv.imread(_path)  # Pixel format is BGR
     print("|", end='')
-    original = proc.crop_to_main_circle(original)
+    original = crop_to_main_circle(original)
     print("|", end='')
     hls = cv.cvtColor(original, cv.COLOR_BGR2HLS_FULL)
     hue = hls[:, :, 0]
     lightness = hls[:, :, 1]
     # process orange
     orange_part =\
-        proc.diff_of_gaussian(lightness, 1, 15) * proc.keep_red_yellow(hue)
-    detector = cv.SimpleBlobDetector.create(proc.setup_orange_params())
+        diff_of_gaussian(lightness, 1, 15) * keep_red_yellow(hue)
+    detector = cv.SimpleBlobDetector.create(setup_orange_params())
     orange_keypoints = detector.detect(orange_part)
     print("|", end='')
     # process green
     green_part =\
-        proc.diff_of_gaussian(lightness, 5, 20) * proc.keep_green_cyan(hue)
-    detector = cv.SimpleBlobDetector.create(proc.setup_green_params())
+        diff_of_gaussian(lightness, 5, 20) * keep_green_cyan(hue)
+    detector = cv.SimpleBlobDetector.create(setup_green_params())
     green_keypoints = detector.detect(green_part)
     # Debug options
     if debug >= 1:
@@ -50,33 +66,33 @@ def count_spots_second_method(_path: str | Path, color_table: NDArray):
         _path = str(_path)
     img = cv.imread(_path)  # Pixel format is BGR
     print("| Cropping ", end='')
-    img = proc.crop_to_main_circle(img)
+    img = crop_to_main_circle(img)
     print("| Labeling ", end='')
     # load palette
     t0 = perf_counter()
-    labeled_img = np.uint8(proc.label_img_fastest(img, color_table))
+    labeled_img = np.uint8(label_img_fastest(img, color_table))
     print(f"{perf_counter() - t0:.2f} ", end='')
     # make orange / green image
     print("| masking 1 ", end='')
-    isolated_orange = proc.isolate_categories(color_table, (1, 3))
+    isolated_orange = isolate_categories(color_table, (1, 3))
     gs_orange_palette =\
-        np.uint8(proc.evenly_spaced_gray_palette(isolated_orange))
+        np.uint8(evenly_spaced_gray_palette(isolated_orange))
     gs_orange = gs_orange_palette[labeled_img.flatten()]
     gs_orange = gs_orange.reshape(labeled_img.shape)
     print("| masking 2 ", end='')
-    isolated_green = proc.isolate_categories(color_table, (2, 3))
+    isolated_green = isolate_categories(color_table, (2, 3))
     gs_green_palette = np.uint8(
-            proc.evenly_spaced_gray_palette(isolated_green))
+            evenly_spaced_gray_palette(isolated_green))
     gs_green = gs_green_palette[labeled_img.flatten()]
     gs_green = gs_green.reshape(labeled_img.shape)
     # simple blob detector
     print("| detection 1 ", end='')
     detector = cv.SimpleBlobDetector.create(
-        proc.setup_orange_params_faster(gs_orange_palette.shape[0]))
+        setup_orange_params_faster(gs_orange_palette.shape[0]))
     orange_kp = detector.detect(gs_orange)
     print("| detection 2 ", end='')
     detector = cv.SimpleBlobDetector.create(
-        proc.setup_green_params_faster(gs_green_palette.shape[0]))
+        setup_green_params_faster(gs_green_palette.shape[0]))
     green_kp = detector.detect(gs_green)
     return len(orange_kp), len(green_kp)
 
@@ -86,16 +102,16 @@ def count_spots_third_method(img: NDArray,
                              color_table: NDArray,
                              detectors: list,
                              ):
-    img = proc.crop_to_main_circle(img)
-    labeled = proc.label_img_fastest(img, color_table)
+    img = crop_to_main_circle(img)
+    labeled = label_img_fastest(img, color_table)
     values = []
     for i, detector in enumerate(detectors):
         if detector.empty():
             values.append(0)
             continue
         i += 1  # 0 is the bg
-        isolated_color = proc.isolate_categories(color_table, [i])
-        gs_palette = proc.evenly_spaced_gray_palette(isolated_color)
+        isolated_color = isolate_categories(color_table, [i])
+        gs_palette = evenly_spaced_gray_palette(isolated_color)
         gs_img = gs_palette[labeled.flatten()]
         gs_img = gs_img.reshape(labeled.shape)
         key_points = detector.detect(gs_img)
@@ -108,15 +124,15 @@ def count_spots_fourth_method(img: NDArray,
                               det_params: list[DetParams],
                               debug: int = 0,
                               ) -> list[int]:
-    img = proc.crop_to_main_circle(img)
-    labeled = proc.label_img_fastest(img, color_table)
+    img = crop_to_main_circle(img)
+    labeled = label_img_fastest(img, color_table)
     values = []
     for i, settings in enumerate(det_params):
         detector = cv.SimpleBlobDetector.create(
                 load_params(settings, len(color_table)))
         j = i + 1  # 0 is the bg
-        isolated_color = proc.isolate_categories(color_table, [j])
-        gs_palette = proc.evenly_spaced_gray_palette(isolated_color)
+        isolated_color = isolate_categories(color_table, [j])
+        gs_palette = evenly_spaced_gray_palette(isolated_color)
         gs_img = gs_palette[labeled.flatten()]
         gs_img = np.uint8(gs_img.reshape(labeled.shape))
         key_points = detector.detect(gs_img)
@@ -177,3 +193,67 @@ def load_params(det_params: DetParams,
         if "maxi" in convex:
             params.maxConvexity = convex["maxi"]
     return params
+
+
+def init_workers(count: int,
+                 config: ColorAndParams,
+                 in_queue: Queue,
+                 out_queue: Queue,
+                 ) -> list[Process]:
+    """
+    Créée un ensemble d'objets `multiprocessing.Process` mais n'invoque pas
+    leur méthode `.start()`.
+          `count`: Le nombre de Process à créer.
+    `color_table`: La table contenant les informations nécessaire pour
+                 simplifier les images. C'est une liste de liste
+                 d'entiers et pas un array numpy car la table doit
+                 être pickleable.
+       `in_queue`: L'objet qui apporte les ImageElements aux processus.
+      `out_queue`: L'objet qui réccupère les données produites par les
+                 processus.
+         `return`: La liste des Process.
+    """
+    # TODO create detectors from
+    workers_list = []
+    for i in range(count):
+        worker = Process(
+            target=img_processer,
+            args=(in_queue, out_queue, config)
+        )
+        workers_list.append(worker)
+    return workers_list
+
+
+def img_processer(in_queue: Queue,
+                  out_queue: Queue,
+                  config: ColorAndParams,
+                  ) -> None:
+    """
+    La fonction qui attend les instructions et traites les `ImageElements` qui
+    lui sont transmis par la `in_queue` et renvoie le résultat par la
+    `out_queue`.
+       `in_queue`: L'objet `multiprocessing.Queue` depuis lequel arrive les
+                 les `ImageElements`.
+      `out_queue`: L'objet `multiprocessing.Queue` dans lequel les valeurs
+                 calculées sont retournées.
+    `color_table`: La table contenant les informations nécessaires pour
+                 simplifier les images. C'est une liste de listes d'entiers
+                 et pas un array Numpy car la table doit être pickleable.
+         `return`: Rien.
+    """
+    color_table = np.array(config["color_data"]["table"])
+    parent = parent_process()
+    while parent.is_alive():
+        if in_queue.empty():
+            sleep(1)
+        else:
+            job: Union[str, ImageElement] = in_queue.get()
+            if job == "STOP":
+                break
+            folder_row, depth_col, path = job
+            img = cv.imread(path)
+            values = count_spots_fourth_method(img,
+                                               color_table,
+                                               config["det_params"])
+            result: DataElement = (folder_row, depth_col, values)
+            out_queue.put(result)

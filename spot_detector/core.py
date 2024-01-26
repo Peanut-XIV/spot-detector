@@ -3,17 +3,13 @@ from multiprocessing import Queue, Process
 from pathlib import Path
 import time
 # Project files
-from spot_detector.image_process import label_img_fastest
-from spot_detector.file_utils import (read_csv, write_csv, fetch_csv,
-                                      sorted_sub_dirs, unprocessed_images
-                                      )
-from spot_detector.k_means_utils import run_gui, get_k_means
-from spot_detector.multi_core import init_workers
-from spot_detector.config import (get_color_and_params,
-                                  ColorAndParams,
-                                  default_det_params,
-                                  )
-from spot_detector.types import DataRow, DataTable, DataElement
+from .transformations import label_img_fastest, get_k_means
+from .process_chains import init_workers
+from .file_utils import (
+        read_csv, write_csv, fetch_csv, sorted_sub_dirs, unprocessed_images)
+from .palette_gui import run_gui
+from .config import get_color_and_params, ColorAndParams, default_det_params
+from .types import DataRow, DataTable, DataElement
 # Other
 import numpy as np
 import numpy.typing as npT
@@ -66,13 +62,13 @@ def any_alive(worker_list: list[Process]) -> bool:
     return any(status_list)
 
 
-def main(image_dir: str | Path,
-         depths: list[str],
-         csv_path: str | Path,
-         regex: str,
-         config_path: str | Path,
-         proc: int,
-         ) -> None:
+def detect(image_dir: str | Path,
+           depths: list[str],
+           csv_path: str | Path,
+           regex: str,
+           config_path: str | Path,
+           proc: int,
+           ) -> None:
     # TODO: if the csv file already exists, check for coherence between
     #       number of colors, depths and dimensions of the csv file
     config_path = Path(config_path)

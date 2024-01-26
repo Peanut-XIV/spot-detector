@@ -1,18 +1,18 @@
 Metadata-Version: 2.1
-Name: spot_detector
-Version: 2024.0.0
-Summary: FR: Spot-detector est un programme en interface en ligne de commande (CLI) quicompte les luminophores dans un ensemble d'images, et qui range les résultatsdans un fichier .csv. Il est configurable afin de compter plusieurs couleurssimultanément, de filter les luminophores selon leur forme et d'enregister desparamètres par défaut.
+Name: spot-detector
+Version: 2024.1.0
+Summary: FR: Une application en CLI configurable qui compte les points dans des images
 Author-email: Louis Lanoy <louis.lanoy@icloud.com>
 Project-URL: Homepage, https://github.com/Peanut-XIV/spot-detector
 Project-URL: Issues, https://github.com/Peanut-XIV/spot-detector/issues
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
-Requires-Dist: opencv-python
-Requires-Dist: numpy
-Requires-Dist: scipy
-Requires-Dist: pydantic
-Requires-Dist: click
-Requires-Dist: tomlkit
+Requires-Dist: opencv-python>=4.9.0.80
+Requires-Dist: numpy>=1.26.3
+Requires-Dist: scipy>=1.11.4
+Requires-Dist: pydantic>=2.5.3
+Requires-Dist: click>=8.1.7
+Requires-Dist: tomlkit>=0.11.3
 
 # Spot Detector
 
@@ -41,7 +41,22 @@ Par exemple, le tableau peut prendre la forme suivante :
 
 ---
 
+## Installation :
+
+Pour l'instant, l'installation du programme se fait en clonant le projet localement, via l'invite de commande.
+
+#### sur MacOS :
+
+Ouvrez le Finder et allez dans le dossier `Applications/Utilitaires` et double-cliquez sur `Terminal`.
+Puis entrez
+```
+cd ~
+
+git clone
+```
+
 ## Comment l'utiliser :
+
 
 ### Le dossier de travail
 

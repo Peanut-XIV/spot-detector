@@ -1,77 +1,38 @@
 # Python standard library
 from pathlib import Path
-from os import mkdir
 # Project files
-from spot_detector.config import (get_cli_defaults, get_color_and_params,
-                                  CLIDefaults, create_new_config,
-                                  )
-from spot_detector.file_utils import check_img_count
-from spot_detector.main import main, edit_config_file
+from .config import (
+        get_color_and_params,
+        create_new_config,
+        get_defaults_or_error,
+)
+from .misc import fit_elements
+from .file_utils import check_img_count, confirm_new_cfg_file
+from .core import detect, edit_config_file
 # Other dependancies
 import click
 from tomlkit import TOMLDocument
 from tomlkit.toml_file import TOMLFile
-from pydantic import ValidationError
-from click import (BadParameter, FileError, group, argument,
-                   option, echo, confirm, STRING,
-                   )
+from click import (
+        BadParameter,
+        FileError,
+        command,
+        argument,
+        option,
+        echo,
+        confirm,
+)
 
 
-def confirm_new_cfg_file(path):
-    if path.exists():
-        if not path.is_file():
-            raise FileError("Le chemin ne désigne pas un fichier.")
-        confirm("Ce fichier existe déjà. "
-                "Souhaitez-vous écrire par dessus ?",
-                abort=True)
-    else:
-        if not path.parent.exists():
-            confirm("Ce chemin n'existe pas encore. "
-                    "Créer les dossiers manquants ?",
-                    abort=True)
-            mkdir(path.parent)
-
-
-def fit_elements(elements: list[str]) -> list[str]:
-    output = []
-    line = ""
-    for element in elements:
-        if len(line) + len(element) > 80:
-            output.append(line)
-            line = ""
-        line += element
-        line += (20 - (len(line) % 20)) * " "
-    output.append(line)
-    return output
-
-
-def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
-    try:
-        defaults = get_cli_defaults(defaults_file)
-    except ValidationError as e:
-        e2 = BadParameter("Le fichier de valeurs par"
-                          " défaut n'est pas valide",
-                          param_hint=["-d"])
-        raise e2 from e
-    return defaults
-
-
-@group
-def cli():
-    pass
-
-
-@cli.command
+@command()
 @argument(
     "dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
 )
 @argument(
     "config",
-    type=click.Path(file_okay=True,
-                    dir_okay=True,
-                    resolve_path=True,
-                    path_type=Path),
+    type=click.Path(file_okay=True, dir_okay=True,
+                    resolve_path=True, path_type=Path),
     default=str(Path.home().joinpath(".spot-detector/config.toml")),
 )
 @option(
@@ -82,22 +43,19 @@ def cli():
 )
 @option(
     "-d", "--vals-par-defaut", "--defaults", "defaults_file",
-    type=click.Path(exists=True,
-                    file_okay=True,
-                    dir_okay=False,
-                    resolve_path=True,
-                    path_type=Path),
+    type=click.Path(exists=True, file_okay=True, dir_okay=False,
+                    resolve_path=True, path_type=Path),
     default=str(Path.home().joinpath(".spot-detector/defaults.toml")),
     help="Le chemin du dossier de configuration du programme."
 )
 @option(
-    "-p", "--profondeurs", "depths", type=STRING, default=None,
+    "-p", "--profondeurs", "depths", type=click.STRING, default=None,
     help="Les valeurs de profondeur présentes dans le nom des images, "
          "séprarées par des espaces le tout entre deux guillemets. "
          "Exemple : `spot-detector ./chemin/dossier -d=\"1 2 3 4 5\"`",
 )
 @option(
-    "-r", "--regex", type=STRING, default=None,
+    "-r", "--regex", type=click.STRING, default=None,
     help="L'expression régulière qui décrit le nom des images à traiter. "
          "Doit être écrite entre deux apostrophes. Utilisez $value pour "
          "insérer la valeur de profondeur correspondante. "
@@ -116,28 +74,26 @@ def cli():
          "limité par la mémoire vive.",
 )
 @option("-y", is_flag=True, flag_value=True, default=False)
-def spot_detector(dir: str,
-                  config: str,
-                  no_default: bool,
-                  defaults_file: str,
-                  depths: list[str],
-                  regex: str,
-                  csv_path: str,
-                  y: bool,
-                  proc: int,
-                  ) -> None:
+def detector(dir: str,
+             config: str,
+             no_default: bool,
+             defaults_file: str,
+             depths: list[str],
+             regex: str,
+             csv_path: str,
+             y: bool,
+             proc: int,
+             ) -> None:
     if not no_default:
         defaults = get_defaults_or_error(defaults_file)
         dir = dir or defaults["image_dir"]
         csv_path = csv_path or defaults["csv_path"]
         regex = regex or defaults["regex"]
         depths = depths or defaults["depths"]
-
     csv = Path(csv_path)
     if csv.exists() and not y:
         confirm(f"{csv.name} existe déjà. Traiter les images manquantes ?",
                 abort=True)
-
     sdirs = list(filter(lambda x: x.is_dir(), Path(dir).iterdir()))
     mismatches, counts = check_img_count(len(depths), sdirs)
     if mismatches and not y:
@@ -156,10 +112,10 @@ def spot_detector(dir: str,
                  f" que {len(depths)} étaient attendues.")
         confirm("Continuer ?", abort=True)
 
-    main(dir, depths, csv_path, regex, config, proc)
+    detect(dir, depths, csv_path, regex, config, proc)
 
 
-@cli.command
+@command()
 @argument(
     "path", type=click.Path(file_okay=True, dir_okay=False),
 )
@@ -226,7 +182,3 @@ def palette_editor(path,
         path = duplicate
     if edit:
         edit_config_file(edit, path, from_image)
-
-
-if __name__ == "__main__":
-    cli()

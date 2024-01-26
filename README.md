@@ -25,7 +25,22 @@ Par exemple, le tableau peut prendre la forme suivante :
 
 ---
 
+## Installation :
+
+Pour l'instant, l'installation du programme se fait en clonant le projet localement, via l'invite de commande.
+
+#### sur MacOS :
+
+Ouvrez le Finder et allez dans le dossier `Applications/Utilitaires` et double-cliquez sur `Terminal`.
+Puis entrez
+```
+cd ~
+
+git clone
+```
+
 ## Comment l'utiliser :
+
 
 ### Le dossier de travail
 

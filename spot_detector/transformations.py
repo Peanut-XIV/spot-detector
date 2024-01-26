@@ -5,7 +5,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy import signal
 # Project files
-from spot_detector.types import T
+from .types import T
 
 
 # Obsolete

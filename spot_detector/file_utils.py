@@ -1,16 +1,14 @@
 # Python standard library
 import string
 from pathlib import Path
+from os import mkdir
 import csv
 import re
 # Project Files
-from spot_detector.types import (
-        DataRow,
-        DataTable,
-        ImageElement,
-)
+from .types import DataRow, DataTable, ImageElement
 # Other dependancies
 import numpy as np
+from click import confirm, FileError
 
 
 im_ext = re.compile(r".+\.(jpe?g|JPE?G|png|PNG)")
@@ -306,3 +304,18 @@ def match_dir_items(dir: str | Path,
     regex = re.compile(pattern)
     dir = Path(dir)
     return list(filter(lambda x: regex.fullmatch(x.name), dir.iterdir()))
+
+
+def confirm_new_cfg_file(path):
+    if path.exists():
+        if not path.is_file():
+            raise FileError("Le chemin ne désigne pas un fichier.")
+        confirm("Ce fichier existe déjà. "
+                "Souhaitez-vous écrire par dessus ?",
+                abort=True)
+    else:
+        if not path.parent.exists():
+            confirm("Ce chemin n'existe pas encore. "
+                    "Créer les dossiers manquants ?",
+                    abort=True)
+            mkdir(path.parent)
