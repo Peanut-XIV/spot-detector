@@ -1,15 +1,16 @@
 # Python standard library
-import string
-from pathlib import Path
-from os import mkdir
 import csv
 import re
-# Project Files
-from .types import DataRow, DataTable, ImageElement
+import string
+from os import mkdir
+from pathlib import Path
+
 # Other dependancies
 import numpy as np
-from click import confirm, FileError
+from click import FileError, confirm
 
+# Project Files
+from .types import DataRow, DataTable, ImageElement
 
 im_ext = re.compile(r".+\.(jpe?g|JPE?G|png|PNG)")
 
@@ -22,16 +23,17 @@ def read_csv(csv_file: str | Path) -> DataTable:
       `return`: la table, qui est une liste de liste de chaines de caractères.
     """
     table = []
-    with open(Path(csv_file), "r", newline='') as file:
-        reader = csv.reader(file, dialect='unix')
+    with open(Path(csv_file), "r", newline="") as file:
+        reader = csv.reader(file, dialect="unix")
         for line in reader:
             table.append(line)
     return table
 
 
-def write_csv(csv_file: str | Path,
-              table: DataTable,
-              ) -> None:
+def write_csv(
+    csv_file: str | Path,
+    table: DataTable,
+) -> None:
     """
     Enregistre les valeurs du tableau `table` dans le fichier csv donné.
     `csv_file`: L'objet de chemin du fichier en question.
@@ -39,15 +41,16 @@ def write_csv(csv_file: str | Path,
               enregistrées dans le fichier csv.
       `return`: Rien.
     """
-    with open(Path(csv_file), 'w', newline='') as file:
+    with open(Path(csv_file), "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerows(table)
 
 
-def is_valid_csv(file: str | Path,
-                 expected_rows: int,
-                 expected_cols: int,
-                 ) -> bool:
+def is_valid_csv(
+    file: str | Path,
+    expected_rows: int,
+    expected_cols: int,
+) -> bool:
     contents = []
     with open(file, "r", newline="") as io_stream:
         reader = csv.reader(io_stream)
@@ -61,11 +64,12 @@ def is_valid_csv(file: str | Path,
     return True
 
 
-def fetch_csv(csv_path: str | Path,
-              depths: list[str],
-              colors: list[str],
-              sub_directories: list[Path],
-              ) -> Path:
+def fetch_csv(
+    csv_path: str | Path,
+    depths: list[str],
+    colors: list[str],
+    sub_directories: list[Path],
+) -> Path:
     """
     Retourne l'objet de chemin du fichier `csv_path` s'il existe. Sinon, la
     fonction en créée un nouveau correspondant aux différentes valeurs
@@ -95,18 +99,19 @@ def fetch_csv(csv_path: str | Path,
     empty_part = [""] * (col_count - 1)
     rows = []
     for sub_dir in sub_directories:
-        if sub_dir.is_dir() and sub_dir.name[0] != '.':
+        if sub_dir.is_dir() and sub_dir.name[0] != ".":
             rows.append([sub_dir.name] + empty_part)
-    with open(path_obj, "x+", newline='') as csv_file:
-        writer = csv.writer(csv_file, dialect='unix')
+    with open(path_obj, "x+", newline="") as csv_file:
+        writer = csv.writer(csv_file, dialect="unix")
         writer.writerows((label_row_1, label_row_2))
         writer.writerows(rows)
     return path_obj
 
 
-def first_two_rows(depths: list[str],
-                   colors: list[str],
-                   ) -> tuple[DataRow, DataRow]:
+def first_two_rows(
+    depths: list[str],
+    colors: list[str],
+) -> tuple[DataRow, DataRow]:
     """
     Créée les deux premières ligne du document csv.
     La première indique la catégorie de donnée (couleur, total - nbr, %tage).
@@ -144,12 +149,13 @@ def map_folder_to_row(table: DataTable) -> dict[str, int]:
     return f2r_dict
 
 
-def unprocessed_images(sub_directories: list[Path],
-                       csv_file: str | Path,
-                       depths: list[str],
-                       colors: list[str],
-                       regex: str,
-                       ) -> list[ImageElement]:
+def unprocessed_images(
+    sub_directories: list[Path],
+    csv_file: str | Path,
+    depths: list[str],
+    colors: list[str],
+    regex: str,
+) -> list[ImageElement]:
     """
     Donne les images présentes dans les différents dossiers `sub_directories`
     qui n'ont pas été traitées et dont les valeurs ne sont pas indiquées dans
@@ -175,8 +181,10 @@ def unprocessed_images(sub_directories: list[Path],
         for depth_nbr, depth in enumerate(depths):
             matching_files = match_dir_items(sub_dir, regex, depth)
             if len(matching_files) > 1:
-                print("Attention, plusieurs images correspondent à la même"
-                      f"profondeur dans le dossier {sub_dir.name} :")
+                print(
+                    "Attention, plusieurs images correspondent à la même"
+                    f"profondeur dans le dossier {sub_dir.name} :"
+                )
                 print([file.name for file in matching_files])
             img: ImageElement = (row_nbr, depth_nbr, str(matching_files[0]))
             if is_img_processed(img, table, len(depths), len(colors)):
@@ -186,11 +194,12 @@ def unprocessed_images(sub_directories: list[Path],
     return unprocessed
 
 
-def is_img_processed(img: ImageElement,
-                     table: DataTable,
-                     depth_count: int,
-                     color_count: int,
-                     ) -> bool:
+def is_img_processed(
+    img: ImageElement,
+    table: DataTable,
+    depth_count: int,
+    color_count: int,
+) -> bool:
     """
     Indique si l'image `img` a déjà été traitée dans `table`.
     Nécessite le nombre de couleurs différentes `color_count`
@@ -210,7 +219,7 @@ def is_img_processed(img: ImageElement,
     start = 1 + col_num
     stop = color_count * depth_count
     step = depth_count
-    val_unfilled = [val == '' for val in row[start: stop: step]]
+    val_unfilled = [val == "" for val in row[start:stop:step]]
     if any(val_unfilled):
         return False
     else:
@@ -229,9 +238,10 @@ def sorted_sub_dirs(path: str | Path) -> list[Path]:
     return sorted(subs)
 
 
-def incoherent_file(file_path: str | Path,
-                    should_exist: bool,
-                    ) -> bool:
+def incoherent_file(
+    file_path: str | Path,
+    should_exist: bool,
+) -> bool:
     obj = Path(file_path)
     is_file = obj.exists() and obj.is_file()
     return is_file == should_exist
@@ -245,9 +255,10 @@ def count_images(dir: Path) -> int:
     return sum(map(is_im_file, dir.iterdir()))
 
 
-def check_img_count(expected: int,
-                    dossiers: list[Path],
-                    ) -> tuple[int, list[int]]:
+def check_img_count(
+    expected: int,
+    dossiers: list[Path],
+) -> tuple[int, list[int]]:
     image_counts = list(map(count_images, dossiers))
     mismatches = len(list(filter(lambda n_im: n_im != expected, image_counts)))
     return mismatches, image_counts
@@ -256,13 +267,13 @@ def check_img_count(expected: int,
 # Not used
 def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
     color_table = []
-    with open(path, "r", newline='') as file:
+    with open(path, "r", newline="") as file:
         reader = csv.reader(file)
         for line in reader:
             color_table.append(line)
     # eliminate first row (labels) and last row if empty
-    if color_table[-1] == [''] * len(color_table[0]):
-        color_table = color_table[1: -1]
+    if color_table[-1] == [""] * len(color_table[0]):
+        color_table = color_table[1:-1]
     else:
         color_table = color_table[1:]
     color_table = map(lambda L: list(map(int, L)), color_table)
@@ -271,9 +282,10 @@ def get_color_table_array(path: str = "data_good.csv") -> np.ndarray:
 
 
 # Obsolete
-def get_unprocessed_directories(csv_path: str | Path,
-                                main_dir: str | Path,
-                                ) -> tuple[bool, list[Path]]:
+def get_unprocessed_directories(
+    csv_path: str | Path,
+    main_dir: str | Path,
+) -> tuple[bool, list[Path]]:
     if not Path(csv_path).exists():
         dirs = [subd for subd in Path(main_dir).iterdir() if subd.is_dir()]
         return False, dirs
@@ -281,7 +293,7 @@ def get_unprocessed_directories(csv_path: str | Path,
     csv_exists = False
     if Path(csv_path).exists():
         csv_exists = True
-        with open(csv_path, "r", newline='') as tableur:
+        with open(csv_path, "r", newline="") as tableur:
             reader = csv.reader(tableur)
             reader.__next__()
             reader.__next__()
@@ -295,10 +307,11 @@ def get_unprocessed_directories(csv_path: str | Path,
     return csv_exists, unprocessed_directories
 
 
-def match_dir_items(dir: str | Path,
-                    pattern: str,
-                    inserted_value: str,
-                    ) -> list[Path]:
+def match_dir_items(
+    dir: str | Path,
+    pattern: str,
+    inserted_value: str,
+) -> list[Path]:
     pattern = string.Template(pattern)
     pattern = pattern.substitute(value=re.escape(inserted_value))
     regex = re.compile(pattern)
@@ -310,12 +323,15 @@ def confirm_new_cfg_file(path):
     if path.exists():
         if not path.is_file():
             raise FileError("Le chemin ne désigne pas un fichier.")
-        confirm("Ce fichier existe déjà. "
-                "Souhaitez-vous écrire par dessus ?",
-                abort=True)
+        confirm(
+            "Ce fichier existe déjà. " "Souhaitez-vous écrire par dessus ?",
+            abort=True,
+        )
     else:
         if not path.parent.exists():
-            confirm("Ce chemin n'existe pas encore. "
-                    "Créer les dossiers manquants ?",
-                    abort=True)
+            confirm(
+                "Ce chemin n'existe pas encore. "
+                "Créer les dossiers manquants ?",
+                abort=True,
+            )
             mkdir(path.parent)

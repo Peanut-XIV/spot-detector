@@ -29,3 +29,19 @@ spot-detector = "spot_detector.__main__:cli"
 requires = ["setuptools>=61.0", "opencv-python", "numpy",
 			"scipy", "pydantic", "click", "tomlkit"]
 build-backend = "setuptools.build_meta"
+
+[tool.pylint.main]
+init-hook = """
+try:
+	import pylint_venv
+except ImportError:
+	pass
+else:
+	pylint_venv.inithook()
+"""
+extension-pkg-allow-list = ["cv2"]
+generated-member = ["cv.*"]
+disable = ["E1136"]
+
+[tool.mypy]
+python_executable = "./venv/bin/python"

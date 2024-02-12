@@ -1,13 +1,14 @@
-from typing import Optional
 from pathlib import Path
-from numpy.typing import NDArray
+from typing import Optional
+
 import cv2 as cv
+from numpy.typing import NDArray
 
 
 def ask_img_dir(default_value: Optional[str]) -> Path:
     chemin_dossier = input(
-            "Chemin du dossier contenant les sous-dossiers d'image:\n"
-            f"{default_value} par défaut\n"
+        "Chemin du dossier contenant les sous-dossiers d'image:\n"
+        f"{default_value} par défaut\n"
     )
     if chemin_dossier == "":
         chemin_dossier = default_value
@@ -16,8 +17,7 @@ def ask_img_dir(default_value: Optional[str]) -> Path:
 
 def ask_depths(default_value: Optional[list[str]]) -> list[str]:
     profondeurs = input(
-        "Liste de valeurs de profondeur\n"
-        f"{default_value} par défaut\n"
+        "Liste de valeurs de profondeur\n" f"{default_value} par défaut\n"
     )
     if profondeurs == "":
         profondeurs = default_value
@@ -28,8 +28,7 @@ def ask_depths(default_value: Optional[list[str]]) -> list[str]:
 
 def ask_csv_path(default_value: Optional[str]) -> str:
     chemin_tableur = input(
-        "Chemin du document csv :\n"
-        f"{default_value} par défaut\n"
+        "Chemin du document csv :\n" f"{default_value} par défaut\n"
     )
     if chemin_tableur == "":
         chemin_tableur = default_value
@@ -63,7 +62,7 @@ def input_img() -> NDArray:
     _str = input("chemin de l'image : ")
     _path = Path(_str)
     if _str == "":
-        return cv.imread('/Users/Louis/Desktop/test.JPG')
+        return cv.imread("/Users/Louis/Desktop/test.JPG")
     if not _path.is_file():
         print(f"'{_path.stem}' n'est pas un fichier !\nFin de l'exécution.")
         quit()
@@ -76,7 +75,7 @@ def input_img() -> NDArray:
 
 def input_means() -> int:
     _k = input("Nombre de moyennes : ")
-    if _k == '':
+    if _k == "":
         return 18
     try:
         _k = int(_k)

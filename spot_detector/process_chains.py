@@ -1,107 +1,129 @@
-# Python standard library
+from multiprocessing import Process, Queue, parent_process
 from pathlib import Path
 from time import perf_counter, sleep
-from multiprocessing import Queue, Process, parent_process
 from typing import Union
-# Project files
-from .config import DetParams, ColorAndParams
-from .types import DataElement, ImageElement
-from .transformations import (
-        diff_of_gaussian,
-        crop_to_main_circle,
-        keep_green_cyan,
-        keep_red_yellow,
-        setup_green_params,
-        setup_orange_params,
-        setup_green_params_faster,
-        setup_orange_params_faster,
-        label_img_fastest,
-        isolate_categories,
-        evenly_spaced_gray_palette,
-)
-# Other
-from numpy.typing import NDArray
-import numpy as np
+
 import cv2 as cv
-from cv2 import DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS as RICH_KEYPOINTS
+import numpy as np
+from numpy.typing import NDArray
+
+from .config import ColorAndParams, DetParams
+from .transformations import (crop_to_main_circle, diff_of_gaussian,
+                              evenly_spaced_gray_palette, isolate_categories,
+                              keep_green_cyan, keep_red_yellow,
+                              label_img_fastest, setup_green_params,
+                              setup_green_params_faster, setup_orange_params,
+                              setup_orange_params_faster)
+from .types import DataElement, ImageElement
+
+RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
 
 # Obsolete
-def count_spots_first_method(_path: str | Path,
-                             debug: int = 0,
-                             ) -> tuple[int, int]:
+def count_spots_first_method(
+    _path: str | Path,
+    debug: int = 0,
+) -> tuple[int, int]:
+    """
+    La première méthode de calcul du nombre de point. Elle est plutôt naïve et
+    ne fonctionne que pour le vert et le orange. Cette fonction est obsolète
+    puisqu'elle est trop sensible aux réglages de couleurs de l'appareil photo.
+    """
     _path = str(_path)
     original = cv.imread(_path)  # Pixel format is BGR
-    print("|", end='')
+    print("|", end="")
     original = crop_to_main_circle(original)
-    print("|", end='')
+    print("|", end="")
     hls = cv.cvtColor(original, cv.COLOR_BGR2HLS_FULL)
     hue = hls[:, :, 0]
     lightness = hls[:, :, 1]
     # process orange
-    orange_part =\
-        diff_of_gaussian(lightness, 1, 15) * keep_red_yellow(hue)
+    orange_part = diff_of_gaussian(lightness, 1, 15) * keep_red_yellow(hue)
     detector = cv.SimpleBlobDetector.create(setup_orange_params())
     orange_keypoints = detector.detect(orange_part)
-    print("|", end='')
+    print("|", end="")
     # process green
-    green_part =\
-        diff_of_gaussian(lightness, 5, 20) * keep_green_cyan(hue)
+    green_part = diff_of_gaussian(lightness, 5, 20) * keep_green_cyan(hue)
     detector = cv.SimpleBlobDetector.create(setup_green_params())
     green_keypoints = detector.detect(green_part)
     # Debug options
     if debug >= 1:
-        cv.imwrite(expand_debug("Or_naive.jpg"),
-                   cv.drawKeypoints(original, orange_keypoints,
-                                    255, RICH_KEYPOINTS))
-        cv.imwrite(expand_debug("Gr_naive.jpg"),
-                   cv.drawKeypoints(original, green_keypoints,
-                                    255, RICH_KEYPOINTS))
+        cv.imwrite(
+            expand_debug("Or_naive.jpg"),
+            cv.drawKeypoints(original, orange_keypoints, 255, RICH_KEYPOINTS),
+        )
+        cv.imwrite(
+            expand_debug("Gr_naive.jpg"),
+            cv.drawKeypoints(original, green_keypoints, 255, RICH_KEYPOINTS),
+        )
     return len(orange_keypoints), len(green_keypoints)
 
 
 # Obsolete
 def count_spots_second_method(_path: str | Path, color_table: NDArray):
+    """
+    arg _path : Chemin d'un fichier d'image.
+    arg _color_table : tableau de teintes et leur catégorie associée.
+    -------
+    return : le nombre de points oranges et verts
+    -------
+    Une toute autre méthode de comptage qui adapte l'image à une palette de
+    couleurs précalculée. Chaque pixel de l'image est étiqueté (labeled) selon
+    la teinte de palette la plus proche. Selon l'étiquette, le pixel est masqué
+    ou pas, puis est converti en niveau de gris. Enfin, l'image produite est
+    donnée à SimpleBlobDetector de openCV, qui détecte les points clairs.
+    """
     if isinstance(_path, Path):
         _path = str(_path)
     img = cv.imread(_path)  # Pixel format is BGR
-    print("| Cropping ", end='')
+    print("| Cropping ", end="")
     img = crop_to_main_circle(img)
-    print("| Labeling ", end='')
+    print("| Labeling ", end="")
     # load palette
     t0 = perf_counter()
     labeled_img = np.uint8(label_img_fastest(img, color_table))
-    print(f"{perf_counter() - t0:.2f} ", end='')
+    print(f"{perf_counter() - t0:.2f} ", end="")
     # make orange / green image
-    print("| masking 1 ", end='')
+    print("| masking 1 ", end="")
     isolated_orange = isolate_categories(color_table, (1, 3))
-    gs_orange_palette =\
-        np.uint8(evenly_spaced_gray_palette(isolated_orange))
+    gs_orange_palette = np.uint8(evenly_spaced_gray_palette(isolated_orange))
     gs_orange = gs_orange_palette[labeled_img.flatten()]
     gs_orange = gs_orange.reshape(labeled_img.shape)
-    print("| masking 2 ", end='')
+    print("| masking 2 ", end="")
     isolated_green = isolate_categories(color_table, (2, 3))
-    gs_green_palette = np.uint8(
-            evenly_spaced_gray_palette(isolated_green))
+    gs_green_palette = np.uint8(evenly_spaced_gray_palette(isolated_green))
     gs_green = gs_green_palette[labeled_img.flatten()]
     gs_green = gs_green.reshape(labeled_img.shape)
     # simple blob detector
-    print("| detection 1 ", end='')
+    print("| detection 1 ", end="")
     detector = cv.SimpleBlobDetector.create(
-        setup_orange_params_faster(gs_orange_palette.shape[0]))
+        setup_orange_params_faster(gs_orange_palette.shape[0])
+    )
     orange_kp = detector.detect(gs_orange)
-    print("| detection 2 ", end='')
+    print("| detection 2 ", end="")
     detector = cv.SimpleBlobDetector.create(
-        setup_green_params_faster(gs_green_palette.shape[0]))
+        setup_green_params_faster(gs_green_palette.shape[0])
+    )
     green_kp = detector.detect(gs_green)
     return len(orange_kp), len(green_kp)
 
 
 # Obsolete
-def count_spots_third_method(img: NDArray,
-                             color_table: NDArray,
-                             detectors: list,
-                             ):
+def count_spots_third_method(
+    img: NDArray,
+    color_table: NDArray,
+    detectors: list,
+):
+    """
+    arg img : l'image (tableau Numpy ou matrice OpenCV)
+    arg color_table : tableau de teintes et leur catégorie associée
+    arg detectors : liste d'instances SimpleBLobDetector
+    ------
+    return : Liste du nombre de points pour chaque couleur.
+    ------
+    similaire à la méthode 2, mais permet de compter pour un nombre arbitraire
+    de couleurs différentes. Ne fonctionne pas à cause d'un bug lié à OpenCV.
+    """
     img = crop_to_main_circle(img)
     labeled = label_img_fastest(img, color_table)
     values = []
@@ -119,17 +141,19 @@ def count_spots_third_method(img: NDArray,
     return values
 
 
-def count_spots_fourth_method(img: NDArray,
-                              color_table: NDArray,
-                              det_params: list[DetParams],
-                              debug: int = 0,
-                              ) -> list[int]:
+def count_spots_fourth_method(
+    img: NDArray,
+    color_table: NDArray,
+    det_params: list[DetParams],
+    debug: int = 0,
+) -> list[int]:
     img = crop_to_main_circle(img)
     labeled = label_img_fastest(img, color_table)
     values = []
     for i, settings in enumerate(det_params):
         detector = cv.SimpleBlobDetector.create(
-                load_params(settings, len(color_table)))
+            load_params(settings, len(color_table))
+        )
         j = i + 1  # 0 is the bg
         isolated_color = isolate_categories(color_table, [j])
         gs_palette = evenly_spaced_gray_palette(isolated_color)
@@ -138,8 +162,9 @@ def count_spots_fourth_method(img: NDArray,
         key_points = detector.detect(gs_img)
         values.append(len(key_points))
         if debug >= 1:
-            kp = cv.drawKeypoints(gs_img, key_points, None, [0, 0, 255],
-                                  RICH_KEYPOINTS)
+            kp = cv.drawKeypoints(
+                gs_img, key_points, None, [0, 0, 255], RICH_KEYPOINTS
+            )
             cv.imwrite(expand_debug(f"col{j}_kp_km.jpg"), kp)
             cv.imwrite(expand_debug(f"col{j}_gs_km.jpg"), gs_img)
     if debug >= 1:
@@ -154,9 +179,10 @@ def expand_debug(string: str) -> str:
     return str(debug_path.joinpath(string))
 
 
-def load_params(det_params: DetParams,
-                shades_count: int,
-                ) -> cv.SimpleBlobDetector.Params:
+def load_params(
+    det_params: DetParams,
+    shades_count: int,
+) -> cv.SimpleBlobDetector.Params:
     params = cv.SimpleBlobDetector.Params()
     params.blobColor = 255
     if shades_count != 0:
@@ -195,11 +221,12 @@ def load_params(det_params: DetParams,
     return params
 
 
-def init_workers(count: int,
-                 config: ColorAndParams,
-                 in_queue: Queue,
-                 out_queue: Queue,
-                 ) -> list[Process]:
+def init_workers(
+    count: int,
+    config: ColorAndParams,
+    in_queue: Queue,
+    out_queue: Queue,
+) -> list[Process]:
     """
     Créée un ensemble d'objets `multiprocessing.Process` mais n'invoque pas
     leur méthode `.start()`.
@@ -213,21 +240,20 @@ def init_workers(count: int,
                  processus.
          `return`: La liste des Process.
     """
-    # TODO create detectors from
     workers_list = []
-    for i in range(count):
+    for _ in range(count):
         worker = Process(
-            target=img_processer,
-            args=(in_queue, out_queue, config)
+            target=img_processer, args=(in_queue, out_queue, config)
         )
         workers_list.append(worker)
     return workers_list
 
 
-def img_processer(in_queue: Queue,
-                  out_queue: Queue,
-                  config: ColorAndParams,
-                  ) -> None:
+def img_processer(
+    in_queue: Queue,
+    out_queue: Queue,
+    config: ColorAndParams,
+) -> None:
     """
     La fonction qui attend les instructions et traites les `ImageElements` qui
     lui sont transmis par la `in_queue` et renvoie le résultat par la
@@ -252,8 +278,8 @@ def img_processer(in_queue: Queue,
                 break
             folder_row, depth_col, path = job
             img = cv.imread(path)
-            values = count_spots_fourth_method(img,
-                                               color_table,
-                                               config["det_params"])
+            values = count_spots_fourth_method(
+                img, color_table, config["det_params"]
+            )
             result: DataElement = (folder_row, depth_col, values)
             out_queue.put(result)

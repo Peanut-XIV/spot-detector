@@ -1,7 +1,6 @@
-# Project files
-from spot_detector.commands import palette_editor, detector
-# Other dependancies
 import click
+
+from spot_detector.commands import detector, palette_editor
 
 
 @click.group

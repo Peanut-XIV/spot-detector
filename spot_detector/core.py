@@ -1,23 +1,25 @@
 # Python standard library
-from multiprocessing import Queue, Process
-from pathlib import Path
 import time
-# Project files
-from .transformations import label_img_fastest, get_k_means
-from .process_chains import init_workers
-from .file_utils import (
-        read_csv, write_csv, fetch_csv, sorted_sub_dirs, unprocessed_images)
-from .palette_gui import run_gui
-from .config import get_color_and_params, ColorAndParams, default_det_params
-from .types import DataRow, DataTable, DataElement
+from multiprocessing import Process, Queue
+from pathlib import Path
+
 # Other
+import cv2 as cv
 import numpy as np
 import numpy.typing as npT
 import tomlkit
 import tomlkit.items as tomlItems
-from tomlkit.toml_file import TOMLDocument, TOMLFile
-import cv2 as cv
 from click import echo
+from tomlkit.toml_file import TOMLDocument, TOMLFile
+
+# Project files
+from .config import ColorAndParams, default_det_params, get_color_and_params
+from .file_utils import (fetch_csv, read_csv, sorted_sub_dirs,
+                         unprocessed_images, write_csv)
+from .palette_gui import run_gui
+from .process_chains import init_workers
+from .transformations import get_k_means, label_img_fastest
+from .types import DataElement, DataRow, DataTable
 
 
 def count_categories(categories: list[int]) -> int:
@@ -25,11 +27,12 @@ def count_categories(categories: list[int]) -> int:
     return len(list(filter(lambda x: x > 0, unique_categories)))
 
 
-def fill_data_points(table: DataTable,
-                     data_points: DataElement,
-                     depth_count: int,
-                     color_count: int,
-                     ) -> None:
+def fill_data_points(
+    table: DataTable,
+    data_points: DataElement,
+    depth_count: int,
+    color_count: int,
+) -> None:
     row, col, values = data_points
     for i, value in enumerate(values):
         table[row][1 + col + i * depth_count] = value
@@ -38,23 +41,24 @@ def fill_data_points(table: DataTable,
     try_line_completion(table[row], depth_count, color_count)
 
 
-def try_line_completion(current_row: DataRow,
-                        depth_count: int,
-                        color_count: int,
-                        ) -> None:
-    if "" in current_row[1: depth_count + 1]:
+def try_line_completion(
+    current_row: DataRow,
+    depth_count: int,
+    color_count: int,
+) -> None:
+    if "" in current_row[1 : depth_count + 1]:
         return
     middle = 1 + (1 + color_count) * depth_count
     for i in range(color_count + 1):
         start = i * depth_count
         stop = start + depth_count
-        part1 = current_row[1 + start: 1 + stop]
+        part1 = current_row[1 + start : 1 + stop]
         sum1 = sum(map(int, part1))
         if sum1:
             part2 = [100 * int(v) / sum1 for v in part1]
         else:
             part2 = [float("nan")] * len(part1)
-        current_row[middle + start: middle + stop] = part2
+        current_row[middle + start : middle + stop] = part2
 
 
 def any_alive(worker_list: list[Process]) -> bool:
@@ -62,13 +66,14 @@ def any_alive(worker_list: list[Process]) -> bool:
     return any(status_list)
 
 
-def detect(image_dir: str | Path,
-           depths: list[str],
-           csv_path: str | Path,
-           regex: str,
-           config_path: str | Path,
-           proc: int,
-           ) -> None:
+def detect(
+    image_dir: str | Path,
+    depths: list[str],
+    csv_path: str | Path,
+    regex: str,
+    config_path: str | Path,
+    proc: int,
+) -> None:
     # TODO: if the csv file already exists, check for coherence between
     #       number of colors, depths and dimensions of the csv file
     config_path = Path(config_path)
@@ -95,12 +100,16 @@ def detect(image_dir: str | Path,
     while any_alive(workers) or not out_queue.empty():
         if out_queue.empty():
             time.sleep(1)
-            print(f"{remaining} images restantes."
-                  " En attente de données.", end='\r')
+            print(
+                f"{remaining} images restantes." " En attente de données.",
+                end="\r",
+            )
         else:
             # put values in table
-            print(f"{remaining} images restantes."
-                  " Écriture en cours...  ", end='\r')
+            print(
+                f"{remaining} images restantes." " Écriture en cours...  ",
+                end="\r",
+            )
             data_points: DataElement = out_queue.get()
             fill_data_points(table, data_points, len(depths), len(colors))
             write_csv(csv_file, table)
@@ -113,7 +122,7 @@ def edit_config_file(k: int, path: Path, from_image: Path):
     config: TOMLDocument = get_color_and_params(path)
     config_table: tomlItems.Array = config["color_data"]["table"]
     color_table: npT.NDArray
-    palette:     npT.NDArray
+    palette: npT.NDArray
     labeled_img: npT.NDArray
     if k == 1 and from_image is None:
         color_table = np.array(config_table, dtype=np.uint8)
@@ -143,7 +152,7 @@ def edit_config_file(k: int, path: Path, from_image: Path):
     if from_image is not None:
         # There are a lot of changes to take into account
         config["reference_image"] = from_image
-        param_list:     tomlItems.AoT = config["det_params"]
+        param_list: tomlItems.AoT = config["det_params"]
         new_param_list: tomlItems.AoT
         param_count = len(param_list)
         if param_count > category_count:

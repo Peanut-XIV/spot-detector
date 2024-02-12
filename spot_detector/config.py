@@ -1,16 +1,18 @@
 # Python standard library
 from pathlib import Path
-from typing import Optional, Any
-# Project files
-from spot_detector.types import ColorTable
+from typing import Any, Optional
+
+from click import BadParameter
+from pydantic import (BaseModel, Field, TypeAdapter, ValidationError,
+                      field_validator)
+from pydantic_core.core_schema import FieldValidationInfo
 # Other modules
-from tomlkit import load, document, table, inline_table, nl, array, aot
+from tomlkit import aot, array, document, inline_table, load, nl, table
 from tomlkit.items import Table
 from tomlkit.toml_document import TOMLDocument
-from pydantic import (Field, BaseModel, TypeAdapter,
-                      ValidationError, field_validator)
-from pydantic_core.core_schema import FieldValidationInfo
-from click import BadParameter
+
+# Project files
+from spot_detector.types import ColorTable
 
 
 class ColorData(BaseModel):
@@ -18,14 +20,17 @@ class ColorData(BaseModel):
     table: ColorTable
 
     @field_validator("table")
-    def table_values_are_chars(cls,
-                               table: ColorTable,
-                               ) -> ColorTable:
+    def table_values_are_chars(
+        cls,
+        table: ColorTable,
+    ) -> ColorTable:
         for i, row in enumerate(table):
             for j, value in enumerate(row):
                 if type(value) is not int:
-                    raise ValueError(f"value ({i},{j}) of color_data.table "
-                                     "is not between 0 and 255 (inclusive)")
+                    raise ValueError(
+                        f"value ({i},{j}) of color_data.table "
+                        "is not between 0 and 255 (inclusive)"
+                    )
         return table
 
 
@@ -36,10 +41,11 @@ class Threshold(BaseModel):
     step: int = Field(ge=0, le=255, default=16)
 
     @field_validator("maxi")
-    def maxi_greater_than_mini(cls,
-                               maxi: int,
-                               info: FieldValidationInfo,
-                               ) -> int:
+    def maxi_greater_than_mini(
+        cls,
+        maxi: int,
+        info: FieldValidationInfo,
+    ) -> int:
         if maxi <= info.data["mini"]:
             raise ValueError("maxi must be greater than mini")
         return maxi
@@ -51,18 +57,19 @@ class SimpleParam(BaseModel):
     maxi: Optional[float] = None
 
     @field_validator("maxi")
-    def maxi_greater_than_mini(cls,
-                               maxi: Optional[float],
-                               info: FieldValidationInfo,
-                               ) -> Optional[float]:
-        maxi_does_exist = bool(info.data["enabled"]
-                               and (maxi is not None)
-                               and maxi)
+    def maxi_greater_than_mini(
+        cls,
+        maxi: Optional[float],
+        info: FieldValidationInfo,
+    ) -> Optional[float]:
+        maxi_does_exist = bool(
+            info.data["enabled"] and (maxi is not None) and maxi
+        )
         try:
             if maxi_does_exist and (maxi <= info.data["mini"]):
                 raise ValueError("maxi must be greater than mini")
-        except KeyError:
-            raise ValueError(f"maxi = {maxi}")
+        except KeyError as ke:
+            raise ValueError(f"maxi = {maxi}") from ke
         return maxi
 
 
@@ -102,8 +109,11 @@ def get_color_and_params(file_path: str | Path) -> ColorAndParams:
 
 
 def get_cli_defaults(file_path: str | Path) -> CLIDefaults:
+    """
+    Returns the tomlkit table item from
+    """
     content = None
-    with open(file_path, "r") as cfg_file:
+    with open(file_path, "r", encoding="UTF-8") as cfg_file:
         content = load(cfg_file).get("CLI")
     ta = TypeAdapter(CLIDefaults)
     try:
@@ -114,12 +124,16 @@ def get_cli_defaults(file_path: str | Path) -> CLIDefaults:
 
 
 def default_det_params(name: str | int | Any) -> Table:
+    """
+    Returns a Tomlkit Table for the settings of a OpenCV
+    SimpleBlobDetector instance.
+    """
     params = table()
     # base params
     name_str = "undefined_name"
-    if type(name) is int:
+    if isinstance(name, int):
         name_str = f"color_{name}"
-    elif type(name) is str:
+    elif isinstance(name, str):
         name_str = name
     params.add("color_name", name_str)
     params.add("min_dist", 0.0)
@@ -182,8 +196,9 @@ def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
     try:
         defaults = get_cli_defaults(defaults_file)
     except ValidationError as e:
-        e2 = BadParameter("Le fichier de valeurs par"
-                          " défaut n'est pas valide",
-                          param_hint=["-d"])
+        e2 = BadParameter(
+            "Le fichier de valeurs par défaut n'est pas valide",
+            param_hint=["-d"],
+        )
         raise e2 from e
     return defaults
