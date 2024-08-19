@@ -36,7 +36,7 @@ from .misc import fit_elements
     is_flag=True,
     flag_value=True,
     default=False,
-    help="Permet d'empêcher d'utiliser les valeurs par défaut lors du"
+    help="Permet d'empêcher d'utiliser les valeurs par défaut lors du "
     "fonctionnement du programme.",
 )
 @option(
