@@ -96,7 +96,7 @@ class CLIDefaults(BaseModel):
     regex: Optional[str] = None
 
 
-def get_color_and_params(file_path: str | Path) -> ColorAndParams:
+def get_color_and_params(file_path: str | Path) -> TOMLDocument:
     content = None
     with open(file_path, "r", encoding="UTF-8") as cfg_file:
         content = load(cfg_file)
