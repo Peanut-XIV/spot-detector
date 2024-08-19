@@ -43,24 +43,89 @@ Par exemple, le tableau peut prendre la forme suivante :
 
 ## Installation :
 
-Pour l'instant, l'installation du programme se fait en clonant le projet localement, via l'invite de commande.
+Pour l'instant, l'installation du programme se fait en téléchargeant le projet
+depuis github, puis en créant un environnement
+virtuel dans lequel exécuter le programme.
 
-#### sur MacOS :
+### 1 - Télécharger
 
-Ouvrez le Finder et allez dans le dossier `Applications/Utilitaires` et double-cliquez sur `Terminal`.
-Puis entrez
+D'abord, vous devez choisir le répertoire dans lequel vous allez installer
+l'application. Ça peut être votre bureau, mais je conseillerais un
+répertoire qui lui est propre (ce dernier peut être dans le bureau).
+
+Par exemple, créons  un dossier `applications-python` sur le bureau.
+C'est ici que l'on installera l'application. Téléchargez ensuite le projet sur
+votre ordinateur. Pour cela, cliquez sur le bouton vert en haut de la page
+intitulé `code` puis sur `Download ZIP`.
+
+Décompressez le dossier zip, copiez et collez-le dans le dossier 
+`applications-python` précédamment créé. Vous devriez avoir une arborescence de
+la forme suivante :
+
 ```
-cd ~
-
-git clone
+~/Bureau/applications-python/spot-detector-main/
+                                        |- pyproject.toml
+                                        |- README.md
+                                        |- spot_detector
+                                        |- spot_detector.egg-info
+                                        |- tests
 ```
+
+### 2 - Créer l'environnement virtuel (venv)
+
+Maintenant que le projet est présent sur l'ordinateur, il faut créer
+l'environnement virtuel dans lequel il sera exécuté. La création de cet
+environnement nécessite Python (≥ 3.11 dans notre cas) et se fait de manière
+différente sur Windows et sur MacOS / Linux.
+
+#### Sur MacOS :
+
+Ouvrez une fenêtre de terminal au dossier `spot-detector-main`. Pour cela,
+ouvrez le dossier dans Finder, appuyez sur la touche `control` en
+même temps de cliquer sur le nom de dossier et cliquez sur `Services` puis
+`Nouveau terminal au dossier`. Vous êtes dans le terminal !
+
+Maintenant, demandons quelle version de python est utilisée. Écrivez la
+commande suivante et appuyez sur entrer:
+
+```
+python3 --version
+```
+
+* Si le terminal vous répond un message du genre :
+
+```
+zsh: command not found: python3
+```
+
+Alors c'est que vous n'avez pas Python (version 3.0 ou supérieure) d'installé.
+Alternativement, si le terminal vous répond une version de Python inferieure à
+3.11.7, votre version de python n'est pas assez rescente. Dans les deux cas,
+il vous faudra installer Python 3.11.7, Python 3.12 ou la version la plus
+rescente [ici](https://www.python.org/downloads/).
+
+Une fois Python installé, retournez sur le terminal au dossier
+`spot-detector-main` et entrez la commande suivante :
+
+```
+python3.11 -m venv venv
+```
+
+Puis
+
+```
+source venv/bin/activate
+```
+en
+
+
 
 ## Comment l'utiliser :
 
 
 ### Le dossier de travail
 
-Le dossier de travail doit avoir la structure suivante :
+    Le dossier de travail doit avoir la structure suivante :
 
 ```
 .../dossier_principal/
@@ -103,7 +168,7 @@ traitera pas.
 > ⚠️ **Avertissement** : Le programme ne fait pas la différence entre un fichier .csv quelconque et un fichier qu'il a 
 > écrit lui-même. Pour cette raison, prenez garde à bien indiquer un fichier que vous êtes sûr de vouloir modifier !
 > (Il n'y a pas de risque important en soi, le programme ne peut qu'ajouter des lignes, pas les réécrire ou les 
-> supprimer.)
+> supprimer.):
 
 ### Les valeurs de "profondeur"
 
