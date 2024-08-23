@@ -44,7 +44,6 @@ def remove_hot_pixels(
     wheel_count = 0
     for source_dir in source_directories:
         dest_dir = destination_path.joinpath(source_dir.name)
-        dest_dir.mkdir()
         image_paths = [img for img in source_dir.iterdir() if img.is_file()]
         for im_path in image_paths:
             img = cv2.imread(str(im_path), cv2.IMREAD_ANYDEPTH + cv2.IMREAD_COLOR)
@@ -57,6 +56,8 @@ def remove_hot_pixels(
             diff = img.astype(np.int32) - ref_img.astype(np.int32)
             out_img = np.clip(diff, 0, 65535).astype(np.uint16)
             out_img_path = dest_dir.joinpath(im_path.name)
+            if not dest_dir.exists():
+                dest_dir.mkdir()
             cv2.imwrite(str(out_img_path), out_img)
     print("\nFinished!!!")
 
@@ -97,7 +98,7 @@ def validate_destination_path(
         if destination_path.exists():
             raise IsADirectoryError(
                 "to many directories named \"modified_xx\","
-                "please set the destination path manually"
+                " please set the destination path manually"
             )
     else:
         destination_path = Path(destination)
