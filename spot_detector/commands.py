@@ -18,61 +18,30 @@ from .misc import fit_elements
 
 @command()
 @argument(
-    "dir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-)
-@argument(
     "config",
     type=click.Path(
         file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
     ),
-    default=str(Path.home().joinpath(".spot-detector/config.toml")),
 )
-@option(
-    "-n",
-    "--sans-defaut",
-    "--no-default",
-    "no_default",
-    is_flag=True,
-    flag_value=True,
-    default=False,
-    help="Permet d'empêcher d'utiliser les valeurs par défaut lors du "
-    "fonctionnement du programme.",
+@argument(
+    "dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    default=None
 )
-@option(
-    "-d",
-    "--vals-par-defaut",
-    "--defaults",
-    "defaults_file",
-    type=click.Path(
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        resolve_path=True,
-        path_type=Path,
-    ),
-    default=str(Path.home().joinpath(".spot-detector/defaults.toml")),
-    help="Le chemin du dossier de configuration du programme.",
-)
-@option(
-    "-p",
-    "--profondeurs",
+@argument(
     "depths",
     type=click.STRING,
-    default=None,
-    help="Les valeurs de profondeur présentes dans le nom des images, "
-    "séprarées par des espaces le tout entre deux guillemets. "
-    'Exemple : `spot-detector ./chemin/dossier -d="1 2 3 4 5"`',
+    # help="Les valeurs de profondeur présentes dans le nom des images, "
+    # "séprarées par des espaces le tout entre deux guillemets. "
+    # 'Exemple : `spot-detector ./chemin/dossier -d "1 2 3 4 5"`',
 )
-@option(
-    "-r",
-    "--regex",
+@argument(
+    "regex",
     type=click.STRING,
-    default=None,
-    help="L'expression régulière qui décrit le nom des images à traiter. "
-    "Doit être écrite entre deux apostrophes. Utilisez $value pour "
-    "insérer la valeur de profondeur correspondante. "
-    "Exemple : `-r='image$value\\d\\.(jpeg|png)'`",
+    # help="L'expression régulière qui décrit le nom des images à traiter. "
+    #      "Doit être écrite entre deux apostrophes. Utilisez $value pour "
+    #      "insérer la valeur de profondeur correspondante. "
+    #      "Exemple : `-r 'image$value\\d\\.(jpeg|png)'`",
 )
 @option(
     "-f",
@@ -95,38 +64,39 @@ from .misc import fit_elements
 )
 @option("-y", is_flag=True, flag_value=True, default=False)
 def detector(
-    dir: str,
-    config: str,
-    no_default: bool,
-    defaults_file: str,
-    depths: list[str],
+    dir: str | Path | None,
+    config: str | Path,
+    depths: str,
     regex: str,
-    csv_path: str,
+    csv_path: str | None,
     y: bool,
     proc: int,
 ) -> None:
-    if not no_default:
-        defaults = get_defaults_or_error(defaults_file)
-        dir = dir or defaults["image_dir"]
-        csv_path = csv_path or defaults["csv_path"]
-        regex = regex or defaults["regex"]
-        depths = depths or defaults["depths"]
-    csv = Path(csv_path)
+
+    if dir is None:
+        dir = Path.cwd()
+    else:
+        dir = Path(dir)
+    depths_list = depths.split(" ")
+    if csv_path is None:
+        csv = dir.joinpath("results.csv")
+    else:
+        csv = Path(csv_path)
     if csv.exists() and not y:
         confirm(
             f"{csv.name} existe déjà. Traiter les images manquantes ?",
             abort=True,
         )
-    sdirs = list(filter(lambda x: x.is_dir(), Path(dir).iterdir()))
-    mismatches, counts = check_img_count(len(depths), sdirs)
+    img_directories = list(filter(lambda x: x.is_dir(), dir.iterdir()))
+    mismatches, counts = check_img_count(len(depths_list), img_directories)
     if mismatches and not y:
-        bad_dirs = filter(lambda p: p[1] != len(depths), zip(sdirs, counts))
-        dir_and_count = map(lambda p: f"{p[0].name}: {p[1]}", bad_dirs)
+        bad_dirs = filter(lambda p: p[1] != len(depths_list), zip(img_directories, counts))
+        dir_and_count = list(map(lambda p: f"{p[0].name}: {p[1]}", bad_dirs))
         lines = fit_elements(dir_and_count)
         if mismatches > 1:
             echo(
                 f"{mismatches} dossiers ont un nombre d'images "
-                f"inattendu. (attendait {len(depths)} images) :\n"
+                f"inattendu. (attendait {len(depths_list)} images) :\n"
                 "FICHIER: NOMBRE D'IMAGES"
             )
             for line in lines:
@@ -135,11 +105,11 @@ def detector(
             d_name, i_num = list(bad_dirs)[0]
             echo(
                 f"Le dossier {d_name} contient {i_num} images alors"
-                f" que {len(depths)} étaient attendues."
+                f" que {len(depths_list)} étaient attendues."
             )
         confirm("Continuer ?", abort=True)
 
-    detect(dir, depths, csv_path, regex, config, proc)
+    detect(dir, depths_list, csv, regex, config, proc)
 
 
 @command()
