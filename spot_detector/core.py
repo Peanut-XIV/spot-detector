@@ -10,7 +10,8 @@ import numpy.typing as npT
 import tomlkit
 import tomlkit.items as tomlItems
 from click import echo
-from tomlkit.toml_file import TOMLDocument, TOMLFile
+from tomlkit.toml_file import TOMLFile
+from tomlkit.toml_document import TOMLDocument
 
 # Project files
 from .config import ColorAndParams, default_det_params, get_color_and_params
@@ -78,11 +79,11 @@ def detect(
     #       number of colors, depths and dimensions of the csv file
     config_path = Path(config_path)
     config: ColorAndParams = get_color_and_params(config_path)
-    colors = config["color_data"]["names"]
+    colors = config["color_data"]["names"]  # pyright: ignore[reportIndexIssue]
 
     sub_dirs = sorted_sub_dirs(image_dir)
-    csv_file = fetch_csv(csv_path, depths, colors, sub_dirs)
-    images = unprocessed_images(sub_dirs, csv_file, depths, colors, regex)
+    csv_file = fetch_csv(csv_path, depths, colors, sub_dirs)  # pyright: ignore[reportArgumentType]
+    images = unprocessed_images(sub_dirs, csv_file, depths, colors, regex)  # pyright: ignore[reportArgumentType]
     remaining = len(images)
     print(f"{remaining} à traiter")
 
@@ -111,29 +112,29 @@ def detect(
                 end="\r",
             )
             data_points: DataElement = out_queue.get()
-            fill_data_points(table, data_points, len(depths), len(colors))
+            fill_data_points(table, data_points, len(depths), len(colors))  # pyright: ignore[reportArgumentType]
             write_csv(csv_file, table)
             remaining -= 1
     in_queue.close()
     out_queue.close()
 
 
-def edit_config_file(k: int, path: Path, from_image: Path):
+def edit_config_file(k: int, path: Path, from_image: Path | None):
     config: TOMLDocument = get_color_and_params(path)
-    config_table: tomlItems.Array = config["color_data"]["table"]
+    config_table: tomlItems.Array = config["color_data"]["table"]  # pyright: ignore [reportAssignmentType, reportIndexIssue]
     color_table: npT.NDArray
     palette: npT.NDArray
     labeled_img: npT.NDArray
     if k == 1 and from_image is None:
         color_table = np.array(config_table, dtype=np.uint8)
         palette = color_table[:, 0:3]
-        img = cv.imread(config["reference_image"])
+        img = cv.imread(config["reference_image"]) # pyright: ignore [reportArgumentType, reportCallIssue]
         labeled_img = label_img_fastest(img, color_table)
     else:
         if k == 1:
             k = len(config_table)
         echo("calcul des K moyennes, cela peut prendre du temps")
-        img = cv.imread(from_image)
+        img = cv.imread(str(from_image))
         palette, _, labeled_img = get_k_means(img, k)
         palette = palette.astype(np.uint8)
         labeled_img = labeled_img.reshape(img.shape[0:2]).astype(np.uint8)
@@ -148,20 +149,20 @@ def edit_config_file(k: int, path: Path, from_image: Path):
     new_array.multiline(True)
     for row in color_table:
         new_array.add_line(list(map(int, list(row))))
-    config["color_data"]["table"] = new_array
+    config["color_data"]["table"] = new_array  # pyright: ignore [reportIndexIssue]
     if from_image is not None:
         # There are a lot of changes to take into account
         config["reference_image"] = from_image
-        param_list: tomlItems.AoT = config["det_params"]
+        param_list: tomlItems.AoT = config["det_params"]  # pyright: ignore [reportAssignmentType]
         new_param_list: tomlItems.AoT
         param_count = len(param_list)
         if param_count > category_count:
-            new_param_list = param_list[:category_count]
+            new_param_list = param_list[:category_count]  # pyright: ignore [reportAssignmentType]
         elif param_count < category_count:
             new_param_list = param_list
             missing_params = range(param_count, category_count)
             color_names = map("color_{}".format, missing_params)
-            config["color_data"]["names"].extend(color_names)
+            config["color_data"]["names"].extend(color_names)  # pyright: ignore [reportAttributeAccessIssue, reportIndexIssue]
             missing_params = map(default_det_params, missing_params)
             new_param_list.extend(missing_params)
         else:

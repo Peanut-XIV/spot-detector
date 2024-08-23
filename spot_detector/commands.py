@@ -3,14 +3,14 @@ from pathlib import Path
 
 # Other dependancies
 import click
-from click import (BadParameter, FileError, argument, command, confirm, echo,
-                   option)
-from tomlkit import TOMLDocument
+from click import (
+    BadParameter, FileError,
+    argument, command, confirm, echo, option
+)
 from tomlkit.toml_file import TOMLFile
 
 # Project files
-from .config import (create_new_config, get_color_and_params,
-                     get_defaults_or_error)
+from .config import (ColorAndParams, create_new_config, get_color_and_params)
 from .core import detect, edit_config_file
 from .file_utils import check_img_count, confirm_new_cfg_file
 from .misc import fit_elements
@@ -185,13 +185,13 @@ def palette_editor(
     if create:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(path)
-        config: TOMLDocument = create_new_config()
-        TOMLFile(path).write(config)
+        configuration: ColorAndParams = create_new_config()
+        TOMLFile(path).write(configuration)
     elif duplicate:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(duplicate)
-        config: TOMLDocument = get_color_and_params(path)
-        TOMLFile(duplicate).write(config)
+        configuration: ColorAndParams = get_color_and_params(path)
+        TOMLFile(duplicate).write(configuration)
         path = duplicate
     if edit:
         edit_config_file(edit, path, from_image)

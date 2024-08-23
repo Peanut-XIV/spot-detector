@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 import cv2 as cv
 from numpy.typing import NDArray
 
@@ -5,7 +6,7 @@ from numpy.typing import NDArray
 class ImageView:
     def __init__(
         self,
-        img_shape: tuple[int],
+        img_shape: Sequence[int],
         is_alt_image: bool = False,
         x: int = 0,
         y: int = 0,
@@ -25,7 +26,7 @@ class ImageView:
 
         scale = 1 if scale < 1 else scale
         scale = 32 if self.width // scale < 64 else scale
-        self.scale: int = scale
+        self.scale: float = scale
 
     @property
     def scaled_width(self) -> int:

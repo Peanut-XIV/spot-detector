@@ -1,11 +1,10 @@
 from pathlib import Path
-from typing import Optional
 
 import cv2 as cv
 from numpy.typing import NDArray
 
 
-def ask_img_dir(default_value: Optional[str]) -> Path:
+def ask_img_dir(default_value: str) -> Path:
     chemin_dossier = input(
         "Chemin du dossier contenant les sous-dossiers d'image:\n"
         f"{default_value} par défaut\n"
@@ -15,7 +14,7 @@ def ask_img_dir(default_value: Optional[str]) -> Path:
     return Path(chemin_dossier)
 
 
-def ask_depths(default_value: Optional[list[str]]) -> list[str]:
+def ask_depths(default_value: list[str]) -> list[str]:
     profondeurs = input(
         "Liste de valeurs de profondeur\n" f"{default_value} par défaut\n"
     )
@@ -26,7 +25,7 @@ def ask_depths(default_value: Optional[list[str]]) -> list[str]:
     return profondeurs
 
 
-def ask_csv_path(default_value: Optional[str]) -> str:
+def ask_csv_path(default_value: str) -> str:
     chemin_tableur = input(
         "Chemin du document csv :\n" f"{default_value} par défaut\n"
     )
@@ -35,7 +34,7 @@ def ask_csv_path(default_value: Optional[str]) -> str:
     return chemin_tableur
 
 
-def ask_regex(default_value: Optional[str]) -> str:
+def ask_regex(default_value: str) -> str:
     motif = input(
         "Format du nom d'image en fonction de la profondeur:\n"
         f"{default_value} par défaut\n"

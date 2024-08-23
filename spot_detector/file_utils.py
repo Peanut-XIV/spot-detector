@@ -12,7 +12,7 @@ from click import FileError, confirm
 # Project Files
 from .types import DataRow, DataTable, ImageElement
 
-im_ext = re.compile(r".+\.(jpe?g|JPE?G|png|PNG)")
+img_file_name_pattern = re.compile(r".+\.(jpe?g|JPE?G|png|PNG|tiff|TIFF)")
 
 
 def read_csv(csv_file: str | Path) -> DataTable:
@@ -121,14 +121,14 @@ def first_two_rows(
     `return`: Les deux lignes sous forme de listes de chaines de caractères.
     """
     empty_list = [""] * (len(depths) - 1)
-    label_row_1 = [""]
+    label_row_1: DataRow = [""]
     for color in colors:
         label_row_1 += [f"Nbr {color}"] + empty_list
     label_row_1 += ["Nbr all colors"] + empty_list
     for color in colors:
         label_row_1 += [f"%tage {color}"] + empty_list
     label_row_1 += ["%tage all colors"] + empty_list
-    label_row_2 = ["sub_directory\\depth"] + 2 * (1 + len(colors)) * depths
+    label_row_2: DataRow = ["sub_directory\\depth"] + 2 * (1 + len(colors)) * depths[:]
     return label_row_1, label_row_2
 
 
@@ -143,7 +143,7 @@ def map_folder_to_row(table: DataTable) -> dict[str, int]:
     `return`: un dictionnaire aux entrées de la forme
             {"nom_dossier": num_ligne}
     """
-    folder_name = [row[0] for row in table[2:]]
+    folder_name = [str(row[0]) for row in table[2:]]
     row_number = range(2, len(table))
     f2r_dict = dict(zip(folder_name, row_number))
     return f2r_dict
@@ -180,6 +180,8 @@ def unprocessed_images(
         row_nbr = fname_2_row[sub_dir.name]
         for depth_nbr, depth in enumerate(depths):
             matching_files = match_dir_items(sub_dir, regex, depth)
+            if len(matching_files) == 0:
+                print(f"No Match for depth = {depth} in directory {sub_dir.name}")
             if len(matching_files) > 1:
                 print(
                     "Attention, plusieurs images correspondent à la même"
@@ -188,6 +190,7 @@ def unprocessed_images(
                 print([file.name for file in matching_files])
             img: ImageElement = (row_nbr, depth_nbr, str(matching_files[0]))
             if is_img_processed(img, table, len(depths), len(colors)):
+                print(f"already processed: {img}")
                 continue
             else:
                 unprocessed.append(img)
@@ -214,10 +217,10 @@ def is_img_processed(
     row_num, col_num, _ = img
     if col_num >= depth_count or col_num < 0:
         print(f"ERREUR, profondeur hors limites pour l'image {img}")
-        return True  # pour ne pas traiter l'image incriminée
+        raise ValueError  # pour ne pas traiter l'image incriminée
     row = table[row_num]
     start = 1 + col_num
-    stop = color_count * depth_count
+    stop = color_count * depth_count + 1
     step = depth_count
     val_unfilled = [val == "" for val in row[start:stop:step]]
     if any(val_unfilled):
@@ -248,7 +251,7 @@ def incoherent_file(
 
 
 def is_im_file(obj: Path) -> bool:
-    return bool(obj.is_file() and im_ext.match(obj.name))
+    return bool(obj.is_file() and img_file_name_pattern.match(obj.name))
 
 
 def count_images(dir: Path) -> int:
@@ -257,9 +260,14 @@ def count_images(dir: Path) -> int:
 
 def check_img_count(
     expected: int,
-    dossiers: list[Path],
+    directories: list[Path],
 ) -> tuple[int, list[int]]:
-    image_counts = list(map(count_images, dossiers))
+    """
+    Retourne le nombre de répertoires contenant le mauvais nombre d'images,
+    et la liste du nombre d'images contenu pour chacun des répertoires, dans
+    l'ordre de la liste des entrées.
+    """
+    image_counts = list(map(count_images, directories))
     mismatches = len(list(filter(lambda n_im: n_im != expected, image_counts)))
     return mismatches, image_counts
 

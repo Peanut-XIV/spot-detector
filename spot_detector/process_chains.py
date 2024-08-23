@@ -1,27 +1,29 @@
 from multiprocessing import Process, Queue, parent_process
 from pathlib import Path
-from time import perf_counter, sleep
+from time import sleep
 from typing import Union
 
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 
-from .config import ColorAndParams, DetParams
-from .transformations import (crop_to_main_circle, diff_of_gaussian,
-                              evenly_spaced_gray_palette, isolate_categories,
-                              keep_green_cyan, keep_red_yellow,
-                              label_img_fastest, setup_green_params,
-                              setup_green_params_faster, setup_orange_params,
-                              setup_orange_params_faster)
+from .config import ColorAndParams, ColorAndParamsTemplate, DetParamsTemplate
+from .transformations import (
+    crop_to_main_circle,
+    evenly_spaced_gray_palette,
+    isolate_categories,
+    label_img_fastest,
+)
+
 from .types import DataElement, ImageElement
+from tomlkit.items import Table
 
 RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
 def count_spots_fourth_method(
     img: NDArray,
     color_table: NDArray,
-    det_params: list[DetParams],
+    det_params: list[DetParamsTemplate],
     debug: int = 0,
 ) -> list[int]:
     img = crop_to_main_circle(img)
@@ -35,12 +37,16 @@ def count_spots_fourth_method(
         isolated_color = isolate_categories(color_table, [j])
         gs_palette = evenly_spaced_gray_palette(isolated_color)
         gs_img = gs_palette[labeled.flatten()]
-        gs_img = np.uint8(gs_img.reshape(labeled.shape))
+        gs_img = gs_img.reshape(labeled.shape).astype(np.uint8)
         key_points = detector.detect(gs_img)
         values.append(len(key_points))
         if debug >= 1:
             kp = cv.drawKeypoints(
-                gs_img, key_points, None, [0, 0, 255], RICH_KEYPOINTS
+                gs_img,
+                key_points,
+                None, # type: ignore
+                [0, 0, 255],
+                RICH_KEYPOINTS
             )
             cv.imwrite(expand_debug(f"col{j}_kp_km.jpg"), kp)
             cv.imwrite(expand_debug(f"col{j}_gs_km.jpg"), gs_img)
@@ -57,7 +63,7 @@ def expand_debug(string: str) -> str:
 
 
 def load_params(
-    det_params: DetParams,
+    det_params: Table,
     shades_count: int,
 ) -> cv.SimpleBlobDetector.Params:
     params = cv.SimpleBlobDetector.Params()
@@ -67,34 +73,36 @@ def load_params(
     else:
         thresh_step = 1
     if "min_dist" in det_params:
-        params.minDistBetweenBlobs = det_params["min_dist"]
+        minimum_distance: float | int = det_params["min_dist"]  # pyright: ignore[reportAssignmentType]
+        if minimum_distance > 0.0:
+            params.minDistBetweenBlobs = det_params["min_dist"]  # pyright: ignore[reportAssignmentType, reportAttributeAccessIssue]
     thresh = det_params["thresh"]
-    if thresh["automatic"]:
+    if thresh["automatic"]:  # pyright: ignore[reportIndexIssue]
         params.minThreshold = thresh_step // 4
         params.maxThreshold = 255 - thresh_step // 4
         params.thresholdStep = thresh_step
     else:
-        params.minThreshold = thresh["mini"]
-        params.maxThreshold = thresh["maxi"]
-        params.thresholdStep = thresh["step"]
+        params.minThreshold = thresh["mini"]  # pyright: ignore[reportIndexIssue]
+        params.maxThreshold = thresh["maxi"]  # pyright: ignore[reportIndexIssue]
+        params.thresholdStep = thresh["step"]  # pyright: ignore[reportIndexIssue]
     area = det_params["area"]
-    if area["enabled"]:
+    if area["enabled"]:  # pyright: ignore[reportIndexIssue]
         params.filterByArea = True
-        params.minArea = area["mini"]
-        if "maxi" in area:
-            params.maxArea = area["maxi"]
+        params.minArea = area["mini"]  # pyright: ignore[reportIndexIssue]
+        if "maxi" in area:  # pyright: ignore[reportOperatorIssue]
+            params.maxArea = area["maxi"]  # pyright: ignore[reportIndexIssue]
     circ = det_params["circ"]
-    if circ["enabled"]:
+    if circ["enabled"]:  # pyright: ignore[reportIndexIssue]
         params.filterByCircularity = True
-        params.minCircularity = circ["mini"]
-        if "maxi" in circ:
-            params.maxCircularity = circ["maxi"]
+        params.minCircularity = circ["mini"]  # pyright: ignore[reportIndexIssue]
+        if "maxi" in circ:  # pyright: ignore[reportOperatorIssue]
+            params.maxCircularity = circ["maxi"]  # pyright: ignore[reportIndexIssue]
     convex = det_params["convex"]
-    if convex["enabled"]:
+    if convex["enabled"]:  # pyright: ignore[reportIndexIssue]
         params.filterByConvexity = True
-        params.minConvexity = convex["mini"]
-        if "maxi" in convex:
-            params.maxConvexity = convex["maxi"]
+        params.minConvexity = convex["mini"]  # pyright: ignore[reportIndexIssue]
+        if "maxi" in convex:  # pyright: ignore[reportOperatorIssue]
+            params.maxConvexity = convex["maxi"]  # pyright: ignore[reportIndexIssue]
     return params
 
 
@@ -129,7 +137,7 @@ def init_workers(
 def img_processer(
     in_queue: Queue,
     out_queue: Queue,
-    config: ColorAndParams,
+    config: Table,
 ) -> None:
     """
     La fonction qui attend les instructions et traites les `ImageElements` qui
@@ -144,8 +152,10 @@ def img_processer(
                  et pas un array Numpy car la table doit être pickleable.
          `return`: Rien.
     """
-    color_table = np.array(config["color_data"]["table"])
+    color_table = np.array(config["color_data"]["table"])  # pyright: ignore[reportIndexIssue]
     parent = parent_process()
+    if parent is None:
+        return
     while parent.is_alive():
         if in_queue.empty():
             sleep(1)
@@ -156,7 +166,7 @@ def img_processer(
             folder_row, depth_col, path = job
             img = cv.imread(path)
             values = count_spots_fourth_method(
-                img, color_table, config["det_params"]
+                img, color_table, config["det_params"]  # pyright: ignore[reportArgumentType]
             )
             result: DataElement = (folder_row, depth_col, values)
             out_queue.put(result)

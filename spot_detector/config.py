@@ -2,20 +2,23 @@
 from pathlib import Path
 from typing import Any, Optional
 
-from click import BadParameter
+from click import BadParameter, FileError
 from pydantic import (BaseModel, Field, TypeAdapter, ValidationError,
                       field_validator)
 from pydantic_core.core_schema import FieldValidationInfo
 # Other modules
 from tomlkit import aot, array, document, inline_table, load, nl, table
-from tomlkit.items import Table
+from tomlkit.items import InlineTable, Table
 from tomlkit.toml_document import TOMLDocument
 
 # Project files
 from spot_detector.types import ColorTable
 
 
-class ColorData(BaseModel):
+class ColorData(Table):...
+
+
+class ColorDataTemplate(BaseModel):
     names: list[str]
     table: ColorTable
 
@@ -34,7 +37,10 @@ class ColorData(BaseModel):
         return table
 
 
-class Threshold(BaseModel):
+class Threshold(InlineTable):...
+
+
+class ThresholdTemplate(BaseModel):
     automatic: bool
     mini: int = Field(ge=0, le=255, default=0)
     maxi: int = Field(ge=0, le=255, default=255)
@@ -51,7 +57,13 @@ class Threshold(BaseModel):
         return maxi
 
 
-class SimpleParam(BaseModel):
+class SimpleParam(InlineTable):
+    enabled: bool
+    mini: float
+    maxi: Optional[float]
+
+
+class SimpleParamTemplate(BaseModel):
     enabled: bool
     mini: float = Field(ge=0)
     maxi: Optional[float] = None
@@ -73,49 +85,58 @@ class SimpleParam(BaseModel):
         return maxi
 
 
-class DetParams(BaseModel):
+class DetParams(Table):...
+
+class DetParamsTemplate(BaseModel):
     color_name: str
-    thresh: Threshold
+    thresh: ThresholdTemplate
     min_dist: Optional[float] = Field(ge=0, default=None)
-    area: Optional[SimpleParam] = None
-    circ: Optional[SimpleParam] = None
-    convex: Optional[SimpleParam] = None
-    inertia: Optional[SimpleParam] = None
+    area: Optional[SimpleParamTemplate] = None
+    circ: Optional[SimpleParamTemplate] = None
+    convex: Optional[SimpleParamTemplate] = None
+    inertia: Optional[SimpleParamTemplate] = None
 
 
-class ColorAndParams(BaseModel):
+class ColorAndParams(TOMLDocument):...
+
+
+class ColorAndParamsTemplate(BaseModel):
     reference_image: str
-    color_data: ColorData
-    det_params: list[DetParams]
+    color_data: ColorDataTemplate
+    det_params: list[DetParamsTemplate]
 
 
-class CLIDefaults(BaseModel):
+class CLIDefaults(Table):...
+
+
+class CLIDefaultsTemplate(BaseModel):
     image_dir: Optional[str] = None
     csv_path: Optional[str] = None
     depths: Optional[list[str]] = None
     regex: Optional[str] = None
 
 
-def get_color_and_params(file_path: str | Path) -> TOMLDocument:
+def get_color_and_params(file_path: str | Path) -> ColorAndParams:
     content = None
     with open(file_path, "r", encoding="UTF-8") as cfg_file:
         content = load(cfg_file)
-    ta = TypeAdapter(ColorAndParams)
+    ta = TypeAdapter(ColorAndParamsTemplate)
     try:
         ta.validate_python(content)
     except ValidationError as e:
         print(e)
-    return content
+    return content  # type: ignore
 
 
 def get_cli_defaults(file_path: str | Path) -> CLIDefaults:
     """
     Returns the tomlkit table item from
     """
-    content = None
     with open(file_path, "r", encoding="UTF-8") as cfg_file:
         content = load(cfg_file).get("CLI")
-    ta = TypeAdapter(CLIDefaults)
+        if content is None:
+            raise FileError("No defaults found")
+    ta = TypeAdapter(CLIDefaultsTemplate)
     try:
         ta.validate_python(content)
     except ValidationError as e:
@@ -136,7 +157,7 @@ def default_det_params(name: str | int | Any) -> Table:
     elif isinstance(name, str):
         name_str = name
     params.add("color_name", name_str)
-    params.add("min_dist", 0.0)
+    params.add("min_dist", 1.0)
     params.add("filter_by_color", 255)
     # thresh
     thresh = inline_table()
@@ -148,7 +169,7 @@ def default_det_params(name: str | int | Any) -> Table:
     # area
     area = inline_table()
     area.add("enabled", True)
-    area.add("mini", 0.0)
+    area.add("mini", 1.0)
     area.add("maxi", 800.0)
     params.add("area", area)
     # circularity
@@ -156,7 +177,7 @@ def default_det_params(name: str | int | Any) -> Table:
     circ.add("enabled", True)
     circ.add("mini", 0.5)
     circ.add("maxi", 1.0)
-    params.add("cir", circ)
+    params.add("circ", circ)
     # convexity
     convex = inline_table()
     convex.add("enabled", True)
@@ -173,7 +194,7 @@ def default_det_params(name: str | int | Any) -> Table:
     return params
 
 
-def create_new_config() -> TOMLDocument:
+def create_new_config() -> ColorAndParams:
     config = document()
     config["reference_image"] = ""
     config.add(nl())  # ----------------------
@@ -189,7 +210,7 @@ def create_new_config() -> TOMLDocument:
     det_params = aot()
     det_params.extend([default_det_params("lighter")])
     config.add("det_params", det_params)
-    return config
+    return config  # type: ignore
 
 
 def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
@@ -198,7 +219,7 @@ def get_defaults_or_error(defaults_file: str | Path) -> CLIDefaults:
     except ValidationError as e:
         e2 = BadParameter(
             "Le fichier de valeurs par défaut n'est pas valide",
-            param_hint=["-d"],
+            param_hint="-d",
         )
         raise e2 from e
-    return defaults
+    return defaults  # type: ignore
