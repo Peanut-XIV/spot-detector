@@ -1,6 +1,7 @@
 import click
 
-from spot_detector.commands import detector, palette_editor
+from spot_detector.commands.detector import detector
+from spot_detector.commands.palette_editor import palette_editor
 from spot_detector.subtract_base_image import remove_hot_pixels
 
 
