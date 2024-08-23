@@ -9,46 +9,46 @@ from .types import T
 
 
 # Obsolete
-def keep_red_yellow(array: NDArray) -> NDArray:
-    """
-    Makes a binary mask from the hue component of an image,
-    coded from 0 to 255. The mask's pixels are of value 1
-    where the hue is smaller than 120 or larger than 200.
-    Otherwise, pixels are of value 0.
-    :param array: uint8 ndarray of shape (x,y).
-    :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
-    """
-    return np.uint8(np.logical_or(np.less(array, 120),
-                                  np.greater(array, 200)))
+# def keep_red_yellow(array: NDArray) -> NDArray:
+#     """
+#     Makes a binary mask from the hue component of an image,
+#     coded from 0 to 255. The mask's pixels are of value 1
+#     where the hue is smaller than 120 or larger than 200.
+#     Otherwise, pixels are of value 0.
+#     :param array: uint8 ndarray of shape (x,y).
+#     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
+#     """
+#     return np.uint8(np.logical_or(np.less(array, 120),
+#                                   np.greater(array, 200)))
 
 
 # Obsolete
-def keep_green_cyan(array: NDArray) -> NDArray:
-    """
-    Makes a binary mask from the hue component of an image,
-    coded from 0 to 255. The mask's pixels are of value 1
-    where the hue is between 90 and 150. Otherwise, pixels are of value 0.
-    :param array: uint8 ndarray of shape (x,y).
-    :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
-    """
-    return np.uint8(np.logical_and(np.greater(array, 90),
-                                   np.less(array, 140)))
+# def keep_green_cyan(array: NDArray) -> NDArray:
+#     """
+#     Makes a binary mask from the hue component of an image,
+#     coded from 0 to 255. The mask's pixels are of value 1
+#     where the hue is between 90 and 150. Otherwise, pixels are of value 0.
+#     :param array: uint8 ndarray of shape (x,y).
+#     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
+#     """
+#     return np.uint8(np.logical_and(np.greater(array, 90),
+#                                    np.less(array, 140)))
 
 
 # Obsolete
-def normalize(array: NDArray) -> NDArray:
-    """
-    Does a linear interpolation of the values of an array,
-    in such a way that 0 is mapped to 0 and the maximum positive
-    value is mapped to 255.
-    :param array: uint8 ndarray of shape (x,y,z)
-    :return:  uint8 ndarray of shape (x,y,z)
-    """
-    maximum = int(np.amax(array))
-    if maximum == 0:
-        return array
-    k = 255 / maximum
-    return np.uint8(np.multiply(array, k))
+# def normalize(array: NDArray) -> NDArray:
+#     """
+#     Does a linear interpolation of the values of an array,
+#     in such a way that 0 is mapped to 0 and the maximum positive
+#     value is mapped to 255.
+#     :param array: uint8 ndarray of shape (x,y,z)
+#     :return:  uint8 ndarray of shape (x,y,z)
+#     """
+#     maximum = int(np.amax(array))
+#     if maximum == 0:
+#         return array
+#     k = 255 / maximum
+#     return np.uint8(np.multiply(array, k))
 
 
 # Obsolete
@@ -67,10 +67,11 @@ def diff_of_gaussian(array: NDArray,
     """
     matrix_in = [2 * round(rad_in) + 1, 2 * round(rad_in) + 1]
     matrix_out = [2 * round(rad_out) + 1, 2 * round(rad_out) + 1]
-    blur_in = cv.GaussianBlur(np.int16(array), matrix_in, rad_in)
-    blur_out = cv.GaussianBlur(np.int16(array), matrix_out, rad_out)
+    array_int16 = array.astype(np.int16)
+    blur_in = cv.GaussianBlur(array_int16, matrix_in, rad_in)
+    blur_out = cv.GaussianBlur(array_int16, matrix_out, rad_out)
     diff = blur_in - blur_out
-    output = np.uint8(np.multiply(diff, diff > 0))
+    output = np.multiply(diff, diff > 0).astype(np.uint8)
     return output
 
 
@@ -190,8 +191,8 @@ def crop_to_main_circle(src: NDArray) -> NDArray:
 def extract_colors(img: NDArray,
                    color_table: NDArray,
                    ) -> tuple[NDArray, NDArray]:
-    color1 = isolate_categories(color_table, (1, 3))
-    color2 = isolate_categories(color_table, (2, 3))
+    color1 = isolate_categories(color_table, [1, 3])
+    color2 = isolate_categories(color_table, [2, 3])
     labeled_img = label_img(img, color_table)
     mask1 = color1[labeled_img.flatten()]
     mask1 = mask1.reshape(img.shape)
@@ -200,8 +201,8 @@ def extract_colors(img: NDArray,
     return mask1, mask2
 
 
-def isolate_categories(color_table: NDArray, categories: list[int]):
-    color = np.uint8(color_table[:, 0:3].copy())
+def isolate_categories(color_table: NDArray, categories: list[int]) -> NDArray[np.uint8]:
+    color: NDArray[np.uint8] = np.uint8(color_table[:, 0:3].copy())  # type: ignore
     for i in range(color_table.shape[0]):
         if color_table[i, 3] not in categories:
             color[i, :] = 0
@@ -285,14 +286,14 @@ def label_img_ludicrous(im: NDArray, color_table: NDArray) -> NDArray:
         print(".", end='')
         diff_sq = cv.pow(diff, 2)
         print(".", end='')
-        diff_sq_summed = cv.reduce(diff_sq, 2, )
+        diff_sq_summed = cv.reduce(diff_sq, 2, cv.REDUCE_SUM)
         deltas[..., i] = diff_sq_summed
     print("argmin ", end='')
     labeled_img = deltas.argmin(axis=2)
     return labeled_img
 
 
-def get_k_means(img: NDArray,
+def get_k_means(img: NDArray[np.uint8],
                 k: int,
                 epsilon: float = 1e-4,
                 max_iter: int = 60,
@@ -304,15 +305,15 @@ def get_k_means(img: NDArray,
         flags += cv.TERM_CRITERIA_EPS
     criteria = (flags, max_iter, epsilon)
     x, y, _ = img.shape
-    points: NDArray = np.float32(img.reshape((x*y, 3)))
+    points: NDArray = img.reshape((x*y, 3)).astype(np.float32)
     # noinspection PyTypeChecker
-    compactness, labels, LUT = cv.kmeans(points,
+    _, labels, LUT = cv.kmeans(points,
                                          k,
-                                         None,
+                                         None,  # type: ignore
                                          criteria,
                                          1,
                                          cv.KMEANS_PP_CENTERS)
-    LUT: NDArray = np.uint8(LUT)
+    LUT: NDArray = LUT.astype(np.uint8)
     pre_output = LUT[labels.flatten()]
     output = pre_output.reshape(img.shape)
     return LUT, output, labels
@@ -357,7 +358,7 @@ def chg_domain(img: NDArray,
     return new_img
 
 
-def unique_values(values: list[T]) -> list[T]:
+def unique_values(values: list[T] | NDArray) -> list[T]:
     acc = []
     for e in values:
         if e not in acc:
@@ -375,7 +376,7 @@ def evenly_spaced_gray_palette(palette: NDArray) -> NDArray:
             if shade == cur_shade:
                 output_palette[i] = new_shades[j]
                 break
-    return np.uint8(output_palette)
+    return output_palette.astype(np.uint8)
 
 
 def evenly_spaced_values(gs_palette: NDArray) -> NDArray:
@@ -383,4 +384,4 @@ def evenly_spaced_values(gs_palette: NDArray) -> NDArray:
     u_vals = np.array(u_vals)
     index = np.arange(u_vals.size)
     index = np.round(index * 255 / (index.size - 1))
-    return u_vals, index
+    return np.array([u_vals, index])

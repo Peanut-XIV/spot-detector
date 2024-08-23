@@ -1,14 +1,16 @@
 [project]
-name="spot-detector"
+name = "spot-detector"
 version = "2024.1.0"
 requires-python = ">= 3.11"
-dependencies = ["opencv-python>=4.9.0.80",
-				"numpy>=1.26.3",
-				"scipy>=1.11.4",
-				"pydantic>=2.5.3",
-				"click>=8.1.7",
-				"tomlkit>=0.11.3"]
-authors = [{name = "Louis Lanoy", email = "louis.lanoy@icloud.com"}]
+dependencies = [
+  "opencv-python>=4.9.0.80",
+  "numpy>=1.26.3",
+  "scipy>=1.11.4",
+  "pydantic>=2.5.3",
+  "click>=8.1.7",
+  "tomlkit>=0.11.3",
+]
+authors = [{ name = "Louis Lanoy", email = "louis.lanoy@icloud.com" }]
 description = """
 FR: Une application en CLI configurable qui compte les points dans des images
 en fonction de leur couleur et de leur forme. Elle range les résultats dans un
@@ -26,8 +28,15 @@ spot-detector = "spot_detector.__main__:cli"
 
 
 [build-system]
-requires = ["setuptools>=61.0", "opencv-python", "numpy",
-			"scipy", "pydantic", "click", "tomlkit"]
+requires = [
+  "setuptools>=61.0",
+  "opencv-python",
+  "numpy",
+  "scipy",
+  "pydantic",
+  "click",
+  "tomlkit",
+]
 build-backend = "setuptools.build_meta"
 
 [tool.pylint.main]
