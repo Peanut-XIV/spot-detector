@@ -22,16 +22,35 @@ class MainWindow(QMainWindow):
 
         self._create_settings_panel()
         self._create_image_panel()
+        self._create_menu()
 
         layout = QHBoxLayout()
         layout.addWidget(self._settings_panel)
         layout.addWidget(self._image_panel)
 
         self._central_widget = QWidget()
-
         self._central_widget.setLayout(layout)
         self.setCentralWidget(self._central_widget)
 
+    def _create_menu(self):
+        self.menu = self.menuBar()
+        self.file_menu = self.menu.addMenu("File")
+        self.file_menu.addAction("Quit", self.close, "Ctrl+Q")
+        self.file_menu.addAction("Load Image", self._load_image_with_dialog, "Ctrl+I")
+        self.file_menu.addAction("Load Configuration", self._load_config_with_dialog, "Ctrl+L")
+        self.file_menu.addAction("New Configuration", self._new_configuration_dialog, "Ctrl+N")
+
+    def _load_image_with_dialog(self):
+        print("A File dialog box appears")
+        ...
+
+    def _load_config_with_dialog(self):
+        print("A File dialog box appears")
+        ...
+
+    def _new_configuration_dialog(self):
+        print("Would you like to save th current configuration file before closing ?")
+        ...
 
     def _create_settings_panel(self):
         self._settings_panel = QGroupBox("Settings")
