@@ -123,12 +123,13 @@ def first_two_rows(
     empty_list = [""] * (len(depths) - 1)
     label_row_1: DataRow = [""]
     for color in colors:
-        label_row_1 += [f"Nbr {color}"] + empty_list
-    label_row_1 += ["Nbr all colors"] + empty_list
+        label_row_1 += [f"Nbr {color}"] + empty_list[:]
+    label_row_1 += ["Nbr all colors"] + empty_list[:]
     for color in colors:
-        label_row_1 += [f"%tage {color}"] + empty_list
-    label_row_1 += ["%tage all colors"] + empty_list
-    label_row_2: DataRow = ["sub_directory\\depth"] + 2 * (1 + len(colors)) * depths[:]
+        label_row_1 += [f"%tage {color}"] + empty_list[:]
+    label_row_1 += ["%tage all colors"] + empty_list[:]
+    label_row_2: DataRow = []
+    label_row_2 += ["sub_directory\\depth"] + (2 * (1 + len(colors)) * depths)[:]
     return label_row_1, label_row_2
 
 
@@ -320,8 +321,8 @@ def match_dir_items(
     pattern: str,
     inserted_value: str,
 ) -> list[Path]:
-    pattern = string.Template(pattern)
-    pattern = pattern.substitute(value=re.escape(inserted_value))
+    pattern = string.Template(pattern) # type: ignore
+    pattern = pattern.substitute(value=re.escape(inserted_value)) # pyright: ignore[reportAttributeAccessIssue]
     regex = re.compile(pattern)
     dir = Path(dir)
     return list(filter(lambda x: regex.fullmatch(x.name), dir.iterdir()))

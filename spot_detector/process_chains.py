@@ -7,7 +7,7 @@ import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 
-from .config import ColorAndParams, ColorAndParamsTemplate, DetParamsTemplate
+from .config import ColorAndParams, DetParams
 from .transformations import (
     crop_to_main_circle,
     evenly_spaced_gray_palette,
@@ -16,14 +16,13 @@ from .transformations import (
 )
 
 from .types import DataElement, ImageElement
-from tomlkit.items import Table
 
 RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
 def count_spots_fourth_method(
     img: NDArray,
     color_table: NDArray,
-    det_params: list[DetParamsTemplate],
+    det_params: list[DetParams],
     debug: int = 0,
 ) -> list[int]:
     img = crop_to_main_circle(img)
@@ -31,7 +30,7 @@ def count_spots_fourth_method(
     values = []
     for i, settings in enumerate(det_params):
         detector = cv.SimpleBlobDetector.create(
-            load_params(settings, len(color_table))
+            settings.load_params(len(color_table))
         )
         j = i + 1  # 0 is the bg
         isolated_color = isolate_categories(color_table, [j])
@@ -62,48 +61,6 @@ def expand_debug(string: str) -> str:
     return str(debug_path.joinpath(string))
 
 
-def load_params(
-    det_params: Table,
-    shades_count: int,
-) -> cv.SimpleBlobDetector.Params:
-    params = cv.SimpleBlobDetector.Params()
-    params.blobColor = 255
-    if shades_count != 0:
-        thresh_step = 255 // shades_count
-    else:
-        thresh_step = 1
-    if "min_dist" in det_params:
-        minimum_distance: float | int = det_params["min_dist"]  # pyright: ignore[reportAssignmentType]
-        if minimum_distance > 0.0:
-            params.minDistBetweenBlobs = det_params["min_dist"]  # pyright: ignore[reportAssignmentType, reportAttributeAccessIssue]
-    thresh = det_params["thresh"]
-    if thresh["automatic"]:  # pyright: ignore[reportIndexIssue]
-        params.minThreshold = thresh_step // 4
-        params.maxThreshold = 255 - thresh_step // 4
-        params.thresholdStep = thresh_step
-    else:
-        params.minThreshold = thresh["mini"]  # pyright: ignore[reportIndexIssue]
-        params.maxThreshold = thresh["maxi"]  # pyright: ignore[reportIndexIssue]
-        params.thresholdStep = thresh["step"]  # pyright: ignore[reportIndexIssue]
-    area = det_params["area"]
-    if area["enabled"]:  # pyright: ignore[reportIndexIssue]
-        params.filterByArea = True
-        params.minArea = area["mini"]  # pyright: ignore[reportIndexIssue]
-        if "maxi" in area:  # pyright: ignore[reportOperatorIssue]
-            params.maxArea = area["maxi"]  # pyright: ignore[reportIndexIssue]
-    circ = det_params["circ"]
-    if circ["enabled"]:  # pyright: ignore[reportIndexIssue]
-        params.filterByCircularity = True
-        params.minCircularity = circ["mini"]  # pyright: ignore[reportIndexIssue]
-        if "maxi" in circ:  # pyright: ignore[reportOperatorIssue]
-            params.maxCircularity = circ["maxi"]  # pyright: ignore[reportIndexIssue]
-    convex = det_params["convex"]
-    if convex["enabled"]:  # pyright: ignore[reportIndexIssue]
-        params.filterByConvexity = True
-        params.minConvexity = convex["mini"]  # pyright: ignore[reportIndexIssue]
-        if "maxi" in convex:  # pyright: ignore[reportOperatorIssue]
-            params.maxConvexity = convex["maxi"]  # pyright: ignore[reportIndexIssue]
-    return params
 
 
 def init_workers(
@@ -113,17 +70,13 @@ def init_workers(
     out_queue: Queue,
 ) -> list[Process]:
     """
-    Créée un ensemble d'objets `multiprocessing.Process` mais n'invoque pas
-    leur méthode `.start()`.
-          `count`: Le nombre de Process à créer.
-    `color_table`: La table contenant les informations nécessaire pour
-                 simplifier les images. C'est une liste de liste
-                 d'entiers et pas un array numpy car la table doit
-                 être pickleable.
-       `in_queue`: L'objet qui apporte les ImageElements aux processus.
-      `out_queue`: L'objet qui réccupère les données produites par les
-                 processus.
-         `return`: La liste des Process.
+    Creates a list of multiprocessing process objects but does not call
+    their start method.
+    :param count: The number of processes to create
+    :param config: The configuration of the detector for each label
+    :param in_queue: The queue from which the processes fetch their input data
+    :param out_queue: The queue to which the processed data is output
+    :return: The list of process objects
     """
     workers_list = []
     for _ in range(count):
@@ -137,22 +90,18 @@ def init_workers(
 def img_processer(
     in_queue: Queue,
     out_queue: Queue,
-    config: Table,
+    config: ColorAndParams,
 ) -> None:
     """
-    La fonction qui attend les instructions et traites les `ImageElements` qui
-    lui sont transmis par la `in_queue` et renvoie le résultat par la
-    `out_queue`.
-       `in_queue`: L'objet `multiprocessing.Queue` depuis lequel arrive les
-                 les `ImageElements`.
-      `out_queue`: L'objet `multiprocessing.Queue` dans lequel les valeurs
-                 calculées sont retournées.
-    `color_table`: La table contenant les informations nécessaires pour
-                 simplifier les images. C'est une liste de listes d'entiers
-                 et pas un array Numpy car la table doit être pickleable.
-         `return`: Rien.
+    The target function if the workers. The workers terminate when they
+    recieve a "STOP" string.
+    `in_queue`: `multiprocessing.Queue` from which the function fetches
+    `ImageElement`s.
+    `out_queue`: `multiprocessing.Queue` to which processed data are output
+    `config`: An object containing the different configurations necessary
+    for computation. Must be picklable.
     """
-    color_table = np.array(config["color_data"]["table"])  # pyright: ignore[reportIndexIssue]
+    color_table = np.array(config.color_data.table)
     parent = parent_process()
     if parent is None:
         return
@@ -161,12 +110,16 @@ def img_processer(
             sleep(1)
         else:
             job: Union[str, ImageElement] = in_queue.get()
-            if job == "STOP":
-                break
-            folder_row, depth_col, path = job
-            img = cv.imread(path)
-            values = count_spots_fourth_method(
-                img, color_table, config["det_params"]  # pyright: ignore[reportArgumentType]
-            )
-            result: DataElement = (folder_row, depth_col, values)
-            out_queue.put(result)
+            if isinstance(job, str):
+                if job == "STOP":
+                    break
+                else:
+                    print("How? WHy?")
+            else:
+                folder_row, depth_col, path = job
+                img = cv.imread(path)
+                values = count_spots_fourth_method(
+                    img, color_table, config.det_params
+                )
+                result: DataElement = (folder_row, depth_col, values)
+                out_queue.put(result)
