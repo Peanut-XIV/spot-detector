@@ -292,12 +292,12 @@ def label_img_ludicrous(im: NDArray, color_table: NDArray) -> NDArray:
     labeled_img = deltas.argmin(axis=2)
     return labeled_img
 
-
-def get_k_means(img: NDArray[np.uint8],
+# TODO: make it 16 bit compatible
+def get_k_means(img: NDArray,
                 k: int,
                 epsilon: float = 1e-4,
                 max_iter: int = 60,
-                ) -> tuple[NDArray, NDArray, list[list[int]]]:
+                ) -> tuple[NDArray, NDArray, NDArray]:
     flags = 0
     if epsilon:
         flags += cv.TERM_CRITERIA_MAX_ITER

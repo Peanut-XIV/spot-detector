@@ -1,16 +1,13 @@
 # Python standard library
 from pathlib import Path
+import json
 
 # Other dependancies
 import click
-from click import (
-    BadParameter, FileError,
-    argument, command, option
-)
-from tomlkit.toml_file import TOMLFile
+from click import BadParameter, argument, command, option
 
 # Project files
-from spot_detector.config import (ColorAndParams, create_new_config, get_color_and_params)
+from spot_detector.config import ColorAndParams
 from spot_detector.core import edit_config_file
 from spot_detector.file_utils import confirm_new_cfg_file
 
@@ -76,27 +73,23 @@ def palette_editor(
         duplicate = Path(duplicate)
         if not path.exists():
             raise FileNotFoundError("Le fichier source n'existe pas")
-        if duplicate.suffix != ".toml":
-            raise FileError(
-                "Le fichier de destination n'est pas un fichier .toml."
-            )
     if from_image is not None and not edit:
         raise BadParameter("`-i` utilisé sans `-e`.")
     if duplicate and create:
         raise BadParameter("`-c utilisé avec `-d`.")
-    if path.suffix != ".toml":
-        raise FileError("Le fichier source n'est pas un fichier .toml.")
     # HAPPY PATH
     if create:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(path)
-        configuration: ColorAndParams = create_new_config()
-        TOMLFile(path).write(configuration)
+        configuration = ColorAndParams.from_defaults()
+        with open(path, "w") as file:
+            json.dump(configuration.model_dump(), file, indent=2)
     elif duplicate:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(duplicate)
-        configuration: ColorAndParams = get_color_and_params(path)
-        TOMLFile(duplicate).write(configuration)
+        configuration = ColorAndParams.from_path(path)
+        with open(duplicate, "w") as file:
+            json.dump(configuration.model_dump(), file)
         path = duplicate
     if edit:
         edit_config_file(edit, path, from_image)
