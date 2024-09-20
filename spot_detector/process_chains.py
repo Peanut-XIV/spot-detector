@@ -7,8 +7,8 @@ import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 
-from .config import ColorAndParams, DetParams
-from .transformations import (
+from spot_detector.model.models import ColorAndParams, DetParams
+from spot_detector.transformations import (
     crop_to_main_circle,
     evenly_spaced_gray_palette,
     isolate_categories,

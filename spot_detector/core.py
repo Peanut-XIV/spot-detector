@@ -11,13 +11,14 @@ import numpy.typing as npT
 from click import FileError, echo
 
 # Project files
-from .config import ColorAndParams, DetParams
-from .file_utils import (fetch_csv, read_csv, sorted_sub_dirs,
-                         unprocessed_images, write_csv)
-from .palette_gui import run_gui
-from .process_chains import init_workers
-from .transformations import get_k_means, label_img_fastest
-from .types import DataElement, DataRow, DataTable
+from spot_detector.model.models import ColorAndParams, DetParams
+from spot_detector.file_utils import (
+    fetch_csv, read_csv, sorted_sub_dirs, unprocessed_images, write_csv
+)
+from spot_detector.palette_gui import run_gui
+from spot_detector.process_chains import init_workers
+from spot_detector.transformations import get_k_means, label_img_fastest
+from spot_detector.types import DataElement, DataRow, DataTable
 
 
 def count_categories(categories: list[int]) -> int:

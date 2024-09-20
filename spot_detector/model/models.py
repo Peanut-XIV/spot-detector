@@ -5,6 +5,7 @@ import json
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from pydantic_core.core_schema import FieldValidationInfo
 import cv2 as cv
+from spot_detector.types import ColorTable
 
 
 class ColorData(BaseModel):

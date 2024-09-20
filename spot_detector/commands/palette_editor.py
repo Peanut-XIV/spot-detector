@@ -7,7 +7,7 @@ import click
 from click import BadParameter, argument, command, option
 
 # Project files
-from spot_detector.config import ColorAndParams
+from spot_detector.model.models import ColorAndParams
 from spot_detector.core import edit_config_file
 from spot_detector.file_utils import confirm_new_cfg_file
 

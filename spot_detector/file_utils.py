@@ -10,7 +10,7 @@ import numpy as np
 from click import FileError, confirm
 
 # Project Files
-from .types import DataRow, DataTable, ImageElement
+from spot_detector.types import DataRow, DataTable, ImageElement
 
 img_file_name_pattern = re.compile(r".+\.(jpe?g|JPE?G|png|PNG|tiff|TIFF)")
 
