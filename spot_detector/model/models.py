@@ -190,11 +190,19 @@ class ColorAndParams(BaseModel):
     det_params: list[DetParams]
 
     @classmethod
-    def from_defaults(cls) -> Self:
+    def from_defaults(cls, color_name="color_1") -> Self:
         return cls(
             reference_image = "",
-            color_data = ColorData.from_defaults(color_name="color_1"),
-            det_params = [DetParams.from_defaults(color_name="color_1")]
+            color_data = ColorData.from_defaults(color_name),
+            det_params = [DetParams.from_defaults(color_name)]
+        )
+
+    @classmethod
+    def from_prepopulated_defaults(cls, color_name="color_1") -> Self:
+        return cls(
+            reference_image = "",
+            color_data = ColorData.from_defaults(color_name),
+            det_params = [DetParams.from_prepopulated_defaults(color_name)]
         )
 
     @classmethod
