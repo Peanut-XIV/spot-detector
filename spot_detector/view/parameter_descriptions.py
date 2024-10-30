@@ -8,10 +8,34 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-class InstructionWidget(QWidget):
-    def __init__(self, title: str, body: str, parent: QWidget | None = None, f: Qt.WindowType = Qt.WindowType.Widget) -> None:
+
+class HintsWidget(QWidget):
+    def __init__(
+            self,
+            parent: QWidget | None = None,
+            f: Qt.WindowType = Qt.WindowType.Widget
+    ) -> None:
         super().__init__(parent, f)
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
+        self.hints = {
+            "default": HintElement.as_default(self),
+            "min_dist": HintElement.as_minimum_distance(self),
+            "area": HintElement.as_filter_by_area(self),
+            "circ": HintElement.as_filter_by_circularity(self),
+            "convex": HintElement.as_filter_by_convexity(self),
+        }
+
+
+class HintElement(QWidget):
+    def __init__(
+            self,
+            title: str,
+            body: str,
+            parent: QWidget | None = None,
+            f: Qt.WindowType = Qt.WindowType.Widget
+    ) -> None:
+        super().__init__(parent, f)
+        layout = QVBoxLayout(self)
         layout.addWidget(QLabel(title, self))
         text_block = QLabel(body, self)
         text_block.setWordWrap(True)
@@ -62,9 +86,9 @@ if __name__ == "__main__":
     app = QApplication()
     widget = QWidget()
     layout = QHBoxLayout()
-    layout.addWidget(InstructionWidget.as_minimum_distance(widget))
-    layout.addWidget(InstructionWidget.as_filter_by_area(widget))
-    layout.addWidget(InstructionWidget.as_filter_by_circularity(widget))
+    layout.addWidget(HintElement.as_minimum_distance(widget))
+    layout.addWidget(HintElement.as_filter_by_area(widget))
+    layout.addWidget(HintElement.as_filter_by_circularity(widget))
     layout.addStretch(1)
     widget.setLayout(layout)
     widget.show()

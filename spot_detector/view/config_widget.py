@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from spot_detector.model.models import ColorAndParams
 from spot_detector.view.json_tree import JsonModel, TreeItem
-from spot_detector.view.parameter_descriptions import InstructionWidget
+from spot_detector.view.parameter_descriptions import HintElement
 
 
 class ConfigWidget(QWidget):
@@ -72,11 +72,11 @@ class ConfigWidget(QWidget):
 
     def create_infoboxes(self):
         self.infoboxes = [
-            InstructionWidget.as_default(self),
-            InstructionWidget.as_minimum_distance(self),
-            InstructionWidget.as_filter_by_area(self),
-            InstructionWidget.as_filter_by_circularity(self),
-            InstructionWidget.as_filter_by_convexity(self),
+            HintElement.as_default(self),
+            HintElement.as_minimum_distance(self),
+            HintElement.as_filter_by_area(self),
+            HintElement.as_filter_by_circularity(self),
+            HintElement.as_filter_by_convexity(self),
         ]
         for element in self.infoboxes:
             self.splitter.addWidget(element)

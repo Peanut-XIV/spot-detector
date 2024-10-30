@@ -79,8 +79,11 @@ class Threshold(BaseModel):
 
 class SimpleParam(BaseModel):
     enabled: bool
-    mini: float = Field(ge=0)
+    mini: float = Field(ge=0, default=0)
     maxi: Optional[float] = None
+
+    def __init__(self, /, **data: Any) -> None:
+        super().__init__(**data)
 
     @field_validator("maxi")
     def maxi_greater_than_mini(cls, maxi: Optional[float], info: FieldValidationInfo) -> Optional[float]:
@@ -91,6 +94,10 @@ class SimpleParam(BaseModel):
         except KeyError as ke:
             raise ValueError(f"maxi = {maxi}") from ke
         return maxi
+
+    @classmethod
+    def from_defaults(cls, enabled, mini: float, maxi: float | None) -> Self:
+        return cls(enabled=enabled, mini=mini, maxi=maxi)
 
 
 class DetParams(BaseModel):
