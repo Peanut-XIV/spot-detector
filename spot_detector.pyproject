@@ -23,6 +23,7 @@
     "spot_detector/view/image_viewer.py",
     "spot_detector/view/json_tree.py",
     "spot_detector/view/main_window.py",
-    "spot_detector/view/parameter_descriptions.py"
+    "spot_detector/view/parameter_descriptions.py",
+    "spot_detector/resources.qrc"
   ]
 }

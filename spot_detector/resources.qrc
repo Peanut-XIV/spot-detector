@@ -1,0 +1,8 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>resources/docs/hint_default.html</file>
+  <file>resources/images/OpenCV_logo_no_text_.png</file>
+  <file>resources/images/loupe_moins.png</file>
+  <file>resources/images/loupe_plus.png</file>
+</qresource>
+</RCC>

@@ -1,8 +1,0 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<Qresource>
-  <file>spot_detector/resources/docs/hint_default.html</file>
-  <file>spot_detector/resources/images/OpenCV_logo_no_text.png</file>
-  <file>spot_detector/resources/images/loupe_moins.png</file>
-  <file>spot_detector/resources/images/loupe_plus.png</file>
-</Qresource>
-</RCC>
