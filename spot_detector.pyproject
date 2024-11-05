@@ -1,0 +1,28 @@
+{
+  "files":
+  [
+    "spot_detector/__init__.py",
+    "spot_detector/__main__.py",
+    "spot_detector/core.py",
+    "spot_detector/file_utils.py",
+    "spot_detector/misc.py",
+    "spot_detector/palette_gui.py",
+    "spot_detector/process_chains.py",
+    "spot_detector/transformations.py",
+    "spot_detector/types.py",
+    "spot_detector/commands/detector.py",
+    "spot_detector/commands/filter_background.py",
+    "spot_detector/commands/palette_editor.py",
+    "spot_detector/commands/remove_hot_pixels.py",
+    "spot_detector/controller/controller.py",
+    "spot_detector/model/defaults.py",
+    "spot_detector/model/models.py",
+    "spot_detector/view/config_widget.py",
+    "spot_detector/view/detection_settings.py",
+    "spot_detector/view/hint_panel.py",
+    "spot_detector/view/image_viewer.py",
+    "spot_detector/view/json_tree.py",
+    "spot_detector/view/main_window.py",
+    "spot_detector/view/parameter_descriptions.py"
+  ]
+}
