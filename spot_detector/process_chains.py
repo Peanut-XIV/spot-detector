@@ -25,7 +25,8 @@ def count_spots_fourth_method(
     det_params: list[DetParams],
     debug: int = 0,
 ) -> list[int]:
-    img = crop_to_main_circle(img)
+    # crop_to_main_circle does not work
+    # img = crop_to_main_circle(img)
     labeled = label_img_fastest(img, color_table)
     values = []
     for i, settings in enumerate(det_params):

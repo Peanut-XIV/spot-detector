@@ -146,15 +146,29 @@ def setup_orange_params_faster(
     return params
 
 
-def crop_to_main_circle(src: NDArray) -> NDArray:
+def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
     # TODO: Make it not as dumb !!!
     if len(src.shape) == 3:
-        gray = diff_of_gaussian(src[:, :, 0], 10, 50)
+        # TODO: Get rid of this ???
+        # gray = diff_of_gaussian(src[:, :, 0], 10, 50)
+        gray = cv.cvtColor(src, cv.COLOR_BGR2GRAY)
+        if print_debug:
+            cv.imshow("DEBUG", gray)
+            cv.waitKey(0)
     else:
         gray = src
     circles = None
+
+    # Debug variables
+    iter_count: int = 0
+    p1_spy: int = 0
+    p2_spy: int = 0
+
     for p2 in range(300, 100, -50):
         for p1 in range(100, 40, -10):
+            iter_count += 1
+            p1_spy = p1
+            p2_spy = p2
             circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, dp=4,
                                       minDist=100, param1=p1, param2=p2,
                                       minRadius=1000, maxRadius=1500)
@@ -165,7 +179,13 @@ def crop_to_main_circle(src: NDArray) -> NDArray:
             break
         # print("_", end='')
     if circles is None:
+        if print_debug:
+            print("Can't find circle: I give up")
         return src
+    else:
+        if print_debug:
+            print("found main circle after", iter_count, "attempts.")
+            print("p1 and p2 have values", p1_spy, "and", p2_spy)
     x, y, radius = circles[0][0]
     radius = round(radius * 1.05)
     x = round(x)
@@ -184,7 +204,8 @@ def crop_to_main_circle(src: NDArray) -> NDArray:
     coords = np.indices((bottom - top, right - left)) - offset
     dist_squared = (coords ** 2).sum(axis=0)
     mask = dist_squared <= radius**2
-    return src[top:bottom, left:right, :] * mask[:, :, None]
+    output = src[top:bottom, left:right, :] * mask[:, :, None]
+    return output
 
 
 # Obsolete
