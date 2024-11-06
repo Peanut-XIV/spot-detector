@@ -3447,7 +3447,7 @@ E\xc0\xe4/I54\xefF\xb0\xd4E\xc0\xe4/I\
 \xf33`\x1c\xf0\x1a\xe0\x10<\xd8M\x92\x1a\xe9\xff\x01\
 h\xc1\x7f%\xc8l\x9c8\x00\x00\x00\x00IEND\
 \xaeB`\x82\
-\x00\x00\x02\xb1\
+\x00\x00\x06\x91\
 <\
 html>\x0a  <title>D\
 efault Hint</tit\
@@ -3455,42 +3455,104 @@ le>\x0a  <body>\x0a   \
  <h1>Detection p\
 arameters</h1>\x0a \
    <p>\x0a      Spo\
-t-detector uses \
-SimpleBlobDetect\
-or, an alogrithm\
- from the Open-C\
-V\x0a      library,\
- in order to cou\
-nt points.\x0a    <\
-/p>\x0a    <p align\
-=\x22center\x22>\x0a     \
- <img source=\x22sp\
-ot_detector/reso\
-urces/images/Ope\
-nCV_logo_no_text\
-_.png\x22 width=\x2220\
-0\x22>\x0a      <br>\x0a \
-     <i>The Open\
--CV logo</i>\x0a   \
- </p>\x0a    <p>\x0a  \
-    It does so b\
-y quantising the\
- image, through \
-a set binary thr\
-esholds. At\x0a    \
-  each threshold\
-, shape contours\
- are detected. T\
-hen, each contou\
-r is\x0a      assoc\
-iated to a tree \
-node, where the \
-parent is the sh\
-ape of the previ\
-ous\x0a      thresh\
-old.\x0a    </p>\x0a  \
-  <p>\x0a      fina\
-lly,\x0a    </p>\x0a  \
+t-detector is a \
+point counting p\
+rogram that appl\
+y different crit\
+eria\x0a      depen\
+ding on the spot\
+'s color.\x0a    </\
+p>\x0a    <p>\x0a     \
+ The counting is\
+ done using Simp\
+leBlobDetector, \
+an alogrithm fro\
+m the\x0a      Open\
+-CV library, in \
+order to count p\
+oints.\x0a    </p>\x0a\
+    <p align=\x22ce\
+nter\x22>\x0a      <im\
+g source=\x22:resou\
+rces/images/Open\
+CV_logo_no_text_\
+.png\x22 width=\x22200\
+\x22>\x0a      <br>\x0a  \
+    <i>The Open-\
+CV logo</i>\x0a    \
+</p>\x0a    <p>\x0a   \
+   It does so by\
+ quantising the \
+image, through a\
+ set binary thre\
+sholds. At\x0a     \
+ each threshold,\
+ shape contours \
+are detected. Th\
+en, each contour\
+ is\x0a      associ\
+ated to a tree n\
+ode. \x0a    </p>\x0a \
+   <p>\x0a      A n\
+ode's parent is \
+a node associate\
+d to the shape s\
+haring the same\x0a\
+      location b\
+ut detected at a\
+ lower threshold\
+. That way, clus\
+ters of spots\x0a  \
+    can be separ\
+ated into invidu\
+al spots, as lon\
+g as they are no\
+t\x0a      overlapp\
+ing. Finally, th\
+e nodes are filt\
+ered following s\
+hape descriptor\x0a\
+      criteria, \
+and the remainin\
+g branches are c\
+ounted. This pro\
+cess is repeated\
+\x0a      for each \
+color category s\
+et by the user.\x0a\
+    </p>\x0a    <p>\
+\x0a      Here are \
+the different sh\
+ape descriptor c\
+riteria that you\
+ can configure \x0a\
+      (click on \
+the setting fiel\
+ds for more info\
+rmation) :\x0a    <\
+/p>\x0a    <ul>\x0a   \
+   <li>Binary th\
+resholds setting\
+s</li>\x0a      <li\
+>Minimum distanc\
+e between spots<\
+/li>\x0a      <li>S\
+pot Area</li>\x0a  \
+    <li>Spot Cir\
+cularity</li>\x0a  \
+    <li>Spot Con\
+vexity</li>\x0a    \
+  <li>Spot Inert\
+ia</li>\x0a    </ul\
+>\x0a    <h1>Color \
+categories</h1>\x0a\
+    <p>\x0a      Wh\
+en spots of diff\
+erent colors hav\
+e generally diff\
+erent shapes,\x0a  \
+    the user can\
+ set\x0a    </p>\x0a  \
 </body>\x0a</html>\x0a\
 \
 "
@@ -3544,7 +3606,7 @@ qt_resource_struct = b"\
 \x00\x00\x00n\x00\x00\x00\x00\x00\x01\x00\x00\x83\xc9\
 \x00\x00\x01\x92vP{\x98\
 \x00\x00\x00\xb4\x00\x00\x00\x00\x00\x01\x00\x00\xd6\xa2\
-\x00\x00\x01\x92\xde\x0fH\x0f\
+\x00\x00\x01\x92\xfd\x12DG\
 "
 
 def qInitResources():

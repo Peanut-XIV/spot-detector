@@ -1,24 +1,51 @@
 <html>
-  <title>Default Hint</title>
+  <head>
+    <title>Default Hint</title>
+  </head>
   <body>
     <h1>Detection parameters</h1>
     <p>
-      Spot-detector uses SimpleBlobDetector, an alogrithm from the Open-CV
-      library, in order to count points.
+      Spot-detector is a point counting program that apply different criteria
+      depending on the spot's color.
+    </p>
+    <p>
+      The counting is done using SimpleBlobDetector, an alogrithm from the
+      Open-CV library, in order to count points.
     </p>
     <p align="center">
-      <img source="spot_detector/resources/images/OpenCV_logo_no_text_.png" width="200">
+      <img src=":resources/images/OpenCV_logo_no_text_.png" width="100">
       <br>
       <i>The Open-CV logo</i>
     </p>
     <p>
       It does so by quantising the image, through a set binary thresholds. At
       each threshold, shape contours are detected. Then, each contour is
-      associated to a tree node, where the parent is the shape of the previous
-      threshold.
+      associated to a tree node. 
     </p>
     <p>
-      finally,
+      A node's parent is a node associated to the shape sharing the same
+      location but detected at a lower threshold. That way, clusters of spots
+      can be separated into invidual spots, as long as they are not
+      overlapping. Finally, the nodes are filtered following shape descriptor
+      criteria, and the remaining branches are counted. This process is repeated
+      for each color category set by the user.
+    </p>
+    <p>
+      Here are the different shape descriptor criteria that you can configure 
+      (click on the setting fields for more information) :
+    </p>
+    <ul>
+      <li>Binary thresholds settings</li>
+      <li>Minimum distance between spots</li>
+      <li>Spot Area</li>
+      <li>Spot Circularity</li>
+      <li>Spot Convexity</li>
+      <li>Spot Inertia</li>
+    </ul>
+    <h1>Color categories</h1>
+    <p>
+      When spots of different colors have generally different shapes,
+      the user can set
     </p>
   </body>
 </html>
