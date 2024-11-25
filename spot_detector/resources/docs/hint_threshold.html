@@ -5,15 +5,26 @@
   <body>
     <h1>Threshold settings</h1>
     <p>
+      This parameter should be left in automatic because of the current form
+      of the program. Since the colors are quantized, the pixels in the image
+      can take only take a limited number of different values. The automatic
+      setting takes that into acount. Nevertheless, here is how it works.
+    </p>
+    <p>
       In order to detect the shape of the spots you wish to detect,
       spot-detector applies a binary filter on the images to process. This
       binary filter is applied on a range of thresholds, in order to acount for
       ambiant luminosity.
     </p>
     <br>
-    <div style="align: center">
+    <p align="center">
       <img src=":resources/images/thresholds_examples.png" height="100">
+      <br>
       <i>A sample image filtered at different thresholds</i>
-    </div>
+    </p>
+    <p>
+      Since the colors are quantized, the processed images don't look like the
+      example given here.
+    </p>
   </body>
 </html>

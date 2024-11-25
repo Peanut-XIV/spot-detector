@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 
-from spot_detector.view.config_widget import ConfigWidget
 from spot_detector.view.image_viewer import ViewerWidget
 
 
@@ -18,10 +17,6 @@ class MainWindow(QMainWindow):
         # self._create_menu()
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._create_config_widget(splitter)
-        self._create_viewer(splitter)
-
-        splitter.addWidget(self.config_widget)
         splitter.addWidget(self.viewer)
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
@@ -36,10 +31,6 @@ class MainWindow(QMainWindow):
     #     self._file_menu.addAction("Load Image", self._load_image_with_dialog, "Ctrl+I")
     #     self._file_menu.addAction("Load Configuration", self._load_config_with_dialog, "Ctrl+L")
     #     self._file_menu.addAction("New Configuration", self._new_configuration_dialog, "Ctrl+N")
-
-    def _create_config_widget(self, parent):
-        self.config_widget = ConfigWidget(parent)
-        self.config_widget.model.load({})
 
     def _create_viewer(self, parent):
         self.viewer = ViewerWidget(parent)
@@ -63,5 +54,3 @@ if __name__ == "__main__":
     window.resize(800, 600)
     window.show()
     sys.exit(app.exec())
-
-

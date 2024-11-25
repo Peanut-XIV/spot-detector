@@ -1,8 +1,14 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
   <file>resources/docs/hint_default.html</file>
+  <file>resources/docs/hint_circularity.html</file>
+  <file>resources/docs/hint_area.html</file>
+  <file>resources/docs/hint_threshold.html</file>
+  <file>resources/docs/hint_convexity.html</file>
   <file>resources/images/OpenCV_logo_no_text_.png</file>
+  <file>resources/images/convexity.png</file>
   <file>resources/images/loupe_moins.png</file>
   <file>resources/images/loupe_plus.png</file>
+  <file>resources/images/circularity_formula.png</file>
 </qresource>
 </RCC>

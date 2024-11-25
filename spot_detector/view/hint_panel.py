@@ -1,62 +1,83 @@
+"""
+I hope this file is useful...
+"""
+
 import sys
-from importlib.resources import files
-from typing import Self
-from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
-        QLabel,
-        QWidget,
-        QApplication,
-        QHBoxLayout,
-        QVBoxLayout,
-        QScrollArea,
+    QLabel,
+    QWidget,
+    QApplication,
+    QHBoxLayout,
+    QScrollArea,
 )
 from PySide6.QtCore import (
-        QFile,
-        QIODevice,
-        QTextStream,
-        Qt,
+    QFile,
+    QIODevice,
+    QTextStream,
+    Qt,
+    Slot,
 )
+
+# //////// DO NOT REMOVE ////////
 import spot_detector.rc_resources
-from spot_detector.view.detection_settings import Hint
+
+from spot_detector.types import Hint
 
 
-class HintPanel(QScrollArea):
+class HintPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.selected_panel: Hint = Hint.DEFAULT
+
         layout = QHBoxLayout(self)
-        page = HintPage.as_default(self)
-        #page.setMaximumWidth(1000)
-        layout.addWidget(page)
+        doc_path = ":resources/docs/"
+        # TODO: Add the remaining docs please
+        docs_n_ids = [
+            ["hint_default.html", Hint.MISSING],  # Make an ERROR PAGE NOT FOUND page
+            ["hint_default.html", Hint.DEFAULT],
+            ["hint_threshold.html", Hint.THRESH],
+            ["hint_area.html", Hint.AREA],
+            ["hint_circularity.html", Hint.CIRC],
+            ["hint_convexity.html", Hint.CONV],
+        ]
+        self.pages: dict[Hint, HintPage] = {}
+        for doc, id in docs_n_ids:
+            page = HintPage(id, doc_path + doc, self)
+            page.setVisible(False)
+            layout.addWidget(page)
+            self.pages[id] = page
         self.setLayout(layout)
+        self.pages[Hint.DEFAULT].setVisible(True)
+        self.current_page_id: Hint = Hint.DEFAULT
 
-class HintPage(QWidget):
+    @property
+    def current_page(self):
+        return self.pages[self.current_page_id]
+
+    @Slot(Hint)
+    def select_hint(self, id: Hint):
+        print("recieved ID", id)
+        next_page = self.pages.get(id, None)
+        if next_page is None:
+            print("Eh, this one does not exist (yet ?)")
+            id = Hint.MISSING
+            return
+        self.current_page.setVisible(False)
+        self.current_page_id = id
+        self.pages[id].setVisible(True)
+
+
+class HintPage(QLabel):
     def __init__(
-            self,
-            hint_id: Hint,
-            parent: QWidget | None = None,
-            f: Qt.WindowType = Qt.WindowType.Widget
+        self,
+        hint_id: Hint,
+        document: str,
+        parent: QWidget | None = None,
     ) -> None:
-        super().__init__(parent, f)
+        text = print_file(document)
+        super().__init__(text, parent)
         self.id: Hint = hint_id
-
-    @classmethod
-    def as_default(
-            cls, 
-            parent: QWidget | None = None,
-            f: Qt.WindowType = Qt.WindowType.Widget
-    ) -> Self:
-        page = cls(Hint.DEFAULT, parent, f)
-        layout = QVBoxLayout(page)
-        document = QLabel(page)
-
-        text = print_file(":resources/docs/hint_default.html")
-
-        document.setText(text)
-        document.setWordWrap(True)
-        layout.addWidget(document)
-        page.setLayout(layout)
-        return page
+        self.setWordWrap(True)
+        self.setAlignment(Qt.AlignmentFlag.AlignTop)
 
 
 def print_file(file_path: str) -> str:

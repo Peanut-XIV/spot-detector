@@ -2,45 +2,40 @@ import sys
 from enum import IntEnum
 from typing_extensions import override
 from PySide6.QtWidgets import (
-        QApplication,
-        QCheckBox,
-        QHBoxLayout,
-        QLabel,
-        QListWidget,
-        QScrollArea,
-        QSpinBox,
-        QSplitter,
-        QVBoxLayout,
-        QWidget,
-        QGroupBox,
-        QDoubleSpinBox,
-        QLineEdit,
+    QApplication,
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QScrollArea,
+    QSpinBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+    QGroupBox,
+    QDoubleSpinBox,
+    QLineEdit,
 )
 from PySide6.QtCore import (
-        Qt,
-        Slot,
+    Qt,
+    Signal,
+    Slot,
 )
 from PySide6.QtGui import (
-        QMouseEvent,
+    QMouseEvent,
 )
 
 from spot_detector.model.models import ColorAndParams, DetParams, SimpleParam, Threshold
+from spot_detector.view.hint_panel import HintPanel
+from spot_detector.types import Hint
 
-class Hint(IntEnum):
-    DEFAULT = 0
-    COLORS = 1
-    MIN_DIST = 2
-    THRESH = 3
-    AREA = 4
-    CIRC = 5
-    INERTIA = 6
 
 class DetectionSettings(QWidget):
     def __init__(
         self,
         colors,
         parent: QWidget | None = None,
-        f: Qt.WindowType = Qt.WindowType.Widget
+        f: Qt.WindowType = Qt.WindowType.Widget,
     ) -> None:
         super().__init__(parent, f)
         self.selected_color = 0
@@ -55,6 +50,7 @@ class DetectionSettings(QWidget):
         self.colors_list.addItems(colors)
         self.colors_list.setMaximumWidth(200)
         split.addWidget(self.colors_list)
+
         # Fields
         scroll_area = QScrollArea(self)
         self.fields = SettingsFields(None, self)
@@ -64,27 +60,33 @@ class DetectionSettings(QWidget):
         scroll_area.setMinimumWidth(302)
         scroll_area.setMaximumWidth(302)
         split.addWidget(scroll_area)
-        # Help
-        self.help_panel = QWidget(self)
-        split.addWidget(self.help_panel)
+
+        # Hint
+        scroll_area_2 = QScrollArea(self)
+        self.help_panel = HintPanel(self)
+        self.help_panel.setMinimumWidth(400)
+        scroll_area_2.setWidget(self.help_panel)
+        split.addWidget(scroll_area_2)
 
         layout.addWidget(split)
         self.setLayout(layout)
+
+        self.fields.clicked.connect(self.help_panel.select_hint)
 
     def load(self, model: ColorAndParams):
         self.colors_list.clear()
         self.colors_list.addItems(model.color_data.names)
         self.fields.load(model.det_params[0])
-        # TODO: set hint to default
 
 
 class SettingsFields(QWidget):
-    # Add clicked signal
+    clicked: Signal = Signal(Hint)
+
     def __init__(
         self,
         model: DetParams | None,
         parent: QWidget | None = None,
-        f: Qt.WindowType = Qt.WindowType.Widget
+        f: Qt.WindowType = Qt.WindowType.Widget,
     ) -> None:
         super().__init__(parent, f)
         self.setObjectName("Settings_Fields")
@@ -111,13 +113,21 @@ class SettingsFields(QWidget):
         # in model/defaults.py for these settings (with a JSON maybe)
         self.thresh = TresholdParam(thresh_model, True, self)
         layout.addWidget(self.thresh)
-        self.area = SimpleParamWidget("Filter by Area", area_model, 4000, 1, self)
+        self.area = SimpleParamWidget(
+            "Filter by Area", Hint.AREA, area_model, 4000, 1, self
+        )
         layout.addWidget(self.area)
-        self.convex = SimpleParamWidget("Filter by Convexity", convex_model, 1, 0.05, self)
+        self.convex = SimpleParamWidget(
+            "Filter by Convexity", Hint.CONV, convex_model, 1, 0.05, self
+        )
         layout.addWidget(self.convex)
-        self.circ = SimpleParamWidget("Filter by Circularity", circ_model, 1, 0.05, self)
+        self.circ = SimpleParamWidget(
+            "Filter by Circularity", Hint.CIRC, circ_model, 1, 0.05, self
+        )
         layout.addWidget(self.circ)
-        self.inertia = SimpleParamWidget("Filter by Angular Moment", inertia_model, 1, 0.05, self)
+        self.inertia = SimpleParamWidget(
+            "Filter by Angular Moment", Hint.INERTIA, inertia_model, 1, 0.05, self
+        )
         layout.addWidget(self.inertia)
         layout.addStretch(1)
 
@@ -126,7 +136,8 @@ class SettingsFields(QWidget):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click Main")
+            print("Click BG")
+            self.clicked.emit(Hint.DEFAULT)
         else:
             super().mousePressEvent(event)
 
@@ -143,7 +154,7 @@ class TresholdParam(QGroupBox):
     def __init__(
         self,
         model: Threshold | None,
-        is_8bit = True,  #TODO: Handle higher image depths
+        is_8bit=True,  # TODO: Handle higher image depths
         parent: QWidget | None = None,
     ) -> None:
         super().__init__("Detection Thresholds", parent)
@@ -218,6 +229,9 @@ class TresholdParam(QGroupBox):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             print("Click Threshold")
+            parent = self.parent()
+            if isinstance(parent, SettingsFields):
+                parent.clicked.emit(Hint.THRESH)
         else:
             super().mousePressEvent(event)
 
@@ -226,6 +240,7 @@ class SimpleParamWidget(QGroupBox):
     def __init__(
         self,
         name: str,
+        hint_id: Hint,
         model: SimpleParam | None,
         maximum: float | None,
         step: float = 1,
@@ -236,10 +251,12 @@ class SimpleParamWidget(QGroupBox):
         Spinboxes get values between 0 and maximum (must be positive)
         """
         super().__init__(name, parent)
-        self.setObjectName("Simple_param_widget_"+name)
+        self.setObjectName("Simple_param_widget_" + name)
 
         if model is None:
             model = SimpleParam.from_defaults(False, 0, None)
+
+        self.hint_id = hint_id
 
         # Main Parameter Enabled checkbox
         layout = QVBoxLayout(self)
@@ -287,7 +304,9 @@ class SimpleParamWidget(QGroupBox):
         self.mini_spinbox.valueChanged.connect(self.on_mini_changed)
         self.maxi_spinbox.valueChanged.connect(self.on_maxi_changed)
         self.enabled_checkbox.checkStateChanged.connect(self.on_enabled_changed)
-        self.maxi_enabled_checkbox.checkStateChanged.connect(self.on_maxi_enabled_changed)
+        self.maxi_enabled_checkbox.checkStateChanged.connect(
+            self.on_maxi_enabled_changed
+        )
 
     @Slot(float)
     def on_maxi_changed(self, value):
@@ -319,7 +338,7 @@ class SimpleParamWidget(QGroupBox):
         if model.maxi is not None:
             self.maxi_spinbox.setValue(model.maxi or model.mini)
         else:
-            state = Qt.CheckState.Unchecked 
+            state = Qt.CheckState.Unchecked
             self.maxi_enabled_checkbox.setCheckState(state)
             self.on_maxi_enabled_changed(state)
 
@@ -327,6 +346,9 @@ class SimpleParamWidget(QGroupBox):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             print("Click SimpleParam")
+            parent = self.parent()
+            if isinstance(parent, SettingsFields):
+                parent.clicked.emit(self.hint_id)
         else:
             super().mousePressEvent(event)
 
@@ -349,6 +371,9 @@ class MinDistField(QGroupBox):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             print("Click Min dist")
+            parent = self.parent()
+            if isinstance(parent, SettingsFields):
+                parent.clicked.emit(Hint.MIN_DIST)
         else:
             super().mousePressEvent(event)
 
@@ -366,6 +391,9 @@ class NameField(QGroupBox):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             print("Click name field")
+            parent = self.parent()
+            if isinstance(parent, SettingsFields):
+                parent.clicked.emit(Hint.COLORS)
         else:
             super().mousePressEvent(event)
 
@@ -376,11 +404,13 @@ def checkState2Bool(check_state: Qt.CheckState) -> bool:
     else:
         return False
 
+
 def bool2CheckState(value: bool) -> Qt.CheckState:
     if value:
         return Qt.CheckState.Checked
     else:
         return Qt.CheckState.Unchecked
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
