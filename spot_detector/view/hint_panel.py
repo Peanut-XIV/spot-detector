@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QApplication,
     QHBoxLayout,
-    QScrollArea,
 )
 from PySide6.QtCore import (
     QFile,
@@ -32,12 +31,13 @@ class HintPanel(QWidget):
         doc_path = ":resources/docs/"
         # TODO: Add the remaining docs please
         docs_n_ids = [
-            ["hint_default.html", Hint.MISSING],  # Make an ERROR PAGE NOT FOUND page
+            ["not_found.html", Hint.MISSING],
             ["hint_default.html", Hint.DEFAULT],
             ["hint_threshold.html", Hint.THRESH],
             ["hint_area.html", Hint.AREA],
             ["hint_circularity.html", Hint.CIRC],
             ["hint_convexity.html", Hint.CONV],
+            ["hint_inertia.html", Hint.INERTIA],
         ]
         self.pages: dict[Hint, HintPage] = {}
         for doc, id in docs_n_ids:
@@ -56,11 +56,7 @@ class HintPanel(QWidget):
     @Slot(Hint)
     def select_hint(self, id: Hint):
         print("recieved ID", id)
-        next_page = self.pages.get(id, None)
-        if next_page is None:
-            print("Eh, this one does not exist (yet ?)")
-            id = Hint.MISSING
-            return
+        id = id if id in self.pages else Hint.MISSING
         self.current_page.setVisible(False)
         self.current_page_id = id
         self.pages[id].setVisible(True)

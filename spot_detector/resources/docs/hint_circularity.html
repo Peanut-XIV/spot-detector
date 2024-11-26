@@ -4,6 +4,7 @@
     <style>
     td {border-width: 1px ; padding: 2px}
     th {border-width: 1px ; padding: 2px}
+    table {border: 1px solid ; border-collapse: collapse}
     </style>
   </head>
   <body>
@@ -12,7 +13,11 @@
       SimpleBlobDetector can also filter shapes by circularity to discriminate
       them. Circularity is a dimensionless value between 0 and 1 associated to
       a closed 2D shape. The closer the value is to 1, the rounder the shape
-      is, with a perfect circle having a value of one.
+      is, with a perfect circle having a value of 1.
+    </p>
+    <p>
+      The <b>minimum</b> bound is <b>inclusive</b> and the <b>maximum</b> bound
+      is <b>exclusive</b>.
     </p>
     <p>
       This value is calculated from the area and the perimeter of the shape with
@@ -25,34 +30,13 @@
       For your convenience, here is a table of values for a few remarkable
       shapes.
     </p>
-    <table
-      style="border: 1px solid ; border-collapse: collapse"
-      width="300"
-    >
-      <tr>
-        <th>shape name</th>
-        <th>circularity</th>
-      </tr>
-      <tr>
-        <td>circle</td>
-        <td>1.0000</td>
-      </tr>
-      <tr>
-        <td>regular hexagon</td>
-        <td>0.9069</td>
-      </tr>
-      <tr>
-        <td>2:1 ellipse</td>
-        <td>0.8412</td>
-      </tr>
-      <tr>
-        <td>square</td>
-        <td>0.7854</td>
-      </tr>
-      <tr>
-        <td>regular triangle</td>
-        <td>0.6046</td>
-      </tr>
+    <table width="300">
+      <tr> <th>shape name</th>       <th>circularity</th> </tr>
+      <tr> <td>circle</td>           <td>1.0000</td>      </tr>
+      <tr> <td>regular hexagon</td>  <td>0.9069</td>      </tr>
+      <tr> <td>2:1 ellipse</td>      <td>0.8412</td>      </tr>
+      <tr> <td>square</td>           <td>0.7854</td>      </tr>
+      <tr> <td>regular triangle</td> <td>0.6046</td>      </tr>
     </table>
   </body>
 </html>

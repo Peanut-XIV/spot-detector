@@ -1,0 +1,45 @@
+<html>
+  <head>
+    <title>Inertia hint</title>
+  </head>
+  <body>
+    <h1>Filtering by inertia</h1>
+    <p>
+      SimpleBlobDetector allows to distinguish different shapes of spots with
+      it's minimum to maximum inertia ratio.
+    </p>
+    <h2>What is inertia?</h2>
+    <p>
+      Inertia has a broad definition, but it is linked to the physical notion of
+      moment of inertia of an object. In our case, it measures how "packed" the
+      shape is along an axis passing by it's center of mass:<br>
+      The closer a shape is to an axis, the lower its inertia is along the axis.
+      This also means that the more spread-out the shape is relative to the
+      axis, the higher its inertia is.
+    </p>
+    <p>
+      Also, it is possible to compute the angle of the axis minimizing and
+      maximizing the inertia of a given shape. The calculation is complex but
+      can be found following
+      <a href="https://homepages.inf.ed.ac.uk/rbf/CVonline/LOCAL_COPIES/OWENS/LECT2/node3.html">
+        this link
+      </a>.
+    </p>
+    <p align="center">
+      <img src=":resources/images/inertia_formula.png" width="500"><br>
+      <i>
+        Formula of the inertia of an image along the x axis,
+        where ȳ is the y coordinate of the center of mass of the shape.
+      </i>
+    </p>
+    <p>
+      To be consise, the ratio of minimum to maximum inertia of a shape give us
+      information on how squished a shape is. A line like object will have an
+      inertia ratio close to zero whereas a circle will have an inertia of 1.
+    </p>
+    <p>
+      As for other parameters, the <b>minimum</b> bound is <b>inclusive</b> and
+      the <b>maximum</b> bound is <b>exclusive</b>.
+    </p>
+  </body>
+</html>
