@@ -14,5 +14,6 @@
   <file>resources/images/loupe_plus.png</file>
   <file>resources/images/circularity_formula.png</file>
   <file>resources/images/inertia_formula.png</file>
+  <file>resources/images/testscreen.png</file>
 </qresource>
 </RCC>
