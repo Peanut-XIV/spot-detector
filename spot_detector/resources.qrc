@@ -15,5 +15,6 @@
   <file>resources/images/circularity_formula.png</file>
   <file>resources/images/inertia_formula.png</file>
   <file>resources/images/testscreen.png</file>
+  <file>resources/images/testscreen2.png</file>
 </qresource>
 </RCC>

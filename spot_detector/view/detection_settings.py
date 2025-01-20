@@ -43,13 +43,15 @@ class DetectionSettings(QWidget):
         self.fields.setMinimumWidth(300)
         self.fields.setMaximumWidth(300)
         scroll_area.setWidget(self.fields)
-        scroll_area.setMinimumWidth(302)
-        scroll_area.setMaximumWidth(302)
+        scroll_area.setMinimumWidth(300)
+        scroll_area.setMaximumWidth(300)
         split.addWidget(scroll_area)
 
         # Hint
         scroll_area_2 = QScrollArea(self)
-        self.help_panel = HintPanel(self)
+        scroll_area_2.setObjectName("scroll_area_2")
+        scroll_area_2.setMinimumWidth(400)
+        self.help_panel = HintPanel(self, scroll_area_2)
         self.help_panel.setMinimumWidth(400)
         scroll_area_2.setWidget(self.help_panel)
         split.addWidget(scroll_area_2)

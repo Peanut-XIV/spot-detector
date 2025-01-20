@@ -26,6 +26,7 @@ class ColorData(BaseModel):
     ]
     ```
     """
+
     names: list[str]
     table: ColorTable
 
@@ -36,9 +37,7 @@ class ColorData(BaseModel):
         test_len = len(table[0])
         for row in table:
             if len(row) != test_len:
-                raise ValueError(
-                        "color_data.table has inconsistent dimensions"
-                )
+                raise ValueError("color_data.table has inconsistent dimensions")
         for i, row in enumerate(table):
             for j, value in enumerate(row):
                 if type(value) is not int:
@@ -46,7 +45,7 @@ class ColorData(BaseModel):
                         f"value ({i},{j}) of color_data.table is not an integer"
                     )
         return table
-    
+
     @model_validator(mode="after")
     def check_name_list_match(self) -> Self:
         count = len(self.names)
@@ -57,7 +56,7 @@ class ColorData(BaseModel):
 
     @classmethod
     def from_defaults(cls, color_name) -> Self:
-        return cls(names=[color_name], table=[[0, 0, 0, 0],[255,255,255,1]])
+        return cls(names=[color_name], table=[[0, 0, 0, 0], [255, 255, 255, 1]])
 
 
 class Threshold(BaseModel):
@@ -86,7 +85,9 @@ class SimpleParam(BaseModel):
         super().__init__(**data)
 
     @field_validator("maxi")
-    def maxi_greater_than_mini(cls, maxi: Optional[float], info: FieldValidationInfo) -> Optional[float]:
+    def maxi_greater_than_mini(
+        cls, maxi: Optional[float], info: FieldValidationInfo
+    ) -> Optional[float]:
         maxi_does_exist = bool(info.data["enabled"] and (maxi is not None) and maxi)
         try:
             if maxi_does_exist and (maxi <= info.data["mini"]):
@@ -105,7 +106,8 @@ class DetParams(BaseModel):
     The settings of openCV's SimpleBlobDetector, wrapped in
     an object for validation and serialization.
     """
-    color_name: str  
+
+    color_name: str
     thresh: Threshold
     min_dist: Optional[float] = Field(gt=0, default=None)
     filter_by_color: Optional[int] = Field(ge=0, le=255, default=255)
@@ -146,7 +148,7 @@ class DetParams(BaseModel):
             area=area,
             circ=circ,
             convex=convex,
-            inertia=inertia
+            inertia=inertia,
         )
         return params
 
@@ -199,17 +201,17 @@ class ColorAndParams(BaseModel):
     @classmethod
     def from_defaults(cls, color_name="color_1") -> Self:
         return cls(
-            reference_image = "",
-            color_data = ColorData.from_defaults(color_name),
-            det_params = [DetParams.from_defaults(color_name)]
+            reference_image="",
+            color_data=ColorData.from_defaults(color_name),
+            det_params=[DetParams.from_defaults(color_name)],
         )
 
     @classmethod
     def from_prepopulated_defaults(cls, color_name="color_1") -> Self:
         return cls(
-            reference_image = "",
-            color_data = ColorData.from_defaults(color_name),
-            det_params = [DetParams.from_prepopulated_defaults(color_name)]
+            reference_image="",
+            color_data=ColorData.from_defaults(color_name),
+            det_params=[DetParams.from_prepopulated_defaults(color_name)],
         )
 
     @classmethod

@@ -5,6 +5,7 @@ I hope this file is useful...
 import sys
 from PySide6.QtWidgets import (
     QLabel,
+    QScrollArea,
     QWidget,
     QApplication,
     QHBoxLayout,
@@ -24,9 +25,11 @@ from spot_detector.types import Hint
 
 
 class HintPanel(QWidget):
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, parent: QWidget | None = None, scroll_area: QScrollArea | None = None
+    ) -> None:
         super().__init__(parent)
-
+        self.scroll_area = scroll_area
         layout = QHBoxLayout(self)
         doc_path = ":resources/docs/"
         # TODO: Add the remaining docs please
@@ -55,11 +58,12 @@ class HintPanel(QWidget):
 
     @Slot(Hint)
     def select_hint(self, id: Hint):
-        print("recieved ID", id)
         id = id if id in self.pages else Hint.MISSING
         self.current_page.setVisible(False)
         self.current_page_id = id
         self.pages[id].setVisible(True)
+        if self.scroll_area is not None:
+            self.scroll_area.ensureVisible(0, 0)
 
 
 class HintPage(QLabel):

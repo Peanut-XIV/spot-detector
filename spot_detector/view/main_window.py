@@ -17,6 +17,7 @@ class MainWindow(QMainWindow):
         # self._create_menu()
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._create_viewer(splitter)
         splitter.addWidget(self.viewer)
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
