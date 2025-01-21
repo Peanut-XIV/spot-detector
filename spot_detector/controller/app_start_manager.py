@@ -1,0 +1,38 @@
+import sys
+
+from PySide6.QtCore import QObject, QThread, Slot, Signal
+from PySide6.QtWidgets import QApplication
+
+from spot_detector.controller.start_manager_interface import StartManagerInterface
+from spot_detector.view.main_window import MainWindow
+from spot_detector.view.welcome_window import WelcomeWindow
+from spot_detector.model.project import Project
+
+
+class AppStartManager(QObject, StartManagerInterface):
+    """
+    An object responsible for starting
+    the main window once a valid project
+    is selected in the welcome window.
+    """
+
+    def __init__(self, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self.main_window_count = 0
+
+    def start_from_welcome(self):
+        # create welcome window
+        self.welcome_window = WelcomeWindow(self)
+        self.welcome_window.show()
+
+    @Slot(Project)
+    def start_main_window(self, project):
+        self.project = project
+        self.main_window = MainWindow(project)
+
+
+if __name__ == "__main__":
+    app = QApplication()
+    start_manager = AppStartManager()
+    start_manager.start_from_welcome()
+    sys.exit(app.exec())

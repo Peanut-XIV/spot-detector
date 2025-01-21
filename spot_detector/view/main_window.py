@@ -7,14 +7,14 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 
+from spot_detector.model.project import Project
 from spot_detector.view.image_viewer import ViewerWidget
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, project: Project):
         super().__init__()
         self.setWindowTitle("Spot Detector GUI")
-        # self._create_menu()
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         self._create_viewer(splitter)
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(Project.from_path("test_file"))
     window.resize(800, 600)
     window.show()
     sys.exit(app.exec())

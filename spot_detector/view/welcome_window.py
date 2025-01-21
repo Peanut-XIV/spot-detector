@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
-import json
+from types import MethodType
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
+    QMessageBox,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -17,21 +18,23 @@ from PySide6.QtCore import (
     Qt,
     Signal,
     Slot,
-)
-from PySide6.QtGui import (
-    QPixmap,
+    QObject,
 )
 
+from spot_detector.controller.start_manager_interface import StartManagerInterface
 from spot_detector.view.new_project_dialog import NewProjectDialog
+from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
+from spot_detector.model.project import Project
 
 
-class WelcomeWindow(QWidget):
+class WelcomeWindow(QWidget, WelcomeWindowInterface):
     start_project: Signal = Signal(dict)
 
-    def __init__(self, controller) -> None:
+    def __init__(self, start_manager: QObject | None) -> None:
         super().__init__(None, Qt.WindowType.Window)
-        # Load previous projects
-        self.controller = controller
+        self.start_manager = start_manager
+        self.project: None | Project = None
+        # layout
         layout = QHBoxLayout(self)
         splitter = QSplitter(self)
         splitter.setOrientation(Qt.Orientation.Horizontal)
@@ -56,7 +59,7 @@ class WelcomeWindow(QWidget):
     def is_valid_project_path(self, path: str) -> bool:
         path_obj = Path(path)
         output = (
-            (not path.startswith("#"))
+            (not path.startswith("#"))  # ignore comments
             and path_obj.exists()
             and path_obj.is_file()
             and path_obj.suffix == ".spot"  # Actually a json file but *hush*
@@ -93,10 +96,27 @@ class WelcomeWindow(QWidget):
         panel.setLayout(layout)
         return panel
 
+    @Slot(Project)
+    def setProject(self, project: Project):
+        self.project = project
+
     @Slot()
     def create_new_project(self):
-        dialog = NewProjectDialog(self.controller, self)
+        dialog = NewProjectDialog(self)
         dialog.exec()
+        if self.project is not None:
+            self.start_main_window_and_hide(self.project)
+
+    def start_main_window_and_hide(self, project: Project):
+        manager = self.start_manager
+        if isinstance(manager, StartManagerInterface):
+            manager.start_main_window(project)
+            self.close()
+        else:
+            message = QMessageBox(self)
+            message.setText(
+                "Could not create new project since the start manager is missing"
+            )
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 from enum import Enum
 from pathlib import Path
 import json
-from typing_extensions import Self
+from typing import Self, Any, Optional
 
 from pydantic import BaseModel, field_validator, Field, ValidationError
+
+from spot_detector.model.models import ColorAndParams
 
 
 class PathError(BaseException):
@@ -12,21 +14,26 @@ class PathError(BaseException):
 
 
 class Project(BaseModel):
-    name: str = Field(max_length=40)
-    ref_image_path: str
-    dust_filter_path: str
-    image_directory_path: str
+    name: str = Field(max_length=40)  #  Validated for printable characters
+    latest_save_path: Optional[str] = Field(default=None)
+    ref_image_path: Optional[str] = Field(default=None)
+    dust_filter_image_path: Optional[str] = Field(default=None)
+    image_directory_path: Optional[str] = Field(default=None)
+    configuration: Optional[ColorAndParams] = Field(default=None)
 
     @field_validator(
-        "name", "ref_image_path", "dust_filter_path", "image_directory_path"
+        "name",
+        "latest_save_path",
+        "ref_image_path",
+        "dust_filter_image_path",
+        "image_directory_path",
     )
-    def is_printable(cls, string: str):
-        if not string.isprintable():
+    def is_printable(cls, string: str | None):
+        if string is not None and not string.isprintable():
             error = ValidationError()
             error.add_note(
-                "expected fields 'ref_image_path', 'dust_filter_path'"
-                " and 'image_directory_path' to only contain printable characters."
-                "At least one of them contain a non-printable character"
+                "A field within the config file contains non printable characters,"
+                " it is therfore invalid"
             )
             raise error
 
@@ -36,6 +43,10 @@ class Project(BaseModel):
             json_dict = json.load(file)
             content = cls(**json_dict)
         return content
+
+    @classmethod
+    def from_dict(cls, project_data: dict[str, Any]) -> Self:
+        return cls(**project_data)
 
     def is_valid_image_format(self, path: Path):
         valid_extensions = [
@@ -78,7 +89,7 @@ class Project(BaseModel):
                     f"of project {self.name}"
                 )
                 raise e
-        self.dust_filter_path = str(path)
+        self.dust_filter_image_path = str(path)
 
     def set_ref_image_path(self, path: Path | str, validate: bool = True):
         if validate:
@@ -103,9 +114,3 @@ class Project(BaseModel):
                 )
                 raise e
         self.ref_image_path = str(path)
-
-    def check_fields(self) -> dict | None:
-        # Check field 1
-        # Check field 2
-        # Check field 3
-        return None

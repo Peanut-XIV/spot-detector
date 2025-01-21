@@ -4,10 +4,12 @@ import sys
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QErrorMessage,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QVBoxLayout,
     QWidget,
     QDialog,
@@ -15,23 +17,18 @@ from PySide6.QtWidgets import (
     QPushButton,
 )
 from PySide6.QtCore import (
-    QSize,
     Qt,
     Slot,
-    Signal,
 )
+from pydantic import ValidationError
 
-from spot_detector.model.project import PathError, Project
-
-import spot_detector.rc_resources
+from spot_detector.model.project import Project
+from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
 
 
 class NewProjectDialog(QDialog):
-    start_project: Signal = Signal(dict)
-
     def __init__(
         self,
-        controller,
         parent: QWidget | None = None,
         f: Qt.WindowType = Qt.WindowType.Dialog,
     ) -> None:
@@ -105,17 +102,36 @@ class NewProjectDialog(QDialog):
     @Slot()
     def attempt_create(self):
         data = {
-            "name": self.name_line.text,
+            "name": self.name_line.text(),
             "dust_filter_path": self.dust_filter_field.text(),
             "ref_image_path": self.ref_image_field.text(),
             "image_directory_path": self.image_directory_field.text(),
         }
+        validation_success = True
+        output = None
+        error_text = "data is None"
+        try:
+            output = Project.from_dict(data)
+        except ValidationError as e:
+            # Error message
+            validation_success = False
+            error_text = str(e)
 
-
-#        self.controller.
-
-#    @Slot(dict)
-#    def start_project_error(k
+        if validation_success:
+            parent = self.parent()
+            if isinstance(parent, WelcomeWindowInterface) and output is not None:
+                parent.setProject(output)  # type: ignore
+                self.accept()
+            else:
+                message = QMessageBox(self)
+                message.setText("Error: Parent of NewProjectDialog is not supported")
+                message.exec()
+        elif not validation_success or output is None:
+            message = QMessageBox(self)
+            message.setText("Error: the input data may not be valid:\n" + error_text)
+            message.exec()
+            # raise validation error message
+            # don't close dialog
 
 
 class PathLineWidget(QLineEdit):

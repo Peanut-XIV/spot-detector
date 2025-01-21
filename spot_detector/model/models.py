@@ -16,7 +16,7 @@ class ColorData(BaseModel):
     ```
     name = ["label_A", "label_B", "label_C", ...]
     table = [
-    #   [bbb, ggg, rrr, ID]  BGR is the standard in openCV, not RGB
+        [bbb, ggg, rrr, ID]  # BGR is the standard in openCV, not RGB
         [  0,   0,   0, 0],  # no label (id 0 -> background)
         [255, 255, 255, 1],  # label_A (id 1 -> index 0)
         [  0, 255,   0, 2],  # label_B (id 2 -> index 1)
@@ -163,6 +163,7 @@ class DetParams(BaseModel):
             minimum_distance: float | int = self.min_dist
             if minimum_distance > 0.0:
                 params.minDistBetweenBlobs = self.min_dist
+
         thresh = self.thresh
         if thresh.automatic:
             params.minThreshold = thresh_step // 4
@@ -172,24 +173,36 @@ class DetParams(BaseModel):
             params.minThreshold = thresh.mini
             params.maxThreshold = thresh.maxi
             params.thresholdStep = thresh.step
+
         area = self.area
-        if area is not None and area.enabled:
-            params.filterByArea = True
-            params.minArea = area.mini
-            if area.maxi is not None:
-                params.maxArea = area.maxi
+        if area is not None:
+            if area.enabled:
+                params.filterByArea = True
+                params.minArea = area.mini
+                if area.maxi is not None:
+                    params.maxArea = area.maxi
+            else:
+                params.filterByArea = False
+
         circ = self.circ
-        if circ is not None and circ.enabled:
-            params.filterByCircularity = True
-            params.minCircularity = circ.mini
-            if circ.maxi is not None:
-                params.maxCircularity = circ.maxi
+        if circ is not None:
+            if circ.enabled:
+                params.filterByCircularity = True
+                params.minCircularity = circ.mini
+                if circ.maxi is not None:
+                    params.maxCircularity = circ.maxi
+            else:
+                params.filterByCircularity = False
+
         convex = self.convex
-        if convex is not None and convex.enabled:
-            params.filterByConvexity = True
-            params.minConvexity = convex.mini
-            if convex.maxi is not None:
-                params.maxConvexity = convex.maxi
+        if convex is not None:
+            if convex.enabled:
+                params.filterByConvexity = True
+                params.minConvexity = convex.mini
+                if convex.maxi is not None:
+                    params.maxConvexity = convex.maxi
+            else:
+                params.filterByConvexity = False
         return params
 
 
@@ -221,6 +234,10 @@ class ColorAndParams(BaseModel):
             content = cls(**json_dict)
         return content
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        return cls(**data)
+
 
 class CLIDefaults(BaseModel):
     image_dir: Optional[str] = None
@@ -231,7 +248,7 @@ class CLIDefaults(BaseModel):
     @classmethod
     def from_path(cls, file_path: str | Path) -> Self:
         """
-        Returns the tomlkit table item from
+        Unused code, check before removing though
         """
         with open(file_path, "r", encoding="UTF-8") as cfg_file:
             content = json.load(cfg_file).__getitem__("CLI")
