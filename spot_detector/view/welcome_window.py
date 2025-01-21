@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from types import MethodType
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
@@ -10,7 +9,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QListWidget,
-    QListWidgetItem,
     QPushButton,
 )
 from PySide6.QtCore import (

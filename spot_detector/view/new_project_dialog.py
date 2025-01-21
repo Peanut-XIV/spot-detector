@@ -1,10 +1,7 @@
 from collections.abc import Sequence
-from typing import Self
 import sys
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QErrorMessage,
     QFileDialog,
     QGridLayout,
     QHBoxLayout,

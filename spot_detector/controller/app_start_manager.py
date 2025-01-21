@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtCore import QObject, QThread, Slot, Signal
+from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QApplication
 
 from spot_detector.controller.start_manager_interface import StartManagerInterface
