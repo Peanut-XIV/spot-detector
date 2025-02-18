@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   sodipodi:docname="ref_image_icon.svg"
+   inkscape:export-filename="../images/ref_image_icon.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#505050"
+     inkscape:document-units="px"
+     inkscape:zoom="1.272846"
+     inkscape:cx="230.19281"
+     inkscape:cy="274.58153"
+     inkscape:window-width="1808"
+     inkscape:window-height="1126"
+     inkscape:window-x="0"
+     inkscape:window-y="258"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="swatch2"
+       inkscape:swatch="solid">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop2" />
+    </linearGradient>
+  </defs>
+  <rect
+     style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
+     id="rect1"
+     width="419.53229"
+     height="405.39075"
+     x="46.233856"
+     y="53.304626" />
+  <rect
+     style="fill:#a8e0f2;fill-opacity:1;stroke:none;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
+     id="rect2"
+     width="373.17947"
+     height="279.6882"
+     x="69.410263"
+     y="79.111794" />
+  <path
+     style="fill:#e87655;fill-opacity:1;stroke:none;stroke-width:5.96571;stroke-dasharray:none;stroke-opacity:1"
+     d="m 167.62089,184.03838 c 27.16758,-35.13307 97.78114,-52.33573 134.44907,-20.56046 36.66793,31.77526 110.94399,27.10243 70.51524,82.24185 C 332.15646,300.85919 313.3524,256 256,256 c -57.3524,0 -31.0267,55.13942 -74.27606,57.94313 -43.24934,2.8037 -41.27062,-94.77166 -14.10305,-129.90475 z"
+     id="path2"
+     sodipodi:nodetypes="zssssz" />
+  <text
+     xml:space="preserve"
+     style="font-size:319.503px;line-height:0;font-family:Arial;-inkscape-font-specification:Arial;fill:none;fill-opacity:1;stroke:#000000;stroke-width:74.8834;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     x="-144.59805"
+     y="389.90192"
+     id="text3"
+     transform="scale(0.98919371,1.0109243)"><tspan
+       sodipodi:role="line"
+       x="-144.59805"
+       y="389.90192"
+       id="tspan4"
+       style="stroke-width:74.8834;stroke-dasharray:none" /></text>
+  <text
+     xml:space="preserve"
+     style="font-size:42.6667px;line-height:0;font-family:Arial;-inkscape-font-specification:Arial;fill:#e87655;fill-opacity:1;stroke:none;stroke-width:10;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     x="-54.994869"
+     y="335.46872"
+     id="text5"><tspan
+       sodipodi:role="line"
+       id="tspan5"
+       x="-54.994869"
+       y="335.46872" /></text>
+  <text
+     xml:space="preserve"
+     style="font-size:42.6667px;line-height:0;font-family:Arial;-inkscape-font-specification:Arial;fill:#000000;fill-opacity:1;stroke:none;stroke-width:10;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     x="222.81976"
+     y="421.88919"
+     id="text6"><tspan
+       sodipodi:role="line"
+       id="tspan6"
+       x="222.81976"
+       y="421.88919" /></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:120px;line-height:0;font-family:Arial;-inkscape-font-specification:'Arial Bold';fill:#000000;fill-opacity:1;stroke:none;stroke-width:10;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+     x="144.57306"
+     y="450.1723"
+     id="text7"><tspan
+       sodipodi:role="line"
+       id="tspan7"
+       x="144.57306"
+       y="450.1723">REF</tspan></text>
+</svg>

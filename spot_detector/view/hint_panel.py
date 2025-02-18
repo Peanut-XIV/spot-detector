@@ -85,6 +85,7 @@ def print_file(file_path: str) -> str:
     text: str = ""
     flags = QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text
     if not file.open(flags):
+        # TODO: Handle this case properly
         print("Could not open file", file_path)
     else:
         stream = QTextStream(file)

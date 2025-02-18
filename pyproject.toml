@@ -54,3 +54,6 @@ disable = ["E1136"]
 
 [tool.mypy]
 python_executable = "./venv/bin/python"
+
+[tool.pyright]
+disableTaggedHints = true

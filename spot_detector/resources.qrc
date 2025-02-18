@@ -12,6 +12,8 @@
   <file>resources/images/convexity.png</file>
   <file>resources/images/loupe_moins.png</file>
   <file>resources/images/loupe_plus.png</file>
+  <file>resources/images/loupe_neutre.png</file>
+  <file>resources/images/ref_image_icon.png</file>
   <file>resources/images/circularity_formula.png</file>
   <file>resources/images/inertia_formula.png</file>
   <file>resources/images/testscreen.png</file>

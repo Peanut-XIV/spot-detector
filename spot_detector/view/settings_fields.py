@@ -39,9 +39,9 @@ class SettingsFields(QWidget):
         self.setObjectName("Settings_Fields")
         layout = QVBoxLayout(self)
         layout.setObjectName("Settings_Fields_layout")
-        self.name_field = NameField(self)
+        self.name_field = NameField(self)  # TODO: Handle Hint
         layout.addWidget(self.name_field)
-        self.min_dist = MinDistField(self)
+        self.min_dist = MinDistField(self)  # TODO: Handle Hint
         layout.addWidget(self.min_dist)
 
         if model is not None:
@@ -83,7 +83,7 @@ class SettingsFields(QWidget):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click BG")
+            # print("Click BG")
             self.clicked.emit(Hint.DEFAULT)
         else:
             super().mousePressEvent(event)
@@ -175,7 +175,7 @@ class TresholdParam(QGroupBox):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click Threshold")
+            # print("Click Threshold")
             parent = self.parent()
             if isinstance(parent, SettingsFields):
                 parent.clicked.emit(Hint.THRESH)
@@ -292,7 +292,7 @@ class SimpleParamWidget(QGroupBox):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click SimpleParam")
+            # print("Click SimpleParam")
             parent = self.parent()
             if isinstance(parent, SettingsFields):
                 parent.clicked.emit(self.hint_id)
@@ -317,7 +317,7 @@ class MinDistField(QGroupBox):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click Min dist")
+            # print("Click Min dist")
             parent = self.parent()
             if isinstance(parent, SettingsFields):
                 parent.clicked.emit(Hint.MIN_DIST)
@@ -337,7 +337,7 @@ class NameField(QGroupBox):
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            print("Click name field")
+            # print("Click name field")
             parent = self.parent()
             if isinstance(parent, SettingsFields):
                 parent.clicked.emit(Hint.COLORS)

@@ -4,146 +4,9 @@ import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 from scipy import signal
+
 # Project files
 from .types import T
-
-
-# Obsolete
-# def keep_red_yellow(array: NDArray) -> NDArray:
-#     """
-#     Makes a binary mask from the hue component of an image,
-#     coded from 0 to 255. The mask's pixels are of value 1
-#     where the hue is smaller than 120 or larger than 200.
-#     Otherwise, pixels are of value 0.
-#     :param array: uint8 ndarray of shape (x,y).
-#     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
-#     """
-#     return np.uint8(np.logical_or(np.less(array, 120),
-#                                   np.greater(array, 200)))
-
-
-# Obsolete
-# def keep_green_cyan(array: NDArray) -> NDArray:
-#     """
-#     Makes a binary mask from the hue component of an image,
-#     coded from 0 to 255. The mask's pixels are of value 1
-#     where the hue is between 90 and 150. Otherwise, pixels are of value 0.
-#     :param array: uint8 ndarray of shape (x,y).
-#     :return: uint8 ndarray of shape (x,y) with values either 0 or 1.
-#     """
-#     return np.uint8(np.logical_and(np.greater(array, 90),
-#                                    np.less(array, 140)))
-
-
-# Obsolete
-# def normalize(array: NDArray) -> NDArray:
-#     """
-#     Does a linear interpolation of the values of an array,
-#     in such a way that 0 is mapped to 0 and the maximum positive
-#     value is mapped to 255.
-#     :param array: uint8 ndarray of shape (x,y,z)
-#     :return:  uint8 ndarray of shape (x,y,z)
-#     """
-#     maximum = int(np.amax(array))
-#     if maximum == 0:
-#         return array
-#     k = 255 / maximum
-#     return np.uint8(np.multiply(array, k))
-
-
-# Obsolete
-def diff_of_gaussian(array: NDArray,
-                     rad_in: float,
-                     rad_out: float,
-                     ) -> NDArray:
-    """
-    The Difference of an image with itself at two
-    different gaussian blur strength. Used to eliminate
-    details outside a defined spatial frequency range.
-    :param array: ndarray
-    :param rad_in:
-    :param rad_out:
-    :return:
-    """
-    matrix_in = [2 * round(rad_in) + 1, 2 * round(rad_in) + 1]
-    matrix_out = [2 * round(rad_out) + 1, 2 * round(rad_out) + 1]
-    array_int16 = array.astype(np.int16)
-    blur_in = cv.GaussianBlur(array_int16, matrix_in, rad_in)
-    blur_out = cv.GaussianBlur(array_int16, matrix_out, rad_out)
-    diff = blur_in - blur_out
-    output = np.multiply(diff, diff > 0).astype(np.uint8)
-    return output
-
-
-# Obsolete
-def setup_green_params() -> cv.SimpleBlobDetector.Params:
-    params = cv.SimpleBlobDetector.Params()
-    params.filterByArea = True
-    params.minArea = 20
-    params.filterByCircularity = True
-    params.minCircularity = 0.01
-    params.filterByConvexity = True
-    params.minConvexity = 0.001
-    params.blobColor = 255
-    params.minThreshold = 10
-    params.maxThreshold = 200
-    params.thresholdStep = 1
-    return params
-
-
-# Obsolete
-def setup_green_params_faster(
-        shades_count: int) -> cv.SimpleBlobDetector.Params:
-    thresh_step = 255 // (shades_count - 1)
-    params = cv.SimpleBlobDetector.Params()
-    params.filterByArea = True
-    params.minArea = 10
-    params.filterByCircularity = True
-    params.minCircularity = 0.01
-    params.filterByConvexity = True
-    params.minConvexity = 0.1
-    params.blobColor = 255
-    params.minThreshold = thresh_step // 2
-    params.maxThreshold = 255 - thresh_step // 2
-    params.thresholdStep = thresh_step
-    return params
-
-
-# Obsolete
-def setup_orange_params() -> cv.SimpleBlobDetector.Params:
-    params = cv.SimpleBlobDetector.Params()
-    params.filterByArea = True
-    params.minArea = 1
-    params.filterByCircularity = True
-    params.minCircularity = 0.01
-    params.filterByConvexity = True
-    params.minConvexity = 0.01
-    params.blobColor = 255
-    params.minThreshold = 10
-    params.maxThreshold = 200
-    params.thresholdStep = 5
-    params.minDistBetweenBlobs = 10
-    return params
-
-
-# Obsolete
-def setup_orange_params_faster(
-        shades_count: int) -> cv.SimpleBlobDetector.Params:
-    thresh_step = 255 // shades_count
-    params = cv.SimpleBlobDetector.Params()
-    params.filterByArea = True
-    params.minArea = 4
-    params.maxArea = 800
-    params.filterByCircularity = True
-    params.minCircularity = 0.01
-    params.filterByConvexity = True
-    params.minConvexity = 0.2
-    params.blobColor = 255
-    params.minThreshold = thresh_step // 4
-    params.maxThreshold = 255 - thresh_step // 4
-    params.thresholdStep = thresh_step
-    params.minDistBetweenBlobs = 0.5
-    return params
 
 
 def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
@@ -169,9 +32,16 @@ def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
             iter_count += 1
             p1_spy = p1
             p2_spy = p2
-            circles = cv.HoughCircles(gray, cv.HOUGH_GRADIENT, dp=4,
-                                      minDist=100, param1=p1, param2=p2,
-                                      minRadius=1000, maxRadius=1500)
+            circles = cv.HoughCircles(
+                gray,
+                cv.HOUGH_GRADIENT,
+                dp=4,
+                minDist=100,
+                param1=p1,
+                param2=p2,
+                minRadius=1000,
+                maxRadius=1500,
+            )
             if circles is not None:
                 break
             # print(">", end='')
@@ -202,60 +72,20 @@ def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
     offset = np.ndarray(shape=(2, 1, 1))
     offset[:, 0, 0] = (min(radius, y), min(radius, x))
     coords = np.indices((bottom - top, right - left)) - offset
-    dist_squared = (coords ** 2).sum(axis=0)
+    dist_squared = (coords**2).sum(axis=0)
     mask = dist_squared <= radius**2
     output = src[top:bottom, left:right, :] * mask[:, :, None]
     return output
 
 
-# Obsolete
-def extract_colors(img: NDArray,
-                   color_table: NDArray,
-                   ) -> tuple[NDArray, NDArray]:
-    color1 = isolate_categories(color_table, [1, 3])
-    color2 = isolate_categories(color_table, [2, 3])
-    labeled_img = label_img(img, color_table)
-    mask1 = color1[labeled_img.flatten()]
-    mask1 = mask1.reshape(img.shape)
-    mask2 = color2[labeled_img.flatten()]
-    mask2 = mask2.reshape(img.shape)
-    return mask1, mask2
-
-
-def isolate_categories(color_table: NDArray, categories: list[int]) -> NDArray[np.uint8]:
+def isolate_categories(
+    color_table: NDArray, categories: list[int]
+) -> NDArray[np.uint8]:
     color: NDArray[np.uint8] = np.uint8(color_table[:, 0:3].copy())  # type: ignore
     for i in range(color_table.shape[0]):
         if color_table[i, 3] not in categories:
             color[i, :] = 0
     return color
-
-
-def label_img(img: NDArray, color_table: NDArray) -> NDArray:
-    table_size = color_table.shape[0]
-    height, width = img.shape[0:2]
-    delta_shape = (height, width, len(color_table))
-    deltas = np.empty(shape=delta_shape)
-    for i in range(table_size):
-        print(f"{i}.", end='')
-        diff = (img - color_table[i, 0:3])
-        print(".", end='')
-        diff_sq = diff ** 2
-        print(".", end='')
-        diff_sq_summed = np.sum(diff_sq, axis=2)
-        deltas[..., i] = diff_sq_summed
-    print("argmin ", end='')
-    labeled_img = deltas.argmin(axis=2)
-    return labeled_img
-
-
-def label_img_faster(img: NDArray, color_table: NDArray) -> NDArray:
-    t0 = perf_counter()
-    palette = color_table[:, 0:3].astype(np.float32)
-    pre_img = np.repeat(img[:, :, np.newaxis, :].astype(np.float32),
-                        palette.shape[0], axis=2)
-    labeled_img = np.linalg.norm(pre_img - palette, axis=-1).argmin(axis=-1)
-    print(f"{perf_counter() - t0} ", end='')
-    return labeled_img
 
 
 def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
@@ -295,82 +125,77 @@ def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     return labeled
 
 
-def label_img_ludicrous(im: NDArray, color_table: NDArray) -> NDArray:
-    img = im.astype(np.float32)
-    color_table = color_table.astype(np.float32)
-    table_size = color_table.shape[0]
-    height, width = img.shape[0:2]
-    deltas = np.empty((height, width, table_size))
-    for i in range(table_size):
-        print(f"{i}.", end='')
-        diff = cv.subtract(img, color_table[i, 0:3])
-        print(".", end='')
-        diff_sq = cv.pow(diff, 2)
-        print(".", end='')
-        diff_sq_summed = cv.reduce(diff_sq, 2, cv.REDUCE_SUM)
-        deltas[..., i] = diff_sq_summed
-    print("argmin ", end='')
-    labeled_img = deltas.argmin(axis=2)
-    return labeled_img
+def get_k_means(
+    img: NDArray[np.uint8 | np.uint16],
+    k: int,
+    epsilon: float = 1e-4,
+    max_iter: int = 60,
+) -> tuple[NDArray, NDArray, NDArray]:
+    """
+    A function using OpenCV's kmeans function with extra steps
+    returns:
+    - the lookup table associating each label from 0 to k-1 (1st index) with BGR values (2nd index).
+      The BGR values are coded on 3x8 or 3x16 bits, depending the image's datatype)
+    - the image, palettized with
 
-# TODO: make it 16 bit compatible
-def get_k_means(img: NDArray,
-                k: int,
-                epsilon: float = 1e-4,
-                max_iter: int = 60,
-                ) -> tuple[NDArray, NDArray, NDArray]:
+    """
+    original_dtype = img.dtype
+    if original_dtype not in (np.uint8, np.uint16):
+        raise NotImplementedError
     flags = 0
     if epsilon:
-        flags += cv.TERM_CRITERIA_MAX_ITER
+        flags |= cv.TERM_CRITERIA_MAX_ITER
     if max_iter:
-        flags += cv.TERM_CRITERIA_EPS
+        flags |= cv.TERM_CRITERIA_EPS
     criteria = (flags, max_iter, epsilon)
     x, y, _ = img.shape
-    points: NDArray = img.reshape((x*y, 3)).astype(np.float32)
+    points: NDArray = img.reshape((x * y, 3)).astype(np.float32)
     # noinspection PyTypeChecker
-    _, labels, LUT = cv.kmeans(points,
-                                         k,
-                                         None,  # type: ignore
-                                         criteria,
-                                         1,
-                                         cv.KMEANS_PP_CENTERS)
-    LUT: NDArray = LUT.astype(np.uint8)
-    pre_output = LUT[labels.flatten()]
-    output = pre_output.reshape(img.shape)
+    _, labels, LUT = cv.kmeans(
+        points,
+        k,
+        None,  # type: ignore
+        criteria,
+        1,
+        cv.KMEANS_PP_CENTERS,
+    )
+    LUT = LUT.astype(original_dtype)
+    output = LUT[labels.flatten()].reshape(img.shape)
     return LUT, output, labels
 
 
-def gaussian_kernel(sigma: float,
-                    kernel_size: int,
-                    ) -> NDArray:
+def gaussian_kernel(
+    sigma: float,
+    kernel_size: int,
+) -> NDArray:
     if kernel_size < 0:
-        kernel_size = - kernel_size
+        kernel_size = -kernel_size
     if kernel_size % 2 == 0:
         kernel_size += 1
     indices = np.indices((kernel_size, kernel_size), dtype=float)
     coords = indices - (kernel_size - 1) / 2
     dist_squared = np.power(coords, 2).sum(axis=2)
     _1_2s = 1 / (2 * sigma)
-    kernel = np.exp(- dist_squared * _1_2s) * (_1_2s / np.pi)
+    kernel = np.exp(-dist_squared * _1_2s) * (_1_2s / np.pi)
     return kernel
 
 
-def laplacian_of_gaussian(img: NDArray,
-                          sigma: float,
-                          kernel_size: int,
-                          ) -> NDArray:
+def laplacian_of_gaussian(
+    img: NDArray,
+    sigma: float,
+    kernel_size: int,
+) -> NDArray:
     kernel = gaussian_kernel(sigma, kernel_size)
     filtered = signal.convolve2d(img, kernel)
-    sobel_kernel = np.array([[0, 1,  0],
-                             [1, -4, 1],
-                             [0, 1,  0]])
+    sobel_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
     laplacian = signal.convolve2d(filtered, sobel_kernel)
     return laplacian * sigma
 
 
-def chg_domain(img: NDArray,
-               new_domain: tuple[float, float],
-               ) -> NDArray:
+def chg_domain(
+    img: NDArray,
+    new_domain: tuple[float, float],
+) -> NDArray:
     # noinspection PyArgumentList
     mini_p, maxi_p = img.min(), img.max()
     mini_n, maxi_n = new_domain

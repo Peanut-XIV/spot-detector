@@ -14,6 +14,14 @@ from spot_detector.types import DataRow, DataTable, ImageElement
 
 img_file_name_pattern = re.compile(r".+\.(jpe?g|JPE?G|png|PNG|tiff|TIFF)")
 
+VALID_IMAGE_MIME_TYPES: list[str] = [
+    "image/jpeg",
+    "image/png",
+    "image/bmp",
+    "image/webp",
+    "image/tiff",
+]
+
 
 def read_csv(csv_file: str | Path) -> DataTable:
     """
@@ -321,8 +329,8 @@ def match_dir_items(
     pattern: str,
     inserted_value: str,
 ) -> list[Path]:
-    pattern = string.Template(pattern) # type: ignore
-    pattern = pattern.substitute(value=re.escape(inserted_value)) # pyright: ignore[reportAttributeAccessIssue]
+    pattern = string.Template(pattern)  # type: ignore
+    pattern = pattern.substitute(value=re.escape(inserted_value))  # pyright: ignore[reportAttributeAccessIssue]
     regex = re.compile(pattern)
     dir = Path(dir)
     return list(filter(lambda x: regex.fullmatch(x.name), dir.iterdir()))
@@ -339,8 +347,7 @@ def confirm_new_cfg_file(path):
     else:
         if not path.parent.exists():
             confirm(
-                "Ce chemin n'existe pas encore. "
-                "Créer les dossiers manquants ?",
+                "Ce chemin n'existe pas encore. " "Créer les dossiers manquants ?",
                 abort=True,
             )
             mkdir(path.parent)

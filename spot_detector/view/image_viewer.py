@@ -1,7 +1,12 @@
 import sys
 
-from PySide6.QtCore import  QRectF, QSize, Slot
+import numpy as np
+from numpy.typing import NDArray
+from PySide6.QtCore import QRectF, QSize, Slot
 from PySide6.QtGui import (
+    QAction,
+    QIcon,
+    QImage,
     QPixmap,
     QTransform,
 )
@@ -15,7 +20,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QLabel,
+    QToolBar,
 )
+import spot_detector.rc_resources
 
 
 class ImageView(QGraphicsView):
@@ -32,10 +39,8 @@ class ImageView(QGraphicsView):
 
     def change_transform(self, value: int):
         self.scale_power = max(-10, min(10, value))
-        k = self.scale_factor ** self.scale_power
-        transform = QTransform(k, 0, 0,
-                               0, k, 0,
-                               0, 0, 1)
+        k = self.scale_factor**self.scale_power
+        transform = QTransform(k, 0, 0, 0, k, 0, 0, 0, 1)
         self.setTransform(transform)
         self.updateScene([self.scene().sceneRect()])
 
@@ -47,38 +52,59 @@ class ImageView(QGraphicsView):
     def zoom_out(self):
         self.change_transform(self.scale_power - 1)
 
+    @Slot()
+    def zoom_neutral(self):
+        self.change_transform(0)
+
 
 class ViewerWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
         v_layout = QVBoxLayout(self)
-
-        h_layout = QHBoxLayout(self)
-        h_layout.addWidget(QLabel("Image Viewer: ", self))
-        h_layout.addStretch(1)
-        h_layout.addWidget(QLabel("Zoom: ", self))
-        self.create_zoom_buttons()
-        h_layout.addWidget(self.zoom_in_button)
-        h_layout.addWidget(self.zoom_out_button)
-
-        v_layout.addLayout(h_layout)
-        self.viewer = ImageView()
+        self.viewer: ImageView = ImageView()
+        self.create_toolbar()
+        # Replace with toolbar
+        v_layout.addWidget(self.toolbar)
         v_layout.addWidget(self.viewer)
+        self.setLayout(v_layout)
 
-        self.zoom_in_button.clicked.connect(self.viewer.zoom_in)
-        self.zoom_out_button.clicked.connect(self.viewer.zoom_out)
+        self.frame0: QImage = QImage(":resources/images/testscreen.png")
+        self.show_frame0()
 
-    def create_zoom_buttons(self):
-        self.zoom_in_button = QPushButton("+", self)
-        self.zoom_in_button.setFixedSize(QSize(30, 30))
-        self.zoom_out_button = QPushButton("-", self)
-        self.zoom_out_button.setFixedSize(QSize(30, 30))
+    def create_toolbar(self):
+        self.create_actions()
+        self.toolbar = QToolBar("Image Viewer", self)
+        self.toolbar.addActions(
+            [self.zoom_out_action, self.zoom_neutral_action, self.zoom_in_action]
+        )
 
-    def change_pixmap(self, pixmap: QPixmap):
-        size = pixmap.size()
+    def create_actions(self):
+        icon_i = QIcon(":resources/images/loupe_plus.png")
+        self.zoom_in_action = QAction(icon_i, "Zoom In", self)
+        self.zoom_in_action.setShortcut("Ctrl++")
+        self.zoom_in_action.triggered.connect(self.viewer.zoom_in)
+
+        icon_o = QIcon(":resources/images/loupe_moins.png")
+        self.zoom_out_action = QAction(icon_o, "Zoom Out", self)
+        self.zoom_out_action.setShortcut("Ctrl+-")
+        self.zoom_out_action.triggered.connect(self.viewer.zoom_out)
+
+        icon_n = QIcon(":resources/images/loupe_neutre.png")
+        self.zoom_neutral_action = QAction(icon_n, "Zoom Neutral", self)
+        self.zoom_neutral_action.setShortcut("Ctrl+o")
+        self.zoom_neutral_action.triggered.connect(self.viewer.zoom_neutral)
+
+    def show_frame0(self):
+        size = self.frame0.size()
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-        self.viewer._image_item.setPixmap(pixmap)
+        self.viewer._image_item.setPixmap(QPixmap(self.frame0))
+
+    @Slot(QImage)
+    def show_image(self, image: QImage):
+        self.frame0 = image.copy()
+        self.show_frame0()
+
 
 if __name__ == "__main__":
     app = QApplication()

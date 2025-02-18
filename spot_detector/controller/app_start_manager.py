@@ -29,6 +29,7 @@ class AppStartManager(QObject, StartManagerInterface):
     def start_main_window(self, project):
         self.project = project
         self.main_window = MainWindow(project)
+        self.main_window.show()
 
 
 if __name__ == "__main__":

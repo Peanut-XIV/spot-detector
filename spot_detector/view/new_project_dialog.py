@@ -1,5 +1,6 @@
-from collections.abc import Sequence
 import sys
+from pathlib import Path
+from typing import Literal
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -20,7 +21,9 @@ from PySide6.QtCore import (
 from pydantic import ValidationError
 
 from spot_detector.model.project import Project
+from spot_detector.view.dialogs import OpenDirFileDialog, ReadOnlyImageFileDialog
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
+from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 
 
 class NewProjectDialog(QDialog):
@@ -53,14 +56,6 @@ class NewProjectDialog(QDialog):
         panel = QWidget(self)
         panel.setMinimumWidth(600)
 
-        mime_type_filters = [
-            "image/jpeg",
-            "image/png",
-            "image/bmp",
-            "image/webp",
-            "image/tiff",
-        ]
-
         layout = QGridLayout(panel)
         l0 = QLabel("Name:", self)
         layout.addWidget(l0, 0, 0)
@@ -69,26 +64,27 @@ class NewProjectDialog(QDialog):
         layout.addWidget(self.name_line, 0, 1)
 
         l1 = QLabel("Dust Filter path:", self)
-        self.dust_filter_field = PathLineWidget(self)
-        self.dust_filter_field.set_mime_filters(mime_type_filters)
-        self.dust_filter_field.set_file_dialog_flags(QFileDialog.FileMode.ExistingFile)
+        self.dust_filter_field = PathLineWidget(
+            "read_only_img", "Select a dust filter", None, self
+        )
         layout.addWidget(l1, 1, 0)
         layout.setAlignment(l1, Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.dust_filter_field, 1, 1)
         layout.addWidget(self.dust_filter_field.get_button(), 1, 2)
 
         l2 = QLabel("Reference image path:", self)
-        self.ref_image_field = PathLineWidget(self)
-        self.ref_image_field.set_mime_filters(mime_type_filters)
-        self.ref_image_field.set_file_dialog_flags(QFileDialog.FileMode.ExistingFile)
+        self.ref_image_field = PathLineWidget(
+            "read_only_img", "Select a reference image", None, self
+        )
         layout.addWidget(l2, 2, 0)
         layout.setAlignment(l2, Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.ref_image_field, 2, 1)
         layout.addWidget(self.ref_image_field.get_button(), 2, 2)
 
         l3 = QLabel("Image directory path:", self)
-        self.image_directory_field = PathLineWidget(self)
-        self.image_directory_field.set_file_dialog_flags(QFileDialog.FileMode.Directory)
+        self.image_directory_field = PathLineWidget(
+            "dir", "Select an image directory", None, self
+        )
         layout.addWidget(l3, 3, 0)
         layout.setAlignment(l3, Qt.AlignmentFlag.AlignRight)
         layout.addWidget(self.image_directory_field, 3, 1)
@@ -134,34 +130,42 @@ class NewProjectDialog(QDialog):
 class PathLineWidget(QLineEdit):
     def __init__(
         self,
+        path_type: Literal["read_only_img", "dir", "other"],
+        caption: str = "",
+        starting_path: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.flags = None
-        self.mime_filters = None
+        if starting_path is not None:
+            self.starting_path = starting_path
+        else:
+            self.starting_path = str(Path.home())
+
+        self.caption = caption
+
+        self.path_type = path_type
+        if self.path_type == "read_only_img":
+            self.dialog = ReadOnlyImageFileDialog(
+                self, self.caption, self.starting_path
+            )
+        elif self.path_type == "dir":
+            self.dialog = OpenDirFileDialog(self, self.caption, self.starting_path)
 
         self.setMinimumWidth(350)
-        self.explore_button = QPushButton("...", parent)
+        self.explore_button = QPushButton("Explore", parent)
         self.explore_button.clicked.connect(self.explore)
 
-    def set_file_dialog_flags(self, flags: QFileDialog.FileMode):
-        self.flags = flags
-
-    def set_mime_filters(self, mime_filters: Sequence[str]):
-        self.mime_filters = mime_filters
+    def set_starting_path(self, path: str):
+        self.starting_path = path
 
     def get_button(self) -> QPushButton:
         return self.explore_button
 
     @Slot()
     def explore(self):
-        dialog = QFileDialog(self)
-        if self.flags is not None:
-            dialog.setFileMode(self.flags)
-        if self.mime_filters is not None:
-            dialog.setMimeTypeFilters(self.mime_filters)
-        if dialog.exec():
-            files = dialog.selectedFiles()
+        self.dialog.setDirectory(self.starting_path)
+        if self.dialog.exec():
+            files = self.dialog.selectedFiles()
             if len(files) > 0:
                 self.setText(files[0])
 
