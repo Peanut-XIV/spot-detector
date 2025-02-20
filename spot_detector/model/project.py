@@ -2,9 +2,10 @@ from pathlib import Path
 import json
 from typing import Self, Any, Optional
 
+from numpy.typing import NDArray
 from pydantic import BaseModel, field_validator, Field, ValidationError
 
-from spot_detector.model.models import ColorAndParams
+from spot_detector.model.models import ColorAndParams, ColorData, DetParams
 # from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 # import mimetypes
 
@@ -49,7 +50,7 @@ class Project(BaseModel):
     def from_dict(cls, project_data: dict[str, Any]) -> Self:
         return cls(**project_data)
 
-    def set_ref_image(self, image_path: Path | str):
+    def set_ref_image_path(self, image_path: Path | str):
         if isinstance(image_path, Path):
             self.ref_image_path = str(image_path)
         else:
@@ -61,63 +62,17 @@ class Project(BaseModel):
         else:
             self.dust_filter_image_path = image_path
 
-    # def is_valid_image_format(self, path: Path):
-    #     mime_type, _ = mimetypes.guess_file_type(path)
-    #     if mime_type in VALID_IMAGE_MIME_TYPES:
-    #         return True
-    #     else:
-    #         return False
-    #
-    # def validate_image_path(self, path: Path | str, is_dir: bool = False):
-    #     path_obj = Path(path)
-    #     error = None
-    #     if not path_obj.exists():
-    #         error = PathError()
-    #         error.add_note(f"Expected Path {str(Path)} to exist")
-    #     elif not path_obj.is_file():
-    #         error = PathError()
-    #         error.add_note(f"Expected Path {str(Path)} to be a file")
-    #     elif not (is_dir or self.is_valid_image_format(path_obj)):
-    #         error = PathError()
-    #         error.add_note(
-    #             f"Expected file {str(Path)} to be an image of format"
-    #             "'.png', '.jpg', '.jpeg', '.webp' or '.tiff'"
-    #         )
-    #     if error is not None:
-    #         raise error
-    #
-    # def set_dust_filter_path(self, path: Path | str, validate: bool = True):
-    #     if validate:
-    #         try:
-    #             self.validate_image_path(path)
-    #         except PathError as e:
-    #             e.add_note(
-    #                 f"Could not set {str(path)} as dust_filter_path attribute "
-    #                 f"of project {self.name}"
-    #             )
-    #             raise e
-    #     self.dust_filter_image_path = str(path)
-    #
-    # def set_ref_image_path(self, path: Path | str, validate: bool = True):
-    #     if validate:
-    #         try:
-    #             self.validate_image_path(path)
-    #         except PathError as e:
-    #             e.add_note(
-    #                 f"Could not set {str(path)} as ref_image_path attribute "
-    #                 f"of project {self.name}"
-    #             )
-    #             raise e
-    #     self.ref_image_path = str(path)
-    #
-    # def set_image_directory_path(self, path: Path | str, validate: bool = True):
-    #     if validate:
-    #         try:
-    #             self.validate_image_path(path, True)
-    #         except PathError as e:
-    #             e.add_note(
-    #                 f"Could not set {str(path)} as image_directory_path "
-    #                 f"attribute of project {self.name}"
-    #             )
-    #             raise e
-    #     self.ref_image_path = str(path)
+    def set_lut(self, lut: NDArray):
+        color_data = ColorData.from_lut(lut)
+        if self.configuration is None:
+            # make new config
+            assert self.ref_image_path is not None
+            ref_image = self.ref_image_path
+            det_params = []
+            self.configuration = ColorAndParams(
+                reference_image=ref_image,
+                color_data=color_data,
+                det_params=det_params,
+            )
+        else:
+            self.configuration.color_data = color_data

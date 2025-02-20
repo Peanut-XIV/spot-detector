@@ -70,6 +70,10 @@ class ViewerWidget(QWidget):
         self.setLayout(v_layout)
 
         self.frame0: QImage = QImage(":resources/images/testscreen.png")
+        # NOTE: Should rather work from a ref - ref palettized - highlights system
+        #       Either with a whole image being sent on every update (simpler) or a with
+        #       stored data that updates on image change (proc efficient).
+
         self.show_frame0()
 
     def create_toolbar(self):

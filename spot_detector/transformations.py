@@ -91,35 +91,35 @@ def isolate_categories(
 def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     """
     Broadcasting is necessary to iterate over each shade.
-    |----------|-----------|-----------|-----------|-----------|
-    | axes     |     0     |     1     |     2     |     3     |
-    |==========|===========|===========|===========|===========|
-    |col_table |   shade   |     4     |    -/-    |    -/-    |
-    |->palette |     1     |     1     |   shade   |     3     |
-    |----------|-----------|-----------|-----------|-----------|
-    | im       |     Y     |     X     |     3     |    -/-    |
-    |->im      |     Y     |     X     |     1     |     3     |
-    |----------|-----------|-----------|-----------|-----------|
+    ┌──────────┬───────────┬───────────┬───────────┬───────────┐
+    │ axes     │     0     │     1     │     2     │     3     │
+    ╞══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
+    │col table │   shade   │     4     │    -/-    │    -/-    │
+    │->palette │     1     │     1     │   shade   │     3     │
+    ├──────────┼───────────┼───────────┼───────────┼───────────│
+    │ im       │     Y     │     X     │     3     │    -/-    │
+    │->im      │     Y     │     X     │     1     │     3     │
+    └──────────┴───────────┴───────────┴───────────┴───────────┘
     """
     palette = color_table[None, None, :, 0:3].astype(np.float32)
     im = im[:, :, None, :].astype(np.float32)
     """
     Now Both palette and im have broadcastable shapes.
-    |----------|-----------|-----------|-----------|-----------|
-    | palette  |     1     |     1     |  [shade]  |    -3-    |
-    | im       |    [Y]    |    [X]    |     1     |    -3-    |
-    |----------|-----------|-----------|-----------|-----------|
+    ┌──────────┬───────────┬───────────┬───────────┬───────────┐
+    │ palette  │     1     │     1     │  [shade]  │    -3-    │
+    │ im       │    [Y]    │    [X]    │     1     │    -3-    │
+    └──────────┴───────────┴───────────┴───────────┴───────────┘
     which allows us to compute the distance between to bgr colors.
-    |----------|-----------|-----------|-----------|
-    | norm     |     Y     |     X     |  shades   |
-    |----------|-----------|-----------|-----------|
+    ┌──────────┬───────────┬───────────┬───────────┐
+    │ norm     │     Y     │     X     │  shades   │
+    └──────────┴───────────┴───────────┴───────────┘
     """
     norm = np.linalg.norm(im - palette, axis=3)
     """
     And get the index of the lowest along axis 2 as value
-    |----------|-----------|-----------|
-    | labeled  |     Y     |     X     |
-    |----------|-----------|-----------|
+    ┌──────────┬───────────┬───────────┐
+    │ labeled  │     Y     │     X     │
+    └──────────┴───────────┴───────────┘
     """
     labeled = norm.argmin(axis=2).astype(np.uint8)
     return labeled
@@ -134,9 +134,11 @@ def get_k_means(
     """
     A function using OpenCV's kmeans function with extra steps
     returns:
-    - the lookup table associating each label from 0 to k-1 (1st index) with BGR values (2nd index).
-      The BGR values are coded on 3x8 or 3x16 bits, depending the image's datatype)
-    - the image, palettized with
+    - the lookup table (LUT) associating each label from 0 to k-1 (1st index)
+      with BGR values (2nd index). The BGR values are coded on 3x8 or 3x16 bits,
+      depending the image's datatype)
+    - the image, palettized with the LUT
+    - the labeled image (the pixel value is replaced with indices to the LUT)
 
     """
     original_dtype = img.dtype
