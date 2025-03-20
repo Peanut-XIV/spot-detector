@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import sys
 import random
@@ -12,23 +13,28 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QMainWindow,
     QSplitter,
     QMessageBox,
 )
 from PySide6.QtGui import (
     QAction,
-    QPixmap,
-    QColor,
     QIcon,
     QImage,
 )
 
+from spot_detector.model.defaults import PROJECTS_LIST, get_recent_project_paths
 from spot_detector.model.project import Project
-from spot_detector.view.dialogs import ReadOnlyImageFileDialog
+from spot_detector.transformations import label_img_fastest
+from spot_detector.view.dialogs import (
+    ConfirmOverwriteDialog,
+    ReadOnlyImageFileDialog,
+    SaveProjectAsDialog,
+)
 from spot_detector.view.image_viewer import ViewerWidget
 from spot_detector.view.kmeans_dialog import KMeansDialog, KmeansProcessor
-from spot_detector import rc_resources
+from spot_detector import rc_resources  # WARN: Do not remove
 from spot_detector.view.palette_widget import Palette_List, Palette_Item
 
 
@@ -39,13 +45,9 @@ class MainWindow(QMainWindow):
         self.project = project
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        print("creating viewer")
         self._create_viewer(splitter)
-        print("creating palette")
         self._create_palette(splitter)
-        print("creating menus")
         self._create_menu()
-        print("composing")
         splitter.addWidget(self.palette_list)
         splitter.addWidget(self.viewer)
         splitter.setCollapsible(0, False)
@@ -53,13 +55,17 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(splitter)
 
+        self.previous_rows = None  # The rows previously selected for highlight
+
     def _create_palette(self, parent):
         self.palette_list = Palette_List(parent)
-        for _ in range(10):
-            r = random.randint(0, 255)
-            g = random.randint(0, 255)
-            b = random.randint(0, 255)
-            item = Palette_Item(r, g, b, 0, self.palette_list)
+        for i in range(10):
+            color = (
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(0, 255),
+            )
+            item = Palette_Item(i, color, 0, self.palette_list)
 
     def _create_menu(self):
         self.menu = self.menuBar()
@@ -101,6 +107,107 @@ class MainWindow(QMainWindow):
 
     def _create_viewer(self, parent):
         self.viewer = ViewerWidget(parent)
+        self.viewer.request_palettized.connect(self.make_palettized_ref)
+        self.viewer.request_highlight.connect(self.make_highlight)
+
+    @Slot()
+    def make_highlight(self):
+        rows = self.palette_list.selected_rows()
+        if rows == self.previous_rows:
+            self.viewer.show_highlight()
+        mod_palette = []
+        if self.project.configuration is None:
+            # TODO: Display error message (no palette yet -> needs ref image)
+            return
+        for sel, row in zip(rows, self.project.configuration.color_data.table):
+            if sel:
+                mod_palette.append([0, 0, 255])
+            else:
+                mod_palette.append(row[0:3])
+        mod_lut = np.array(mod_palette, dtype=np.uint8)
+        labeled_array = self.get_labeled_ref_array()
+        if labeled_array is None:
+            # No ref array
+            return
+        print("reference:", labeled_array.shape, labeled_array.dtype)
+        print("mod_lut:", mod_lut.shape, mod_lut.dtype)
+        out = mod_lut[labeled_array]
+        self.viewer.set_highlight(
+            QImage(
+                out.data,
+                out.shape[1],
+                out.shape[0],
+                QImage.Format.Format_BGR888,
+            )
+        )
+        self.viewer.show_highlight()
+
+    @Slot()
+    def make_palettized_ref(self):
+        # get lut
+        if self.project.configuration is None:
+            return  # TODO: display a message
+        lut = np.array(
+            self.project.configuration.color_data.table,
+            dtype=np.uint8,
+        )[:, 0:3]
+        ref = self.ref_image_array
+        if ref.dtype == np.uint16:
+            ref = (ref >> 8).astype(np.uint8)
+        elif ref.dtype != np.uint8:
+            return  # TODO: display a message too
+        print("reference:", ref.shape, ref.dtype)
+        print("palette:", lut.shape, lut.dtype)
+        labels = label_img_fastest(ref, lut)
+        palettized = lut[labels]
+        print(palettized.shape)
+        drawable = QImage(
+            palettized.data,
+            palettized.shape[1],
+            palettized.shape[0],
+            QImage.Format.Format_BGR888,
+        )
+        self.viewer.set_palettized_ref(drawable)
+        self.viewer.show_palettized()
+
+    @Slot()
+    def dialog_save_project_as(self):
+        dialog = SaveProjectAsDialog()
+        if not dialog.exec():
+            return
+        pathes = dialog.selectedFiles()
+        if len(pathes) != 1:
+            msg = QMessageBox(self)
+            msg.setText("Unexpected amount of files selected")
+            msg.exec()
+            return
+        path = Path(pathes[0])
+        if path.exists():
+            conf_diag = ConfirmOverwriteDialog(path, self)
+            if conf_diag.exec() == QDialog.DialogCode.Rejected:
+                return
+        self.project.latest_save_path = str(path)
+        with open(path, "w", encoding="UTF-8") as file:
+            json.dump(self.project.model_dump(), file)
+        # add path to existing projects
+        if str(path) not in get_recent_project_paths():
+            with open(PROJECTS_LIST, "a", encoding="UTF-8") as file:
+                file.write(str(path) + "\n")
+
+    @Slot()
+    def get_labeled_ref_array(self):
+        if self.labeled_ref_array is None:
+            img = self.ref_image_array.astype(np.uint8)
+            if self.project.configuration is not None:
+                color_table = np.array(
+                    self.project.configuration.color_data.table
+                ).astype(np.uint8)
+            else:
+                return None
+            self.labeled_ref_array = label_img_fastest(img, color_table).astype(
+                np.uint8
+            )
+        return self.labeled_ref_array.astype(np.uint8)
 
     @Slot()
     def dialog_for_ref_image(self):
@@ -133,7 +240,7 @@ class MainWindow(QMainWindow):
         self.project.set_ref_image_path(file)
         # Show image in viewer
         self.set_ref_image_array(image)
-        self.viewer.show_image(self.ref_image_paintable)
+        self.viewer.set_ref_image(self.ref_image_paintable)
 
     def set_ref_image_array(self, array: NDArray):
         self.ref_image_array: NDArray = array
@@ -151,7 +258,6 @@ class MainWindow(QMainWindow):
             array.shape[0],
             QImage.Format.Format_BGR888,
         )
-        self.viewer.show_image(self.ref_image_paintable)
 
     def start_kmeans_dialog(self):
         dialog = KMeansDialog(self)
@@ -164,14 +270,16 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def handle_kmeans_output(self, output: tuple[NDArray, NDArray, NDArray]):
         # set color table
-        self.project.set_lut(output[0])
         self.palettized_ref_array = output[1]
-        self.labeled_ref_array = output[2]
+        self.labeled_ref_array = (
+            output[2].reshape(self.palettized_ref_array.shape[0:2]).astype(np.uint8)
+        )
         if output[0].dtype == np.uint16:
             processed_output = (output[0] >> 8).astype(np.uint8)
         else:
             processed_output = output[0]
         listified = [list(row) + [0] for row in processed_output]
+        self.project.set_lut(listified)
         self.palette_list.set_palette(listified)
         # TODO: handle it really
 

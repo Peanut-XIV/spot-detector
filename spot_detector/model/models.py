@@ -60,8 +60,7 @@ class ColorData(BaseModel):
 
     @classmethod
     def from_lut(cls, lut) -> Self:
-        table = [list(row) + [0] for row in lut]
-        return cls(names=[], table=table)
+        return cls(names=[], table=lut)
 
 
 class Threshold(BaseModel):

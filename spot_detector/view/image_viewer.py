@@ -1,8 +1,6 @@
 import sys
 
-import numpy as np
-from numpy.typing import NDArray
-from PySide6.QtCore import QRectF, QSize, Slot
+from PySide6.QtCore import QRectF, Slot, Signal
 from PySide6.QtGui import (
     QAction,
     QIcon,
@@ -15,14 +13,11 @@ from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsScene,
     QGraphicsView,
-    QHBoxLayout,
-    QPushButton,
     QVBoxLayout,
     QWidget,
-    QLabel,
     QToolBar,
 )
-import spot_detector.rc_resources
+import spot_detector.rc_resources  # WARN: don not remove
 
 
 class ImageView(QGraphicsView):
@@ -40,7 +35,7 @@ class ImageView(QGraphicsView):
     def change_transform(self, value: int):
         self.scale_power = max(-10, min(10, value))
         k = self.scale_factor**self.scale_power
-        transform = QTransform(k, 0, 0, 0, k, 0, 0, 0, 1)
+        transform = QTransform(k, 0, 0, 0, k, 0, 0, 0, 1)  # 3x3 matrix
         self.setTransform(transform)
         self.updateScene([self.scene().sceneRect()])
 
@@ -58,6 +53,9 @@ class ImageView(QGraphicsView):
 
 
 class ViewerWidget(QWidget):
+    request_palettized: Signal = Signal()
+    request_highlight: Signal = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -69,18 +67,26 @@ class ViewerWidget(QWidget):
         v_layout.addWidget(self.viewer)
         self.setLayout(v_layout)
 
-        self.frame0: QImage = QImage(":resources/images/testscreen.png")
-        # NOTE: Should rather work from a ref - ref palettized - highlights system
-        #       Either with a whole image being sent on every update (simpler) or a with
-        #       stored data that updates on image change (proc efficient).
+        self.original_ref: QPixmap = QPixmap(QImage(":resources/images/testscreen.png"))
+        self.palettized_ref: QPixmap | None = None
+        self.highlight: QPixmap | None = None
 
-        self.show_frame0()
+        self.current_image = self.original_ref
+
+        self.show_init()
 
     def create_toolbar(self):
         self.create_actions()
         self.toolbar = QToolBar("Image Viewer", self)
         self.toolbar.addActions(
-            [self.zoom_out_action, self.zoom_neutral_action, self.zoom_in_action]
+            [
+                self.show_ref_action,
+                self.show_palettized_action,
+                self.show_highlight_action,
+                self.zoom_out_action,
+                self.zoom_neutral_action,
+                self.zoom_in_action,
+            ]
         )
 
     def create_actions(self):
@@ -99,15 +105,47 @@ class ViewerWidget(QWidget):
         self.zoom_neutral_action.setShortcut("Ctrl+o")
         self.zoom_neutral_action.triggered.connect(self.viewer.zoom_neutral)
 
-    def show_frame0(self):
-        size = self.frame0.size()
+        icon_ref = QIcon(":resources/images/ref_image_icon.png")
+        self.show_ref_action = QAction(icon_ref, "Show Ref", self)
+        self.show_ref_action.triggered.connect(self.show_ref)
+
+        self.show_palettized_action = QAction("Show Palettized", self)
+        self.show_palettized_action.triggered.connect(self.request_palettized.emit)
+
+        self.show_highlight_action = QAction("Show Highlight", self)
+        self.show_highlight_action.triggered.connect(self.request_highlight.emit)
+
+    @Slot()
+    def show_init(self):
+        size = self.original_ref.size()
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-        self.viewer._image_item.setPixmap(QPixmap(self.frame0))
+        self.viewer._image_item.setPixmap(self.original_ref)
 
     @Slot(QImage)
-    def show_image(self, image: QImage):
-        self.frame0 = image.copy()
-        self.show_frame0()
+    def set_ref_image(self, image: QImage):
+        self.original_ref = QPixmap(image)
+        size = self.original_ref.size()
+        self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
+        self.viewer._image_item.setPixmap(self.original_ref)
+
+    @Slot(QImage)
+    def set_palettized_ref(self, image: QImage):
+        self.palettized_ref = QPixmap(image)
+
+    @Slot(QImage)
+    def set_highlight(self, image: QImage):
+        self.highlight = QPixmap(image)
+
+    def show_ref(self):
+        self.viewer._image_item.setPixmap(self.original_ref)
+
+    def show_highlight(self):
+        if self.highlight is not None:
+            self.viewer._image_item.setPixmap(self.highlight)
+
+    def show_palettized(self):
+        if self.palettized_ref is not None:
+            self.viewer._image_item.setPixmap(self.palettized_ref)
 
 
 if __name__ == "__main__":

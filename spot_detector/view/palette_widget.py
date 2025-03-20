@@ -1,5 +1,6 @@
 import sys
 import random
+from typing import TypeGuard
 from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
@@ -58,20 +59,23 @@ class Palette_List(QListWidget):
 
     def get_palette(self) -> list[list[int]]:
         output = []
-        for i in range(self.count()):
-            item = self.item(i)
-            if isinstance(item, Palette_Item):
-                output.append(item.color + [item.label])
+        items = [self.item(i) for i in range(self.count())]
+        valid_items = filter(is_palette_item, items)
+        sorted_items = sorted(valid_items, key=lambda x: x.index)
+        output = [list(item.color) + [item.label] for item in sorted_items]
         return output
 
     @Slot(list)
     def set_palette(self, data: list[list[int]]):
+        """
+        data contains the color value of each label in the BGR format
+        """
         self.clear()
-        for row in data:
+        for i, row in enumerate(data):
             if len(row) != 4:
                 print("dropped row:", row)
                 continue
-            Palette_Item(row[2], row[1], row[0], row[3], self)
+            Palette_Item(i, (row[2], row[1], row[0]), row[3], self)
         self.show()
 
     @Slot()
@@ -79,7 +83,6 @@ class Palette_List(QListWidget):
         items = self.selectedItems()
         idx_item = [(self.indexFromItem(item).row(), item) for item in items]
         idx_item.sort(key=lambda x: x[0])
-        changed = False
         for _, item in idx_item:
             idx = self.indexFromItem(item)
             prev_row = idx.row() - 1
@@ -88,7 +91,6 @@ class Palette_List(QListWidget):
                 continue
             if self.itemFromIndex(prev_idx) in items:
                 continue
-            changed = True
             self.takeItem(idx.row())
             self.insertItem(prev_row, item)
         selection_model = self.selectionModel()
@@ -96,8 +98,6 @@ class Palette_List(QListWidget):
         for e in items:
             idx = self.indexFromItem(e)
             selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
-        if changed:
-            self.palette_changed.emit(self.get_palette())
 
     @Slot()
     def move_sel_down(self):
@@ -105,7 +105,6 @@ class Palette_List(QListWidget):
         idx_item = [(self.indexFromItem(item).row(), item) for item in items]
         idx_item.sort(key=lambda x: x[0])
         idx_item.reverse()
-        changed = False
         for _, item in idx_item:
             idx = self.indexFromItem(item)
             next_row = idx.row() + 1
@@ -114,7 +113,6 @@ class Palette_List(QListWidget):
                 continue
             if self.itemFromIndex(next_idx) in items:
                 continue
-            changed = True
             self.takeItem(idx.row())
             self.insertItem(next_row, item)
         selection_model = self.selectionModel()
@@ -122,8 +120,6 @@ class Palette_List(QListWidget):
         for e in items:
             idx = self.indexFromItem(e)
             selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
-        if changed:
-            self.palette_changed.emit(self.get_palette())
 
     @Slot()
     def incr_sel_ID(self):
@@ -143,21 +139,29 @@ class Palette_List(QListWidget):
         if len(sel_items) > 0:
             self.palette_changed.emit(self.get_palette())
 
+    def selected_rows(self):
+        items = self.selectedItems()
+        selected = [False] * self.count()
+        for item in items:
+            if isinstance(item, Palette_Item):
+                selected[item.index] = True
+        return selected
+
 
 class Palette_Item(QListWidgetItem):
     def __init__(
         self,
-        r: int,
-        g: int,
-        b: int,
+        index: int,
+        color: tuple[int, int, int],
         label: int = 0,
         listview: QListWidget | None = None,
     ):
         image = QImage(50, 50, QImage.Format.Format_RGBA8888)
-        image.fill(QColor(r, g, b, 255))
+        image.fill(QColor(color[0], color[1], color[2], 255))
         super().__init__(QPixmap(image), str(label), listview)
-        self.label = 0
-        self.color = [r, g, b]
+        self.index: int = index
+        self.label: int = 0
+        self.color: tuple[int, int, int] = color
         self.update_text()
 
     def incr_label(self):
@@ -176,16 +180,20 @@ class Palette_Item(QListWidgetItem):
         self.setText(str(self.label))
 
 
+def is_palette_item(item: QListWidgetItem) -> TypeGuard[Palette_Item]:
+    return isinstance(item, Palette_Item)
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QMainWindow()
     palette = Palette_List(window)
     window.setCentralWidget(palette)
-    for _ in range(10):
+    for i in range(10):
         r = random.randint(0, 255)
         g = random.randint(0, 255)
         b = random.randint(0, 255)
-        item = Palette_Item(r, g, b, 0, palette)
+        item = Palette_Item(i, (r, g, b), 0, palette)
 
     window.show()
     sys.exit(app.exec())

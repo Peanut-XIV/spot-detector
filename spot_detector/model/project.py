@@ -62,7 +62,7 @@ class Project(BaseModel):
         else:
             self.dust_filter_image_path = image_path
 
-    def set_lut(self, lut: NDArray):
+    def set_lut(self, lut: list[list[int]]):
         color_data = ColorData.from_lut(lut)
         if self.configuration is None:
             # make new config

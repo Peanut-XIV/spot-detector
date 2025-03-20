@@ -13,7 +13,11 @@ from click import FileError, echo
 # Project files
 from spot_detector.model.models import ColorAndParams, DetParams
 from spot_detector.file_utils import (
-    fetch_csv, read_csv, sorted_sub_dirs, unprocessed_images, write_csv
+    fetch_csv,
+    read_csv,
+    sorted_sub_dirs,
+    unprocessed_images,
+    write_csv,
 )
 from spot_detector.palette_gui import run_gui
 from spot_detector.process_chains import init_workers
@@ -100,13 +104,13 @@ def detect(
         if out_queue.empty():
             time.sleep(1)
             print(
-                f"{remaining} images restantes." " En attente de données.",
+                f"{remaining} images restantes. En attente de données.",
                 end="\r",
             )
         else:
             # put values in table
             print(
-                f"{remaining} images restantes." " Écriture en cours...  ",
+                f"{remaining} images restantes. Écriture en cours...  ",
                 end="\r",
             )
             data_points: DataElement = out_queue.get()

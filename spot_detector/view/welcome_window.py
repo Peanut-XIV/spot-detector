@@ -18,8 +18,10 @@ from PySide6.QtCore import (
     Slot,
     QObject,
 )
+from pydantic import ValidationError
 
 from spot_detector.controller.start_manager_interface import StartManagerInterface
+from spot_detector.view.dialogs import OpenProjectDialog
 from spot_detector.view.new_project_dialog import NewProjectDialog
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
 from spot_detector.model.project import Project
@@ -45,24 +47,6 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         self.setMinimumSize(QSize(500, 300))
         self.setMaximumSize(QSize(1000, 600))
         self.setWindowTitle("Welome to spot-detector!")
-
-    def fetch_recent_projects(self) -> list[str]:
-        recent_projects_fp = Path.home() / ".spot_detector" / "recent_projects.txt"
-        with open(recent_projects_fp, "r", encoding="UTF-8") as recent_proj_file:
-            projects = [
-                line for line in recent_proj_file if self.is_valid_project_path(line)
-            ]
-        return projects
-
-    def is_valid_project_path(self, path: str) -> bool:
-        path_obj = Path(path)
-        output = (
-            (not path.startswith("#"))  # ignore comments
-            and path_obj.exists()
-            and path_obj.is_file()
-            and path_obj.suffix == ".spot"  # Actually a json file but *hush*
-        )
-        return output
 
     def _create_left_panel(self) -> QWidget:
         panel = QWidget(self, Qt.WindowType.Widget)
@@ -102,8 +86,26 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
     def create_new_project(self):
         dialog = NewProjectDialog(self)
         dialog.exec()
+        # Maybe the project should be an attribute of the dialog
+        # and retrieved by the parent
         if self.project is not None:
             self.start_main_window_and_hide(self.project)
+
+    def open_existing_project(self):
+        dialog = OpenProjectDialog(self)
+        if not dialog.exec():
+            return
+        project_file = dialog.selectedFiles()[0]
+        project = None
+        try:
+            project = Project.from_path(project_file)
+        except ValidationError:
+            message = QMessageBox(parent=self)
+            message.setText("The project file could not be opened.")
+            message.setWindowTitle("Error")
+            message.exec()
+        if project is not None:
+            self.start_main_window_and_hide(project)
 
     def start_main_window_and_hide(self, project: Project):
         manager = self.start_manager

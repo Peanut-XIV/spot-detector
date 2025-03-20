@@ -1,4 +1,9 @@
 from PySide6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
     QWidget,
     QFileDialog,
 )
@@ -46,3 +51,60 @@ class OpenDirFileDialog(QFileDialog):
         super().__init__(parent, caption, directory)
         self.setFileMode(QFileDialog.FileMode.Directory)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+
+
+class OpenProjectDialog(QFileDialog):
+    """
+    A File dialog for opening an existing project
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        caption: str = "Open an existing project",
+        directory: str = "",
+    ):
+        super().__init__(parent, caption, directory)
+        self.setFileMode(QFileDialog.FileMode.ExistingFile)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        self.setNameFilter("Project File (*.spot *.json)")
+
+
+class SaveProjectAsDialog(QFileDialog):
+    """
+    A File Dialog to set the project's save path and save it there.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        caption: str = "Save current project as:",
+        directory: str = "",
+    ):
+        super().__init__(parent, caption, directory)
+        self.setFileMode(QFileDialog.FileMode.AnyFile)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        self.setDefaultSuffix("spot")
+
+
+class ConfirmOverwriteDialog(QDialog):
+    def __init__(
+        self,
+        path,
+        parent: QWidget | None = None,
+        f: Qt.WindowType = Qt.WindowType.Window,
+    ) -> None:
+        super().__init__(parent, f)
+        layout = QVBoxLayout(self)
+        text = QLabel(
+            f"{str(path)} already exists. Do you wish to overwrite this file?"
+        )
+        buttons = QHBoxLayout(self)
+        cancel = QPushButton("Cancel", self)
+        overwrite = QPushButton("Overwrite", self)
+        buttons.addWidget(cancel)
+        buttons.addWidget(overwrite)
+        layout.addWidget(text)
+        layout.addLayout(layout)
+        cancel.clicked.connect(self.reject)
+        overwrite.clicked.connect(self.accept)

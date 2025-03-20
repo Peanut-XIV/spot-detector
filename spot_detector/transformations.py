@@ -166,34 +166,6 @@ def get_k_means(
     return LUT, output, labels
 
 
-def gaussian_kernel(
-    sigma: float,
-    kernel_size: int,
-) -> NDArray:
-    if kernel_size < 0:
-        kernel_size = -kernel_size
-    if kernel_size % 2 == 0:
-        kernel_size += 1
-    indices = np.indices((kernel_size, kernel_size), dtype=float)
-    coords = indices - (kernel_size - 1) / 2
-    dist_squared = np.power(coords, 2).sum(axis=2)
-    _1_2s = 1 / (2 * sigma)
-    kernel = np.exp(-dist_squared * _1_2s) * (_1_2s / np.pi)
-    return kernel
-
-
-def laplacian_of_gaussian(
-    img: NDArray,
-    sigma: float,
-    kernel_size: int,
-) -> NDArray:
-    kernel = gaussian_kernel(sigma, kernel_size)
-    filtered = signal.convolve2d(img, kernel)
-    sobel_kernel = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
-    laplacian = signal.convolve2d(filtered, sobel_kernel)
-    return laplacian * sigma
-
-
 def chg_domain(
     img: NDArray,
     new_domain: tuple[float, float],

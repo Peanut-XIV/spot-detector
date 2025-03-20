@@ -18,7 +18,7 @@ class AppStartManager(QObject, StartManagerInterface):
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
-        self.main_window_count = 0
+        # TODO: Update listed projects on startup: For each file, check for presence on drive
 
     def start_from_welcome(self):
         # create welcome window
