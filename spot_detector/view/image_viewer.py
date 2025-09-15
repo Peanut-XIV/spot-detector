@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
 )
-import spot_detector.rc_resources  # WARN: don not remove
+import spot_detector.rc_resources  # WARN: do not remove
 
 
 class ImageView(QGraphicsView):
@@ -67,11 +67,13 @@ class ViewerWidget(QWidget):
         v_layout.addWidget(self.viewer)
         self.setLayout(v_layout)
 
-        self.original_ref: QPixmap = QPixmap(QImage(":resources/images/testscreen.png"))
-        self.palettized_ref: QPixmap | None = None
+        self.reference_image: QPixmap = QPixmap(
+            QImage(":resources/images/testscreen.png")
+        )
+        self.palettized_reference: QPixmap | None = None
         self.highlight: QPixmap | None = None
 
-        self.current_image = self.original_ref
+        self.current_image = self.reference_image
 
         self.show_init()
 
@@ -107,7 +109,7 @@ class ViewerWidget(QWidget):
 
         icon_ref = QIcon(":resources/images/ref_image_icon.png")
         self.show_ref_action = QAction(icon_ref, "Show Ref", self)
-        self.show_ref_action.triggered.connect(self.show_ref)
+        self.show_ref_action.triggered.connect(self.show_reference_image)
 
         self.show_palettized_action = QAction("Show Palettized", self)
         self.show_palettized_action.triggered.connect(self.request_palettized.emit)
@@ -117,35 +119,43 @@ class ViewerWidget(QWidget):
 
     @Slot()
     def show_init(self):
-        size = self.original_ref.size()
+        size = self.reference_image.size()
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-        self.viewer._image_item.setPixmap(self.original_ref)
+        self.viewer._image_item.setPixmap(self.reference_image)
 
     @Slot(QImage)
-    def set_ref_image(self, image: QImage):
-        self.original_ref = QPixmap(image)
-        size = self.original_ref.size()
+    def set_reference_image(self, image: QImage):
+        self.reference_image = QPixmap(image)
+        size = self.reference_image.size()
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-        self.viewer._image_item.setPixmap(self.original_ref)
+        self.viewer._image_item.setPixmap(self.reference_image)
 
     @Slot(QImage)
-    def set_palettized_ref(self, image: QImage):
-        self.palettized_ref = QPixmap(image)
+    def set_palettized_reference(self, image: QImage):
+        self.palettized_reference = QPixmap(image)
 
     @Slot(QImage)
     def set_highlight(self, image: QImage):
         self.highlight = QPixmap(image)
 
-    def show_ref(self):
-        self.viewer._image_item.setPixmap(self.original_ref)
+    def show_reference_image(self):
+        self.viewer._image_item.setPixmap(self.reference_image)
 
     def show_highlight(self):
         if self.highlight is not None:
             self.viewer._image_item.setPixmap(self.highlight)
 
-    def show_palettized(self):
-        if self.palettized_ref is not None:
-            self.viewer._image_item.setPixmap(self.palettized_ref)
+    def show_palettized_reference(self):
+        if self.palettized_reference is not None:
+            self.viewer._image_item.setPixmap(self.palettized_reference)
+
+    def reset_highlight(self):
+        self.highlight = None
+        self.viewer._image_item.setPixmap(self.reference_image)
+
+    def reset_palettized(self):
+        self.palettized_reference = None
+        self.reset_highlight()
 
 
 if __name__ == "__main__":

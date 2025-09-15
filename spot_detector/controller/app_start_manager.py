@@ -25,7 +25,7 @@ class AppStartManager(QObject, StartManagerInterface):
         self.welcome_window = WelcomeWindow(self)
         self.welcome_window.show()
 
-    @Slot(Project)
+    @Slot(object)
     def start_main_window(self, project):
         self.project = project
         self.main_window = MainWindow(project)
