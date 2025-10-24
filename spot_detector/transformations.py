@@ -125,6 +125,43 @@ def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     return labeled
 
 
+def label_img_fastest_uint16(im: NDArray, color_table: NDArray) -> NDArray:
+    """
+    Broadcasting is necessary to iterate over each shade.
+    ┌──────────┬───────────┬───────────┬───────────┬───────────┐
+    │ axes     │     0     │     1     │     2     │     3     │
+    ╞══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
+    │col table │   shade   │     4     │    -/-    │    -/-    │
+    │->palette │     1     │     1     │   shade   │     3     │
+    ├──────────┼───────────┼───────────┼───────────┼───────────│
+    │ im       │     Y     │     X     │     3     │    -/-    │
+    │->im      │     Y     │     X     │     1     │     3     │
+    └──────────┴───────────┴───────────┴───────────┴───────────┘
+    """
+    palette = color_table[None, None, :, 0:3].astype(np.float32)
+    im = im[:, :, None, :].astype(np.float32)
+    """
+    Now Both palette and im have broadcastable shapes.
+    ┌──────────┬───────────┬───────────┬───────────┬───────────┐
+    │ palette  │     1     │     1     │  [shade]  │    -3-    │
+    │ im       │    [Y]    │    [X]    │     1     │    -3-    │
+    └──────────┴───────────┴───────────┴───────────┴───────────┘
+    which allows us to compute the distance between to bgr colors.
+    ┌──────────┬───────────┬───────────┬───────────┐
+    │ norm     │     Y     │     X     │  shades   │
+    └──────────┴───────────┴───────────┴───────────┘
+    """
+    norm = np.linalg.norm(im - palette, axis=3)
+    """
+    And get the index of the lowest along axis 2 as value
+    ┌──────────┬───────────┬───────────┐
+    │ labeled  │     Y     │     X     │
+    └──────────┴───────────┴───────────┘
+    """
+    labeled = norm.argmin(axis=2).astype(np.uint16)
+    return labeled
+
+
 def get_k_means(
     img: NDArray[np.uint8 | np.uint16],
     k: int,

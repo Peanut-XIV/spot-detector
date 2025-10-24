@@ -13,10 +13,12 @@ from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsScene,
     QGraphicsView,
+    QMessageBox,
     QVBoxLayout,
     QWidget,
     QToolBar,
 )
+from spot_detector.model.project import Project
 import spot_detector.rc_resources  # WARN: do not remove
 
 
@@ -56,11 +58,12 @@ class ViewerWidget(QWidget):
     request_palettized: Signal = Signal()
     request_highlight: Signal = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, project: Project, parent=None):
         super().__init__(parent)
 
         v_layout = QVBoxLayout(self)
         self.viewer: ImageView = ImageView()
+        self.project = project
         self.create_toolbar()
         # Replace with toolbar
         v_layout.addWidget(self.toolbar)
@@ -123,20 +126,57 @@ class ViewerWidget(QWidget):
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
         self.viewer._image_item.setPixmap(self.reference_image)
 
-    @Slot(QImage)
-    def set_reference_image(self, image: QImage):
-        self.reference_image = QPixmap(image)
+    @Slot(bool)
+    def update_reference(self, msg_on_fail: bool = True):
+        if self.project.reference_image_model is None:
+            if msg_on_fail:
+                need_ref_image_msg(self)
+            return
+
+        self.reference_image = QPixmap(
+            self.project.reference_image_model.mats.reference.image
+        )
         size = self.reference_image.size()
         self.viewer.setSceneRect(QRectF(0, 0, size.width(), size.height()))
-        self.viewer._image_item.setPixmap(self.reference_image)
+        self.show_reference_image()
 
-    @Slot(QImage)
-    def set_palettized_reference(self, image: QImage):
-        self.palettized_reference = QPixmap(image)
+    @Slot(bool)
+    def update_palettized(self, msg_on_fail: bool = True):
+        if self.project.reference_image_model is None:
+            if msg_on_fail:
+                need_ref_image_msg(self)
+            return
+        if self.project.reference_image_model.mats.palettized is None:
+            if msg_on_fail:
+                box = QMessageBox(self)
+                box.setWindowTitle("Error: missing palette")
+                box.setText(
+                    "This action is impossible. Please generate a palette"
+                    " first by computing the k-means of the reference image."
+                )
+                box.exec()
+            return
 
-    @Slot(QImage)
-    def set_highlight(self, image: QImage):
-        self.highlight = QPixmap(image)
+        self.palettized_reference = QPixmap(
+            self.project.reference_image_model.mats.palettized.image
+        )
+
+    @Slot(bool)
+    def update_highlight(self, msg_on_fail: bool = True):
+        if self.project.reference_image_model is None:
+            if msg_on_fail:
+                need_ref_image_msg(self)
+            return
+        if self.project.reference_image_model.mats.highlight is None:
+            if msg_on_fail:
+                print(
+                    "unexpectedly, reference_image_model.mats.highlight is still None"
+                )
+                need_labels_msg(self)
+            return
+        self.highlight = QPixmap(
+            self.project.reference_image_model.mats.highlight.image
+        )
 
     def show_reference_image(self):
         self.viewer._image_item.setPixmap(self.reference_image)
@@ -158,8 +198,30 @@ class ViewerWidget(QWidget):
         self.reset_highlight()
 
 
+def need_ref_image_msg(parent: QWidget):
+    box = QMessageBox(parent)
+    box.setWindowTitle("Error: Missing reference image")
+    box.setText(
+        "This action is impossible, please select a reference image and try again."
+    )
+    box.exec()
+
+
+def need_labels_msg(parent: QWidget):
+    box = QMessageBox(parent)
+    box.setWindowTitle("Error: missing labels")
+    box.setText(
+        "This action is impossible because it needs the reference image to be "
+        "labeled. Please generate labels by applying the current palette or by "
+        "creating a new one. A palette can be created from computing the k-means "
+        "of the reference image."
+    )
+    box.exec()
+
+
 if __name__ == "__main__":
     app = QApplication()
-    mainWidget = ViewerWidget()
+    project = Project(name="standalone test")
+    mainWidget = ViewerWidget(project)
     mainWidget.show()
     sys.exit(app.exec())

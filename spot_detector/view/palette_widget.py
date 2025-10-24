@@ -23,15 +23,25 @@ from PySide6.QtGui import (
     QKeyEvent,
     QPixmap,
 )
+from numpy import number
+
+from spot_detector.types import ColorTable
 
 
 class Palette_List(QListWidget):
     palette_changed = Signal(list)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        table: ColorTable | None,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.create_actions()
+
+        if table is not None:
+            self.set_palette(table)
 
     def create_actions(self):
         self.move_sel_up_action = QAction("Move Selection Up", self)
@@ -57,7 +67,7 @@ class Palette_List(QListWidget):
             # call action decrease ID
             self.decr_sel_action.trigger()
 
-    def get_palette(self) -> list[list[int]]:
+    def get_palette(self) -> ColorTable:
         output = []
         items = [self.item(i) for i in range(self.count())]
         valid_items = filter(is_palette_item, items)
@@ -66,7 +76,7 @@ class Palette_List(QListWidget):
         return output
 
     @Slot(list)
-    def set_palette(self, data: list[list[int]]):
+    def set_palette(self, data: ColorTable):
         """
         data contains the color value of each label in the BGR format
         """
@@ -156,9 +166,18 @@ class Palette_Item(QListWidgetItem):
         label: int = 0,
         listview: QListWidget | None = None,
     ):
+        # ColorTable is coded with 16 bits per channel the value is converted
+        # to 8 bit to generate a thumbnail the 8 bit values are discarded and
+        # the 16 bit values are kept
+
         image = QImage(50, 50, QImage.Format.Format_RGBA8888)
-        image.fill(QColor(color[0], color[1], color[2], 255))
+        r = convert_channel_u16_u8(color[0])
+        g = convert_channel_u16_u8(color[1])
+        b = convert_channel_u16_u8(color[2])
+        image.fill(QColor(r, g, b, 255))
+
         super().__init__(QPixmap(image), str(label), listview)
+
         self.index: int = index
         self.label: int = 0
         self.color: tuple[int, int, int] = color
@@ -178,6 +197,17 @@ class Palette_Item(QListWidgetItem):
 
     def update_text(self):
         self.setText(str(self.label))
+
+
+def clamp(val: int, interval: tuple[int, int]) -> int:
+    mn, mx = min(interval), max(interval)
+    return max(mn, min(val, mx))
+
+
+def convert_channel_u16_u8(val: int) -> int:
+    val = clamp(val, (0, 65535))
+    val = val >> 8
+    return val
 
 
 def is_palette_item(item: QListWidgetItem) -> TypeGuard[Palette_Item]:

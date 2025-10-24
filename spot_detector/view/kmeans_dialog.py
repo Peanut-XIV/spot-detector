@@ -26,6 +26,7 @@ from PySide6.QtCore import (
 from numpy.typing import NDArray
 import cv2
 from spot_detector.transformations import get_k_means
+from spot_detector.model.reference_image import to_3_channel_mat, to_uint16_mat
 
 
 class KMeansDialog(QDialog):
@@ -84,7 +85,7 @@ class KmeansProcessor(QThread):
     def __init__(self, image: NDArray, k: int, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.k = k
-        self.image = image
+        self.image = to_uint16_mat(to_3_channel_mat(image))
 
     def run(self) -> None:
         result = get_k_means(self.image, self.k, 1e-4, 1000)

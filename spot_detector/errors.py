@@ -13,11 +13,9 @@ class FailedOpeningError(ImageError):
 class InvalidFormatError(ImageError):
     def __init__(
         self,
-        format_info: tuple[str, int],
         img_path: str,
         msg: str = "The image must be RGB and have 8 or 16 bits of depth per channel",
     ) -> None:
-        self.format_info = format_info
         super().__init__(img_path, msg)
 
 

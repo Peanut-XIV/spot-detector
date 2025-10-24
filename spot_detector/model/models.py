@@ -14,14 +14,18 @@ class ColorData(BaseModel):
     and a table of different colors with the associated
     label number.
     ```
-    name = ["label_A", "label_B", "label_C", ...]
-    table = [
-        [bbb, ggg, rrr, ID]  # BGR is the standard in openCV, not RGB
-        [  0,   0,   0, 0],  # no label (id 0 -> background)
-        [255, 255, 255, 1],  # label_A (id 1 -> index 0)
-        [  0, 255,   0, 2],  # label_B (id 2 -> index 1)
-        [ 12,  25, 255, 3],  # label_C (id 3 -> index 2)
-        [ 10, 255,   2, 2],  # Label_B here...
+    name = [
+        "label_A",
+        "label_B",
+        "label_C",
+        ...
+    ]
+    table = [                    # BGR is the standard in openCV, not RGB
+        [ 4620, 20993,  9237, 0] # no label   (id 0 -> background)
+        [31745, 43886, 50832, 1] # label_A    (id 1 -> index 0)
+        [ 6669, 29438, 46721, 2] # label_B    (id 2 -> index 1)
+        [24264, 55633,  2575, 3] # label_C    (id 3 -> index 2)
+        [31595, 29539, 40082, 2] # Label_B here...
         ...
     ]
     ```
@@ -55,12 +59,28 @@ class ColorData(BaseModel):
         return self
 
     @classmethod
-    def from_defaults(cls, color_name) -> Self:
-        return cls(names=[color_name], table=[[0, 0, 0, 0], [255, 255, 255, 1]])
+    def from_defaults(cls, color_name="white") -> Self:
+        table = homogenous_color_table(2)
+        return cls(names=[color_name], table=table)
 
     @classmethod
     def from_lut(cls, lut) -> Self:
         return cls(names=[], table=lut)
+
+
+def homogenous_color_table(levels: int) -> ColorTable:
+    """
+    create a table of well-spread values.
+    The returned ColorTable contains `levels` cubed rows.
+    Values for `levels` above 5 are not recommended.
+    """
+    base = [int(i * 65635 / (levels - 1)) for i in range(levels)]
+    table = []
+    for x in base:
+        for y in base:
+            for z in base:
+                table.append([x, y, z, 0])
+    return table
 
 
 class Threshold(BaseModel):
