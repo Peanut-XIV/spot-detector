@@ -1,16 +1,13 @@
 from PySide6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QVBoxLayout,
-    QWidget,
     QFileDialog,
+    QWidget,
+    QDialog,
+    QLabel,
 )
-from PySide6.QtCore import (
-    Qt,
-    Slot,
-)
+from PySide6.QtCore import Qt
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 
 

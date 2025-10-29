@@ -2,10 +2,11 @@ from pathlib import Path
 import json
 from typing import Self, Any, Optional
 
+from numpy.typing import NDArray
 from pydantic import BaseModel, field_validator, Field, ValidationError
 
 from spot_detector.model.defaults import PROJECTS_LIST, get_recent_project_paths
-from spot_detector.model.models import ColorAndParams, ColorData
+from spot_detector.model.models import ColorAndParams, Shade
 from spot_detector.model.reference_image import ReferenceImageModel
 # from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 # import mimetypes
@@ -64,21 +65,12 @@ class Project(BaseModel):
         else:
             self.dust_filter_image_path = image_path
 
-    def set_lut(self, lut: list[list[int]]):
-        color_data = ColorData.from_lut(lut)
-        if self.configuration is None:
-            # make new config
-            if self.reference_image_model is None:
-                raise ValueError("Expected reference image model to be non-null")
-            ref_image = self.reference_image_model.path
-            det_params = []
-            self.configuration = ColorAndParams(
-                reference_image=ref_image,
-                color_data=color_data,
-                det_params=det_params,
-            )
-        else:
-            self.configuration.color_data = color_data
+    def set_shades(self, lut: NDArray):
+        """
+        lut -> numpy array of shape (3, X) of integers
+        """
+        color_data = [Shade.from_pix(tuple(row)) for row in lut]
+        self.configuration.shades = color_data
 
     def save_as(self, path: str):
         old_path = self.latest_save_path

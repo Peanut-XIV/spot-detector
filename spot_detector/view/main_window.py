@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMainWindow, QSplitter, QMe
 from PySide6.QtGui import QAction, QIcon
 
 from spot_detector import rc_resources  # WARN: Do not remove
+from spot_detector.model.models import Shade
 from spot_detector.model.project import Project
 from spot_detector.model.reference_image import ReferenceImageModel
 from spot_detector.view.kmeans_dialog import KMeansDialog, KmeansProcessor
@@ -51,10 +52,9 @@ class MainWindow(QMainWindow):
 
     def _create_palette(self, parent):
         """
-        A function for populating a palette widget with random palette colors.
+        A function for populating a palette widget with the projects shades.
         """
-        table = self.project.configuration.color_data.table
-        self.palette_list = Palette_List(table, parent)
+        self.palette_list = Palette_List(self.project.configuration.shades, parent)
 
     def _create_menu(self):
         self.menu = self.menuBar()
@@ -95,10 +95,17 @@ class MainWindow(QMainWindow):
         action.triggered.connect(self.start_kmeans_dialog)
         self.kmeans_action = action
 
+    def _create_detection_settings_action(self):
+        action = QAction("Detection Settings", self)
+        action.triggered.connect(self.start_settings_window)
+
     def _create_viewer(self, parent):
         self.viewer = ViewerWidget(self.project, parent)
-        self.viewer.request_palettized.connect(self.make_palettized_ref)
+        self.viewer.request_palettized.connect(self.show_palettized_ref)
         self.viewer.request_highlight.connect(self.make_highlight)
+
+    @Slot()
+    def start_settings_window(self): ...
 
     @Slot()
     def make_highlight(self):
@@ -115,20 +122,33 @@ class MainWindow(QMainWindow):
             need_labels_msg(self)
             return
 
-        table = self.project.configuration.color_data.table
         # could error if labeled_mat was set to None in the meantime
-        self.project.reference_image_model.mats.highlight_selection(rows, table)
+        self.project.reference_image_model.mats.highlight_selection(
+            rows, self.project.configuration.shades
+        )
         self.viewer.update_highlight()
         self.viewer.show_highlight()
+
+    @Slot()
+    def show_palettized_ref(self):
+        if self.project.reference_image_model is None:
+            need_ref_image_msg(self)
+            return
+        if self.project.reference_image_model.mats.labeled_mat is None:
+            need_labels_msg(self)
+            return
+
+        self.viewer.update_palettized(msg_on_fail=False)
+        self.viewer.update_highlight(msg_on_fail=False)
+        self.viewer.show_palettized_reference()
 
     @Slot()
     def make_palettized_ref(self):
         if self.project.reference_image_model is None:
             need_ref_image_msg(self)
             return
-        table = self.project.configuration.color_data.table
-        self.project.reference_image_model.mats.palettize_and_label_reference_from_lut(
-            table, do_update_highlight=True
+        self.project.reference_image_model.mats.palettize_and_label_reference_from_shades(
+            self.project.configuration.shades, do_update_highlight=True
         )
         self.viewer.update_palettized(msg_on_fail=False)
         self.viewer.update_highlight(msg_on_fail=False)
@@ -220,9 +240,9 @@ class MainWindow(QMainWindow):
         self.viewer.show_palettized_reference()
 
         lut = output[0]
-        color_table = [list(row) + [0] for row in lut]
-        self.project.set_lut(color_table)
-        self.palette_list.set_palette(color_table)
+        shades = [Shade.from_pix(tuple(row[0:3])) for row in lut]
+        self.project.set_shades(lut)
+        self.palette_list.set_palette(shades)
 
     # TODO: create the function
     # 1 - Validate source path
@@ -311,8 +331,8 @@ class MainWindow(QMainWindow):
 
         if img_model.mats.palettized is None:
             # should not be possible
-            palette = self.project.configuration.color_data.table
-            palettized = img_model.mats.apply_color_table(palette)
+            palette = [shade.as_row() for shade in self.project.configuration.shades]
+            palettized = img_model.mats.apply_color_list(palette)
             img_model.mats.update_palettized(palettized)
             self.viewer.update_palettized()
 

@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Literal
 from PySide6.QtWidgets import (
     QApplication,
-    QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -23,7 +22,6 @@ from pydantic import ValidationError
 from spot_detector.model.project import Project
 from spot_detector.view.dialogs import OpenDirFileDialog, ReadOnlyImageFileDialog
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
-from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 
 
 class NewProjectDialog(QDialog):

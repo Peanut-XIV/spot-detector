@@ -11,7 +11,8 @@ import numpy.typing as npT
 from click import FileError, echo
 
 # Project files
-from spot_detector.model.models import ColorAndParams, DetParams
+from spot_detector.model.models import DetParams, Shade
+from spot_detector.model.project import Project
 from spot_detector.file_utils import (
     fetch_csv,
     read_csv,
@@ -74,14 +75,14 @@ def detect(
     depths: list[str],
     csv_path: str | Path,
     regex: str,
-    config_path: str | Path,
+    project_path: str | Path,
     proc: int,
 ) -> None:
     # TODO: if the csv file already exists, check for coherence between
     #       number of colors, depths and dimensions of the csv file
-    config_path = Path(config_path)
-    config: ColorAndParams = ColorAndParams.from_path(config_path)
-    colors = config.color_data.names
+    project_path = Path(project_path)
+    project: Project = Project.from_path(str(project_path))
+    colors = [det.color_name for det in project.configuration.det_params]
 
     sub_dirs = sorted_sub_dirs(image_dir)
     csv_file = fetch_csv(csv_path, depths, colors, sub_dirs)
@@ -93,7 +94,7 @@ def detect(
     for img in images:
         in_queue.put(img)
 
-    workers = init_workers(proc, config, in_queue, out_queue)
+    workers = init_workers(proc, project.configuration, in_queue, out_queue)
     for worker in workers:
         in_queue.put("STOP")
         worker.start()
@@ -121,16 +122,23 @@ def detect(
     out_queue.close()
 
 
-def edit_config_file(k: int, path: Path, from_image: Path | None):
-    config = ColorAndParams.from_path(path)
-    config_table: list[list[int]] = config.color_data.table
+def edit_project_file(k: int, project_path: Path, from_image: Path | None):
+    project = Project.from_path(str(project_path))
+    config_table: list[list[int]] = [
+        list(shade.as_row()) for shade in project.configuration.shades
+    ]
     color_table: npT.NDArray
     palette: npT.NDArray
     labeled_img: npT.NDArray
+
     if k == 1 and from_image is None:
+        if project.reference_image_model is None:
+            raise ValueError("No reference image")
+
         color_table = np.array(config_table, dtype=np.uint8)
         palette = color_table[:, 0:3]
-        img = cv.imread(config.reference_image)
+        img = cv.imread(project.reference_image_model.path)
+
         labeled_img = label_img_fastest(img, color_table)
     else:
         if k == 1:
@@ -139,7 +147,7 @@ def edit_config_file(k: int, path: Path, from_image: Path | None):
         img = cv.imread(str(from_image))
         if img is None:
             raise FileError("Image could not be opened")
-        palette, _, labeled_img = get_k_means(img, k)
+        palette, _, labeled_img = get_k_means(img, k)  # pyright:ignore
         palette = palette.astype(np.uint8)
         labeled_img = labeled_img.reshape(img.shape[0:2]).astype(np.uint8)
     # Run the GUI - get the category for each shade
@@ -149,12 +157,18 @@ def edit_config_file(k: int, path: Path, from_image: Path | None):
     category_count = count_categories(categories)
     categories = np.array(categories)[:, None]
     color_table = np.concatenate((palette, categories), axis=1)
-    new_array = [[int(val) for val in row] for row in color_table]
-    config.color_data.table = new_array
+
+    shade_list = []
+    for row in color_table:
+        shade_tuple = tuple(row[:4])
+        shade = Shade.from_row(shade_tuple)
+        shade_list.append(shade)
+
+    project.configuration.shades = shade_list
     if from_image is not None:
         # There are a lot of changes to take into account
-        config.reference_image = str(from_image)
-        param_list: list[DetParams] = config.det_params
+        project.set_reference_image_path(from_image)
+        param_list: list[DetParams] = project.configuration.det_params
         new_param_list: list[DetParams]
         param_count = len(param_list)
         if param_count > category_count:
@@ -162,13 +176,11 @@ def edit_config_file(k: int, path: Path, from_image: Path | None):
         elif param_count < category_count:
             new_param_list = param_list
             missing_params = range(param_count, category_count)
-            color_names = map("color_{}".format, missing_params)
-            config.color_data.names.extend(color_names)
             missing_params = map(DetParams.from_prepopulated_defaults, missing_params)
             new_param_list.extend(missing_params)
         else:
             new_param_list = param_list
-        config.det_params = new_param_list
-    with open(path, "w") as file:
-        json.dump(config.model_dump(), file)
+        project.configuration.det_params = new_param_list
+    with open(project_path, "w") as file:
+        json.dump(project.model_dump(), file)
     print("Done !")

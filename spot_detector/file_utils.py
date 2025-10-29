@@ -148,7 +148,7 @@ def map_folder_to_row(table: DataTable) -> dict[str, int]:
     Le comptage des lignes commence à partir de 0 mais les deux premières
     lignes sont exclues car ce sont des étiquettes.
     Le plus petit numéro est donc 2.
-     `table`: liste de listes de valeurs textuelles
+    `table`: liste de listes de valeurs textuelles
     `return`: un dictionnaire aux entrées de la forme
             {"nom_dossier": num_ligne}
     """
@@ -171,16 +171,11 @@ def unprocessed_images(
     le fichier `csv_file`.
 
     `sub_directories`: Les différents dossiers en question.
-           `csv_file`: Le fichier où sont renseignées les valeurs
-                     des images traitées.
-             `depths`: Les différentes profondeurs traitées dans le csv.
-             `colors`: Les différentes couleurs traitées dans le csv.
-              `regex`: L'expression régulière qui permet d'identifier
-                     précisément le nom d'un fichier d'image, avec la valeur
-                     de profondeur remplacée par $value.
-             `return`: Les images non-traitées, sous la forme d'une liste
-                     d'ImageElement. C'est-à-dire, un tuple
-                     (ligne, colonne, chemin).
+    `csv_file`: Le fichier où sont renseignées les valeurs des images traitées.
+    `depths`: Les différentes profondeurs traitées dans le csv.
+    `colors`: Les différentes couleurs traitées dans le csv.
+    `regex`: L'expression régulière qui permet d'identifier précisément le nom d'un fichier d'image, avec la valeur de profondeur remplacée par $value.
+    `return`: Les images non-traitées, sous la forme d'une liste d'ImageElement. C'est-à-dire, un tuple (ligne, colonne, chemin).
     """
     table = read_csv(csv_file)
     unprocessed = []
@@ -341,13 +336,13 @@ def confirm_new_cfg_file(path):
         if not path.is_file():
             raise FileError("Le chemin ne désigne pas un fichier.")
         confirm(
-            "Ce fichier existe déjà. " "Souhaitez-vous écrire par dessus ?",
+            "Ce fichier existe déjà. Souhaitez-vous écrire par dessus ?",
             abort=True,
         )
     else:
         if not path.parent.exists():
             confirm(
-                "Ce chemin n'existe pas encore. " "Créer les dossiers manquants ?",
+                "Ce chemin n'existe pas encore. Créer les dossiers manquants ?",
                 abort=True,
             )
             mkdir(path.parent)

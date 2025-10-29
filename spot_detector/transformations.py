@@ -1,9 +1,7 @@
 # Python standard library
-from time import perf_counter
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
-from scipy import signal
 
 # Project files
 from .types import T

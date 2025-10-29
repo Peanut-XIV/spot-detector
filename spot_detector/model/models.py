@@ -1,85 +1,141 @@
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
 from typing_extensions import Self
 import json
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 import cv2 as cv
-from spot_detector.types import ColorTable
+from spot_detector.types import PixTuple, ShadeTuple
 
 
-class ColorData(BaseModel):
-    """
-    The datastructure containing both names for labels
-    and a table of different colors with the associated
-    label number.
-    ```
-    name = [
-        "label_A",
-        "label_B",
-        "label_C",
-        ...
-    ]
-    table = [                    # BGR is the standard in openCV, not RGB
-        [ 4620, 20993,  9237, 0] # no label   (id 0 -> background)
-        [31745, 43886, 50832, 1] # label_A    (id 1 -> index 0)
-        [ 6669, 29438, 46721, 2] # label_B    (id 2 -> index 1)
-        [24264, 55633,  2575, 3] # label_C    (id 3 -> index 2)
-        [31595, 29539, 40082, 2] # Label_B here...
-        ...
-    ]
-    ```
-    """
+class ChannelOrder(Enum):
+    RGB = 0
+    BGR = 1
 
-    names: list[str]
-    table: ColorTable
 
-    @field_validator("table")
-    def validate_table(cls, table: list[list[int]]) -> list[list[int]]:
-        if len(table) == 0:
-            return table
-        test_len = len(table[0])
-        for row in table:
-            if len(row) != test_len:
-                raise ValueError("color_data.table has inconsistent dimensions")
-        for i, row in enumerate(table):
-            for j, value in enumerate(row):
-                if type(value) is not int:
-                    raise ValueError(
-                        f"value ({i},{j}) of color_data.table is not an integer"
-                    )
-        return table
+class ChannelDepth(Enum):
+    U8 = 0
+    U16 = 1
 
-    @model_validator(mode="after")
-    def check_name_list_match(self) -> Self:
-        count = len(self.names)
-        for row in self.table:
-            if row[-1] > count:
-                raise ValidationError("too many labels for too few names")
-        return self
+
+class Shade(BaseModel):
+    b: int = Field(ge=0, lt=65536)
+    g: int = Field(ge=0, lt=65536)
+    r: int = Field(ge=0, lt=65536)
+    label_id: int = Field(ge=0)
 
     @classmethod
-    def from_defaults(cls, color_name="white") -> Self:
-        table = homogenous_color_table(2)
-        return cls(names=[color_name], table=table)
+    def from_row(cls, row: ShadeTuple) -> Self:
+        return cls(b=row[0], g=row[1], r=row[2], label_id=row[3])
 
     @classmethod
-    def from_lut(cls, lut) -> Self:
-        return cls(names=[], table=lut)
+    def from_pix(cls, pix: PixTuple, label_id: int = 0) -> Self:
+        return cls(b=pix[0], g=pix[1], r=pix[2], label_id=label_id)
+
+    @classmethod
+    def with_conversion(
+        cls,
+        values: tuple[int, int, int],
+        label_id: int,
+        input_order: ChannelOrder = ChannelOrder.BGR,
+        input_depth: ChannelDepth = ChannelDepth.U16,
+    ):
+        if input_order == ChannelOrder.RGB:
+            values = (values[2], values[1], values[0])
+
+        if input_depth == ChannelDepth.U8:
+            values = (
+                values[0] << 8,
+                values[1] << 8,
+                values[2] << 8,
+            )
+
+        return cls(b=values[0], g=values[1], r=values[2], label_id=label_id)
+
+    def get_color(
+        self,
+        order: ChannelOrder = ChannelOrder.BGR,
+        depth: ChannelDepth = ChannelDepth.U16,
+    ):
+        if order == ChannelOrder.RGB:
+            val = (self.r, self.g, self.b)
+        else:
+            val = (self.b, self.g, self.r)
+
+        if depth == ChannelDepth.U8:
+            val = (
+                val[0] >> 8,
+                val[1] >> 8,
+                val[2] >> 8,
+            )
+
+        return val
+
+    @property
+    def rgb_u8(self):
+        return (
+            self.r >> 8,
+            self.g >> 8,
+            self.b >> 8,
+        )
+
+    def set_color(
+        self,
+        values: tuple[int, int, int],
+        order: ChannelOrder = ChannelOrder.BGR,
+        depth: ChannelDepth = ChannelDepth.U16,
+    ):
+        if order == ChannelOrder.RGB:
+            values = (values[2], values[1], values[0])
+
+        if depth == ChannelDepth.U8:
+            values = (
+                values[0] << 8,
+                values[1] << 8,
+                values[2] << 8,
+            )
+        self.b, self.g, self.r = values
+
+    def set_red(self, red_value: int):
+        if not (0 <= red_value < 65536):
+            raise ValueError()
+        self.r = red_value
+
+    def set_green(self, green_value: int):
+        if not (0 <= green_value < 65536):
+            raise ValueError()
+        self.g = green_value
+
+    def set_blue(self, blue_value: int):
+        if not (0 <= blue_value < 65536):
+            raise ValueError()
+        self.b = blue_value
+
+    def get_label_id(self) -> int:
+        return self.label_id
+
+    def set_label_id(self, id: int):
+        if id < 0:
+            raise ValueError("ValueError: Expected a positive integer value")
+        self.label_id = id
+
+    def as_row(self) -> ShadeTuple:
+        return (self.b, self.g, self.r, self.label_id)
 
 
-def homogenous_color_table(levels: int) -> ColorTable:
+def homogenous_color_table(levels: int) -> list[ShadeTuple]:
     """
     create a table of well-spread values.
     The returned ColorTable contains `levels` cubed rows.
     Values for `levels` above 5 are not recommended.
     """
-    base = [int(i * 65635 / (levels - 1)) for i in range(levels)]
+    base = [int(i * 65535 / (levels - 1)) for i in range(levels)]
     table = []
     for x in base:
         for y in base:
             for z in base:
-                table.append([x, y, z, 0])
+                table.append((x, y, z, 0))
     return table
 
 
@@ -232,35 +288,79 @@ class DetParams(BaseModel):
 
 class ColorAndParams(BaseModel):
     reference_image: str
-    color_data: ColorData
+    shades: list[Shade]
     det_params: list[DetParams]
 
     @classmethod
     def from_defaults(cls, color_name="color_1") -> Self:
         return cls(
             reference_image="",
-            color_data=ColorData.from_defaults(color_name),
+            shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_defaults(color_name)],
         )
 
     @classmethod
-    def from_prepopulated_defaults(cls, color_name="color_1") -> Self:
+    def from_prepopulated_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
             reference_image="",
-            color_data=ColorData.from_defaults(color_name),
+            shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_prepopulated_defaults(color_name)],
         )
 
     @classmethod
-    def from_path(cls, file_path: str | Path) -> Self:
-        with open(file_path, "r", encoding="UTF-8") as cfg_file:
-            json_dict = json.load(cfg_file)
-            content = cls(**json_dict)
-        return content
-
-    @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
         return cls(**data)
+
+    def generate_detection_parameters(self):
+        """
+        Adds DetParams objects as well as color names to the det_params and
+        color name lists in order to match the maximum label id in the color
+        data table. This allows for additional / optional sets of detection
+        parameters.
+        """
+        # TODO: complete function
+        ...
+
+    def swap_params(self, index_1: int, index_2: int):
+        """
+        swaps two det_params's position as well as their names.
+        if the indices do not fit, raises an IndexError.
+        """
+        # Trivial case
+        if index_1 == index_2:
+            return
+
+        # handle IndexErrors
+        length = len(self.det_params)
+        idx1_inrange = -length <= index_1 < length
+        idx2_inrange = -length <= index_2 < length
+
+        if (not idx1_inrange) or (not idx2_inrange):
+            errmsg = "OutOfRangeError: "
+
+            if index_1 < -length:
+                errmsg += f"(index_1(={index_1}) < -length(={-length}))"
+            elif index_1 >= length:
+                errmsg += f"(index_1(={index_1}) >= length(={length}))"
+
+            if not (idx1_inrange and idx2_inrange):
+                errmsg += " and "
+
+            if index_2 < -length:
+                errmsg += f"(index_2(={index_2}) < -length(={-length}))"
+            elif index_2 >= length:
+                errmsg += f"(index_2(={index_2}) >= length(={length}))"
+
+            raise IndexError(errmsg)
+
+        # we are free to continue without error
+        temp_det_1 = self.det_params[index_1]
+        self.det_params[index_1] = self.det_params[index_2]
+        self.det_params[index_2] = temp_det_1
+
+    @property
+    def color_names(self):
+        return [det_param.color_name for det_param in self.det_params]
 
 
 class CLIDefaults(BaseModel):

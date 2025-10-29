@@ -1,4 +1,5 @@
 # Python standard library
+import datetime
 from pathlib import Path
 import json
 
@@ -8,10 +9,9 @@ from click import BadParameter, argument, command, option
 
 # Project files
 from spot_detector.model.models import ColorAndParams
-from spot_detector.core import edit_config_file
+from spot_detector.core import edit_project_file
 from spot_detector.file_utils import confirm_new_cfg_file
-
-
+from spot_detector.model.project import Project
 
 
 @command()
@@ -81,15 +81,16 @@ def palette_editor(
     if create:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(path)
-        configuration = ColorAndParams.from_defaults()
+        datetime_str = datetime.datetime.now().strftime("%d%m%Y_%H%M%S")
+        project = Project(name=f"project_{datetime_str}")
         with open(path, "w") as file:
-            json.dump(configuration.model_dump(), file, indent=2)
+            json.dump(project.model_dump(), file, indent=2)
     elif duplicate:
         # aborts if user doesn't want to overwrite
         confirm_new_cfg_file(duplicate)
-        configuration = ColorAndParams.from_path(path)
+        project = Project.from_path(str(path))
         with open(duplicate, "w") as file:
-            json.dump(configuration.model_dump(), file)
+            json.dump(project.model_dump(), file)
         path = duplicate
     if edit:
-        edit_config_file(edit, path, from_image)
+        edit_project_file(edit, path, from_image)

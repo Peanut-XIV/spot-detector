@@ -9,7 +9,6 @@ from numpy.typing import NDArray
 
 from spot_detector.model.models import ColorAndParams, DetParams
 from spot_detector.transformations import (
-    crop_to_main_circle,
     evenly_spaced_gray_palette,
     isolate_categories,
     label_img_fastest,
@@ -18,6 +17,7 @@ from spot_detector.transformations import (
 from .types import DataElement, ImageElement
 
 RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
+
 
 def count_spots_fourth_method(
     img: NDArray,
@@ -30,9 +30,7 @@ def count_spots_fourth_method(
     labeled = label_img_fastest(img, color_table)
     values = []
     for i, settings in enumerate(det_params):
-        detector = cv.SimpleBlobDetector.create(
-            settings.load_params(len(color_table))
-        )
+        detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         j = i + 1  # 0 is the bg
         isolated_color = isolate_categories(color_table, [j])
         gs_palette = evenly_spaced_gray_palette(isolated_color)
@@ -44,9 +42,9 @@ def count_spots_fourth_method(
             kp = cv.drawKeypoints(
                 gs_img,
                 key_points,
-                None, # type: ignore
+                None,  # type: ignore
                 [0, 0, 255],
-                RICH_KEYPOINTS
+                RICH_KEYPOINTS,
             )
             cv.imwrite(expand_debug(f"col{j}_kp_km.jpg"), kp)
             cv.imwrite(expand_debug(f"col{j}_gs_km.jpg"), gs_img)
@@ -62,8 +60,6 @@ def expand_debug(string: str) -> str:
     return str(debug_path.joinpath(string))
 
 
-
-
 def init_workers(
     count: int,
     config: ColorAndParams,
@@ -74,16 +70,14 @@ def init_workers(
     Creates a list of multiprocessing process objects but does not call
     their start method.
     :param count: The number of processes to create
-    :param config: The configuration of the detector for each label
+    :param project: The project, including configuration of the detector for each label
     :param in_queue: The queue from which the processes fetch their input data
     :param out_queue: The queue to which the processed data is output
     :return: The list of process objects
     """
     workers_list = []
     for _ in range(count):
-        worker = Process(
-            target=img_processer, args=(in_queue, out_queue, config)
-        )
+        worker = Process(target=img_processer, args=(in_queue, out_queue, config))
         workers_list.append(worker)
     return workers_list
 
@@ -102,7 +96,7 @@ def img_processer(
     `config`: An object containing the different configurations necessary
     for computation. Must be picklable.
     """
-    color_table = np.array(config.color_data.table)
+    color_table = np.array([shade.as_row() for shade in config.shades])
     parent = parent_process()
     if parent is None:
         return
@@ -119,8 +113,6 @@ def img_processer(
             else:
                 folder_row, depth_col, path = job
                 img = cv.imread(path)
-                values = count_spots_fourth_method(
-                    img, color_table, config.det_params
-                )
+                values = count_spots_fourth_method(img, color_table, config.det_params)
                 result: DataElement = (folder_row, depth_col, values)
                 out_queue.put(result)

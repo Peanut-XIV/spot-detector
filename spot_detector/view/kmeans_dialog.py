@@ -1,5 +1,4 @@
 import sys
-from pathlib import Path
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
@@ -11,11 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
 )
-from PySide6.QtGui import (
-    QIcon,
-    QImage,
-    QAction,
-)
 from PySide6.QtCore import (
     Slot,
     Qt,
@@ -24,7 +18,6 @@ from PySide6.QtCore import (
     Signal,
 )
 from numpy.typing import NDArray
-import cv2
 from spot_detector.transformations import get_k_means
 from spot_detector.model.reference_image import to_3_channel_mat, to_uint16_mat
 

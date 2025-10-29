@@ -1,21 +1,23 @@
 from pathlib import Path
 from typing import Any
+
 from PySide6.QtGui import QImage
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field, PrivateAttr
+
+from spot_detector.model.models import Shade
 from spot_detector.transformations import (
     get_k_means,
     label_img_fastest_uint16,
 )
 from spot_detector.errors import (
-    ImageError,
     InvalidFormatError,
     InvalidNameError,
     FailedOpeningError,
 )
-from spot_detector.types import ColorTable
+from spot_detector.types import PixTuple, ShadeTuple
 
 
 def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:
@@ -159,8 +161,8 @@ class ReferenceImageMatrices:
         lut = result[0]
         return lut
 
-    def palettize_and_label_reference_from_lut(
-        self, table: ColorTable, do_update_highlight: bool = True
+    def palettize_and_label_reference_from_shades(
+        self, shades: list[Shade], do_update_highlight: bool = True
     ) -> None:
         """
         UNUSED - NEEDS CORRESPONDING ACTION
@@ -170,6 +172,7 @@ class ReferenceImageMatrices:
         file.
         """
         palettizable_ref = to_3_channel_mat(to_uint16_mat(self.reference.raw_mat))
+        table = [shade.as_row() for shade in shades]
         lut = np.array(table, dtype=np.uint16)[:, 0:3]
         labels = label_img_fastest_uint16(palettizable_ref, lut)
         self.labeled_mat = labels
@@ -184,12 +187,14 @@ class ReferenceImageMatrices:
         self.update_highlight(palettized)
         self.labeled_mat = labeled
 
-    def apply_color_table(self, table: ColorTable) -> NDArray[np.uint16]:
+    def apply_color_list(
+        self, colors: list[ShadeTuple] | list[PixTuple]
+    ) -> NDArray[np.uint16]:
         """
         can raise a ValueError if labeled_mat is not initialized yet
         """
         if self.labeled_mat is not None:
-            lut = np.array(table, dtype=np.uint16)[:, 0:3]
+            lut = np.array(colors, dtype=np.uint16)[:, 0:3]
             return lut[self.labeled_mat]
         else:
             raise ValueError(
@@ -197,16 +202,16 @@ class ReferenceImageMatrices:
                 " first to be able to apply a palette."
             )
 
-    def highlight_selection(self, selection: list[bool], table: ColorTable) -> None:
-        new_palette = []
-        for sel, row in zip(selection, table):
+    def highlight_selection(self, selection: list[bool], shades: list[Shade]) -> None:
+        color_list: list[PixTuple] = []
+        for sel, shade in zip(selection, shades):
             if sel:
                 # color tables coded in 16 bits channel depth
-                new_palette.append([65535, 65535, 0])
+                color_list.append((65535, 65535, 0))
             else:
-                new_palette.append(row[0:3])
+                color_list.append(shade.as_row()[0:3])
 
-        highlight = self.apply_color_table(new_palette)
+        highlight = self.apply_color_list(color_list)
         self.update_highlight(highlight)
 
     def update_highlight(self, mat: NDArray):

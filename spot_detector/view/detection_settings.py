@@ -19,7 +19,7 @@ from spot_detector.view.settings_fields import SettingsFields
 class DetectionSettings(QWidget):
     def __init__(
         self,
-        colors,
+        settings: ColorAndParams,
         parent: QWidget | None = None,
         f: Qt.WindowType = Qt.WindowType.Widget,
     ) -> None:
@@ -27,34 +27,40 @@ class DetectionSettings(QWidget):
         self.selected_color = 0
         self.selected_hint = 0
 
+        self.settings = settings
+
         layout = QHBoxLayout(self)
         layout.setObjectName("Detection_settings_layout")
         split = QSplitter(Qt.Orientation.Horizontal, self)
+        split.setObjectName("Detection_settings_splitter")
 
         # Colors
         self.colors_list = QListWidget(split)
-        self.colors_list.addItems(colors)
+        self.colors_list.setObjectName("Detection_settings_color_list")
+        self.colors_list.addItems(self.settings.color_names)
         self.colors_list.setMaximumWidth(200)
         split.addWidget(self.colors_list)
 
         # Fields
-        scroll_area = QScrollArea(self)
+        fields_widget = QScrollArea(self)
+        fields_widget.setObjectName("Detection_settings_Fields_container")
         self.fields = SettingsFields(None, self)
+        self.fields.setObjectName("Detection_settings_Fields")
         self.fields.setMinimumWidth(300)
         self.fields.setMaximumWidth(300)
-        scroll_area.setWidget(self.fields)
-        scroll_area.setMinimumWidth(300)
-        scroll_area.setMaximumWidth(300)
-        split.addWidget(scroll_area)
+        fields_widget.setWidget(self.fields)
+        fields_widget.setMinimumWidth(300)
+        fields_widget.setMaximumWidth(300)
+        split.addWidget(fields_widget)
 
         # Hint
-        scroll_area_2 = QScrollArea(self)
-        scroll_area_2.setObjectName("scroll_area_2")
-        scroll_area_2.setMinimumWidth(400)
-        self.help_panel = HintPanel(self, scroll_area_2)
+        help_widget = QScrollArea(self)
+        help_widget.setObjectName("scroll_area_2")
+        help_widget.setMinimumWidth(400)
+        self.help_panel = HintPanel(self, help_widget)
         self.help_panel.setMinimumWidth(400)
-        scroll_area_2.setWidget(self.help_panel)
-        split.addWidget(scroll_area_2)
+        help_widget.setWidget(self.help_panel)
+        split.addWidget(help_widget)
 
         layout.addWidget(split)
         self.setLayout(layout)
@@ -63,12 +69,13 @@ class DetectionSettings(QWidget):
 
     def load(self, model: ColorAndParams):
         self.colors_list.clear()
-        self.colors_list.addItems(model.color_data.names)
+        self.colors_list.addItems(model.color_names)
         self.fields.load(model.det_params[0])
 
 
 if __name__ == "__main__":
+    settings = ColorAndParams.from_prepopulated_defaults("white")
     app = QApplication(sys.argv)
-    bidule = DetectionSettings(["rouge", "vert", "bleu"])
+    bidule = DetectionSettings(settings)
     bidule.show()
     sys.exit(app.exec())

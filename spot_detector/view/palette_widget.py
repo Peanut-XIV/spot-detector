@@ -1,5 +1,4 @@
 import sys
-import random
 from typing import TypeGuard
 from PySide6.QtWidgets import (
     QListWidget,
@@ -23,8 +22,8 @@ from PySide6.QtGui import (
     QKeyEvent,
     QPixmap,
 )
-from numpy import number
 
+from spot_detector.model.models import Shade, homogenous_color_table
 from spot_detector.types import ColorTable
 
 
@@ -33,7 +32,7 @@ class Palette_List(QListWidget):
 
     def __init__(
         self,
-        table: ColorTable | None,
+        shades: list[Shade] | None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -41,7 +40,7 @@ class Palette_List(QListWidget):
         self.create_actions()
 
         if table is not None:
-            self.set_palette(table)
+            self.set_palette(shades)
 
     def create_actions(self):
         self.move_sel_up_action = QAction("Move Selection Up", self)
@@ -67,25 +66,22 @@ class Palette_List(QListWidget):
             # call action decrease ID
             self.decr_sel_action.trigger()
 
-    def get_palette(self) -> ColorTable:
+    def get_shade_list(self) -> list[Shade]:
         output = []
         items = [self.item(i) for i in range(self.count())]
         valid_items = filter(is_palette_item, items)
         sorted_items = sorted(valid_items, key=lambda x: x.index)
-        output = [list(item.color) + [item.label] for item in sorted_items]
+        output = [item.shade.model_copy() for item in sorted_items]
         return output
 
     @Slot(list)
-    def set_palette(self, data: ColorTable):
+    def set_palette(self, shades: list[Shade]):
         """
         data contains the color value of each label in the BGR format
         """
         self.clear()
-        for i, row in enumerate(data):
-            if len(row) != 4:
-                print("dropped row:", row)
-                continue
-            Palette_Item(i, (row[2], row[1], row[0]), row[3], self)
+        for i, row in enumerate(shades):
+            Palette_Item(i, row, self)
         self.show()
 
     @Slot()
@@ -138,7 +134,7 @@ class Palette_List(QListWidget):
             if isinstance(e, Palette_Item):
                 e.incr_label()
         if len(sel_items) > 0:
-            self.palette_changed.emit(self.get_palette())
+            self.palette_changed.emit(self.get_shade_list())
 
     @Slot()
     def decr_sel_ID(self):
@@ -147,7 +143,7 @@ class Palette_List(QListWidget):
             if isinstance(e, Palette_Item):
                 e.decr_label()
         if len(sel_items) > 0:
-            self.palette_changed.emit(self.get_palette())
+            self.palette_changed.emit(self.get_shade_list())
 
     def selected_rows(self):
         items = self.selectedItems()
@@ -162,8 +158,7 @@ class Palette_Item(QListWidgetItem):
     def __init__(
         self,
         index: int,
-        color: tuple[int, int, int],
-        label: int = 0,
+        shade: Shade,
         listview: QListWidget | None = None,
     ):
         # ColorTable is coded with 16 bits per channel the value is converted
@@ -171,32 +166,29 @@ class Palette_Item(QListWidgetItem):
         # the 16 bit values are kept
 
         image = QImage(50, 50, QImage.Format.Format_RGBA8888)
-        r = convert_channel_u16_u8(color[0])
-        g = convert_channel_u16_u8(color[1])
-        b = convert_channel_u16_u8(color[2])
+        r, g, b = shade.rgb_u8
         image.fill(QColor(r, g, b, 255))
 
-        super().__init__(QPixmap(image), str(label), listview)
+        super().__init__(QPixmap(image), str(shade.label_id), listview)
 
         self.index: int = index
-        self.label: int = 0
-        self.color: tuple[int, int, int] = color
+        self.shade = shade.model_copy()
         self.update_text()
 
     def incr_label(self):
-        self.label += 1
+        self.shade.label_id += 1
         self.update_text()
 
     def decr_label(self):
-        self.label = max(0, self.label - 1)
+        self.shade.label_id = max(0, self.shade.label_id - 1)
         self.update_text()
 
     def default_label(self):
-        self.label = 0
+        self.shade.label_id = 0
         self.update_text()
 
     def update_text(self):
-        self.setText(str(self.label))
+        self.setText(str(self.shade.label_id))
 
 
 def clamp(val: int, interval: tuple[int, int]) -> int:
@@ -217,13 +209,8 @@ def is_palette_item(item: QListWidgetItem) -> TypeGuard[Palette_Item]:
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = QMainWindow()
-    palette = Palette_List(window)
+    table = [Shade.from_row(row) for row in homogenous_color_table(3)]
+    palette = Palette_List(table, window)
     window.setCentralWidget(palette)
-    for i in range(10):
-        r = random.randint(0, 255)
-        g = random.randint(0, 255)
-        b = random.randint(0, 255)
-        item = Palette_Item(i, (r, g, b), 0, palette)
-
     window.show()
     sys.exit(app.exec())
