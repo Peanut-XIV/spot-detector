@@ -1,0 +1,11 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+  <file>resources/docs/hint_default.html</file>
+  <file>resources/docs/hint_circularity.html</file>
+  <file>resources/docs/hint_area.html</file>
+  <file>resources/docs/hint_threshold.html</file>
+  <file>resources/docs/hint_convexity.html</file>
+  <file>resources/docs/hint_inertia.html</file>
+  <file>resources/docs/not_found.html</file>
+</qresource>
+</RCC>

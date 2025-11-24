@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 from spot_detector.model.project import Project
-import spot_detector.rc_resources  # WARN: do not remove
+from spot_detector import rc_resources, rc_icons  # WARN: do not remove
 
 
 class ImageView(QGraphicsView):

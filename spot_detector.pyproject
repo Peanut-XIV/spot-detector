@@ -29,6 +29,8 @@
     "spot_detector/view/settings_field.py",
     "spot_detector/view/welcome_window.py",
     "spot_detector/view/welcome_window_interface.py",
-    "spot_detector/resources.qrc"
+    "spot_detector/resources.qrc",
+    "spot_detector/documentation.qrc",
+    "spot_detector/icons.qrc"
   ]
 }

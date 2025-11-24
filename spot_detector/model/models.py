@@ -191,10 +191,18 @@ class DetParams(BaseModel):
     thresh: Threshold
     min_dist: Optional[float] = Field(gt=0, default=None)
     filter_by_color: Optional[int] = Field(ge=0, le=255, default=255)
-    area: Optional[SimpleParam] = None
-    circ: Optional[SimpleParam] = None
-    convex: Optional[SimpleParam] = None
-    inertia: Optional[SimpleParam] = None
+    area: SimpleParam = Field(
+        default_factory=lambda: SimpleParam.from_defaults(False, 0, 4000)
+    )
+    circ: SimpleParam = Field(
+        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
+    )
+    convex: SimpleParam = Field(
+        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
+    )
+    inertia: SimpleParam = Field(
+        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
+    )
 
     def __init__(self, /, **data: Any) -> None:
         super().__init__(**data)

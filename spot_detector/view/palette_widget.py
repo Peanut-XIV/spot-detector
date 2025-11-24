@@ -71,7 +71,7 @@ class Palette_List(QListWidget):
         items = [self.item(i) for i in range(self.count())]
         valid_items = filter(is_palette_item, items)
         sorted_items = sorted(valid_items, key=lambda x: x.index)
-        output = [item.shade.model_copy() for item in sorted_items]
+        output = [item.shade.model_copy(deep=True) for item in sorted_items]
         return output
 
     @Slot(list)

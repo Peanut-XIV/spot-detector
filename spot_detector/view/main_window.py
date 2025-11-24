@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QApplication, QDialog, QMainWindow, QSplitter, QMessageBox
 from PySide6.QtGui import QAction, QIcon
 
-from spot_detector import rc_resources  # WARN: Do not remove
+from spot_detector import rc_resources, rc_icons  # WARN: Do not remove
 from spot_detector.model.models import Shade
 from spot_detector.model.project import Project
 from spot_detector.model.reference_image import ReferenceImageModel

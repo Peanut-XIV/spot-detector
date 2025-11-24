@@ -19,7 +19,7 @@ from spot_detector.view.settings_fields import SettingsFields
 class DetectionSettings(QWidget):
     def __init__(
         self,
-        settings: ColorAndParams,
+        model: ColorAndParams,
         parent: QWidget | None = None,
         f: Qt.WindowType = Qt.WindowType.Widget,
     ) -> None:
@@ -27,7 +27,7 @@ class DetectionSettings(QWidget):
         self.selected_color = 0
         self.selected_hint = 0
 
-        self.settings = settings
+        self.model = model
 
         layout = QHBoxLayout(self)
         layout.setObjectName("Detection_settings_layout")
@@ -35,9 +35,10 @@ class DetectionSettings(QWidget):
         split.setObjectName("Detection_settings_splitter")
 
         # Colors
+        # TODO: change to a list that can add and remove entries
         self.colors_list = QListWidget(split)
         self.colors_list.setObjectName("Detection_settings_color_list")
-        self.colors_list.addItems(self.settings.color_names)
+        self.colors_list.addItems(self.model.color_names)
         self.colors_list.setMaximumWidth(200)
         split.addWidget(self.colors_list)
 

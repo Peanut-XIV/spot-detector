@@ -19,7 +19,7 @@ from PySide6.QtCore import (
 )
 
 # //////// DO NOT REMOVE ////////
-import spot_detector.rc_resources
+from spot_detector import rc_resources, rc_documentation
 
 from spot_detector.types import Hint
 
