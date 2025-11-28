@@ -1,6 +1,9 @@
 import sys
 from typing import TypeGuard
+from typing_extensions import override
 
+from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtGui import QIcon, QPixmap, QKeyEvent
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -10,11 +13,10 @@ from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
 )
-from PySide6.QtCore import Signal, Slot, Qt, QItemSelectionModel
-from PySide6.QtGui import QIcon, QPixmap
 
 from spot_detector.model.models import DetParams
-from spot_detector import rc_icons
+from spot_detector.view.base_list_widget import MoveListWidget
+from spot_detector import rc_icons  # noqa: F401
 
 
 class LabelListItem(QListWidgetItem):
@@ -37,7 +39,7 @@ class LabelListItem(QListWidgetItem):
 
     @Slot()
     def update_text(self):
-        name_str = f"{self.index} - {self.model.color_name}"
+        name_str = f"{self.index + 1} - {self.model.color_name}"
         self.setText(name_str)
 
     @Slot(bool)
@@ -52,7 +54,7 @@ class LabelListItem(QListWidgetItem):
         self.update_text()
 
 
-class LabelListWidget(QListWidget):
+class LabelListWidget(MoveListWidget):
     update_names: Signal = Signal()
 
     def __init__(
@@ -61,10 +63,17 @@ class LabelListWidget(QListWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.focused_item: LabelListItem
         self.set_list(model)
         self.itemDoubleClicked.connect(self.onItemDoubleClicked)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        key = event.key()
+        if key == Qt.Key.Key_Up:
+            self.move_sel_up_action.trigger()
+        elif key == Qt.Key.Key_Down:
+            # call action move down
+            self.move_sel_down_action.trigger()
 
     def set_list(self, entries: list[DetParams]):
         self.clear()
@@ -111,59 +120,21 @@ class LabelListWidget(QListWidget):
             item.set_index(idx)
 
     @Slot()
+    @override
     def move_sel_up(self):
-        items = self.selectedItems()
-        idx_item = [(self.indexFromItem(item).row(), item) for item in items]
-        idx_item.sort(key=lambda x: x[0])
-        for _, item in idx_item:
-            idx = self.indexFromItem(item)
-            prev_row = idx.row() - 1
-            prev_idx = idx.siblingAtRow(prev_row)
-            if not prev_idx.isValid():
-                continue
-            if self.itemFromIndex(prev_idx) in items:
-                continue
-            self.takeItem(idx.row())
-            self.insertItem(prev_row, item)
-
+        super().move_sel_up()
         self.reindex_items()
-
-        # reconstitute selection
-        selection_model = self.selectionModel()
-        selection_model.clear()
-        for e in items:
-            idx = self.indexFromItem(e)
-            selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
 
     @Slot()
+    @override
     def move_sel_down(self):
-        items = self.selectedItems()
-        idx_item = [(self.indexFromItem(item).row(), item) for item in items]
-        idx_item.sort(key=lambda x: x[0])
-        idx_item.reverse()
-        for _, item in idx_item:
-            idx = self.indexFromItem(item)
-            next_row = idx.row() + 1
-            next_idx = idx.siblingAtRow(next_row)
-            if not next_idx.isValid():
-                continue
-            if self.itemFromIndex(next_idx) in items:
-                continue
-            self.takeItem(idx.row())
-            self.insertItem(next_row, item)
-
+        super().move_sel_down()
         self.reindex_items()
-
-        # reconstitute selection
-        selection_model = self.selectionModel()
-        selection_model.clear()
-        for e in items:
-            idx = self.indexFromItem(e)
-            selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
 
     @Slot(QListWidgetItem)
     def onItemDoubleClicked(self, item: QListWidgetItem):
         if not is_label_list_item(item):
+            print("item is not of class LabelListItem")
             return
         self.set_focused_item(item)
 
@@ -171,6 +142,7 @@ class LabelListWidget(QListWidget):
     def insert_new_after_focused_item(self):
         next_idx = self.focused_item_index + 1
         model = DetParams.from_prepopulated_defaults(next_idx + 1)
+        model.color_name = "new color"
         item = LabelListItem(next_idx, model, False, None)
         self.insertItem(next_idx, item)
         self.reindex_items()
@@ -188,12 +160,12 @@ class LabelListWidget(QListWidget):
         model = item.model.model_copy(deep=True)
         model.color_name = model.color_name + "(copy)"
         next_idx = self.focused_item_index + 1
-        item = LabelListItem(next_idx, model, False, self)
+        item = LabelListItem(next_idx, model, False, None)
+        self.insertItem(next_idx, item)
         self.reindex_items()
 
     @Slot()
     def delete_focused_item(self):
-        # TODO: Bugged af
         items = self._get_items()
         if len(items) <= 1:
             return
@@ -201,16 +173,17 @@ class LabelListWidget(QListWidget):
         self.takeItem(idx)
         if idx == self.count():
             idx -= 1
-
         self.reindex_items()
 
         new_focus = self.item(idx)
         if is_label_list_item(new_focus):
+            self.focused_item = new_focus
             new_focus.set_focused_state(True)
             return
 
         items = self._get_items()
         new_focus = items[0]
+
         new_focus.set_focused_state(True)
         self.focused_item = new_focus
 
@@ -252,6 +225,10 @@ class LabelWidget(QWidget):
         l1.addLayout(l2)
 
         self.remove_button.clicked.connect(self.list.delete_focused_item)
+        self.add_button.clicked.connect(self.list.add_new_item)
+        self.duplicate_button.clicked.connect(self.list.duplicate_focused_item)
+        self.insert_button.clicked.connect(self.list.insert_new_after_focused_item)
+        # TODO: Implement insert
 
         self.setLayout(l1)
 

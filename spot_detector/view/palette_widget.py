@@ -1,5 +1,8 @@
 import sys
 from typing import TypeGuard
+
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtGui import QAction, QColor, QImage, QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
@@ -8,26 +11,11 @@ from PySide6.QtWidgets import (
     QApplication,
 )
 
-from PySide6.QtCore import (
-    QItemSelectionModel,
-    Qt,
-    Signal,
-    Slot,
-)
-
-from PySide6.QtGui import (
-    QAction,
-    QColor,
-    QImage,
-    QKeyEvent,
-    QPixmap,
-)
-
 from spot_detector.model.models import Shade, homogenous_color_table
-from spot_detector.types import ColorTable
+from spot_detector.view.base_list_widget import MoveListWidget
 
 
-class Palette_List(QListWidget):
+class Palette_List(MoveListWidget):
     palette_changed = Signal(list)
 
     def __init__(
@@ -36,17 +24,12 @@ class Palette_List(QListWidget):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.create_actions()
 
         if table is not None:
             self.set_palette(shades)
 
     def create_actions(self):
-        self.move_sel_up_action = QAction("Move Selection Up", self)
-        self.move_sel_up_action.triggered.connect(self.move_sel_up)
-        self.move_sel_down_action = QAction("Move Selection Down", self)
-        self.move_sel_down_action.triggered.connect(self.move_sel_down)
         self.incr_sel_action = QAction("Increment Selection Label", self)
         self.incr_sel_action.triggered.connect(self.incr_sel_ID)
         self.decr_sel_action = QAction("Decrement Selection Label", self)
@@ -83,49 +66,6 @@ class Palette_List(QListWidget):
         for i, row in enumerate(shades):
             Palette_Item(i, row, self)
         self.show()
-
-    @Slot()
-    def move_sel_up(self):
-        items = self.selectedItems()
-        idx_item = [(self.indexFromItem(item).row(), item) for item in items]
-        idx_item.sort(key=lambda x: x[0])
-        for _, item in idx_item:
-            idx = self.indexFromItem(item)
-            prev_row = idx.row() - 1
-            prev_idx = idx.siblingAtRow(prev_row)
-            if not prev_idx.isValid():
-                continue
-            if self.itemFromIndex(prev_idx) in items:
-                continue
-            self.takeItem(idx.row())
-            self.insertItem(prev_row, item)
-        selection_model = self.selectionModel()
-        selection_model.clear()
-        for e in items:
-            idx = self.indexFromItem(e)
-            selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
-
-    @Slot()
-    def move_sel_down(self):
-        items = self.selectedItems()
-        idx_item = [(self.indexFromItem(item).row(), item) for item in items]
-        idx_item.sort(key=lambda x: x[0])
-        idx_item.reverse()
-        for _, item in idx_item:
-            idx = self.indexFromItem(item)
-            next_row = idx.row() + 1
-            next_idx = idx.siblingAtRow(next_row)
-            if not next_idx.isValid():
-                continue
-            if self.itemFromIndex(next_idx) in items:
-                continue
-            self.takeItem(idx.row())
-            self.insertItem(next_row, item)
-        selection_model = self.selectionModel()
-        selection_model.clear()
-        for e in items:
-            idx = self.indexFromItem(e)
-            selection_model.select(idx, QItemSelectionModel.SelectionFlag.Select)
 
     @Slot()
     def incr_sel_ID(self):
