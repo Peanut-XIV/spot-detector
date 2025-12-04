@@ -132,10 +132,12 @@ def homogenous_color_table(levels: int) -> list[ShadeTuple]:
     """
     base = [int(i * 65535 / (levels - 1)) for i in range(levels)]
     table = []
+    id = 0
     for x in base:
         for y in base:
             for z in base:
-                table.append((x, y, z, 0))
+                table.append((x, y, z, id))
+                id += 1
     return table
 
 
@@ -295,7 +297,7 @@ class DetParams(BaseModel):
 
 
 class ColorAndParams(BaseModel):
-    reference_image: str
+    reference_image: str  # path string to the reference image
     shades: list[Shade]
     det_params: list[DetParams]
 
@@ -369,6 +371,9 @@ class ColorAndParams(BaseModel):
     @property
     def color_names(self):
         return [det_param.color_name for det_param in self.det_params]
+
+    def append_new_color(self, name: str):
+        self.det_params.append(DetParams.from_defaults(name))
 
 
 class CLIDefaults(BaseModel):

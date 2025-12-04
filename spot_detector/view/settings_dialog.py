@@ -10,13 +10,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from spot_detector.model.project import Project
 from spot_detector.view.detection_settings import DetectionSettings
-from spot_detector.model.models import ColorAndParams
+from spot_detector.model.models import ColorAndParams, DetParams
 
 
 class DetectionSettingsDialog(QDialog):
     def __init__(
         self,
-        config: ColorAndParams,
+        model: ColorAndParams,
         parent: QWidget | None = None,
         f: Qt.WindowType = Qt.WindowType.Window,
     ) -> None:
@@ -26,29 +26,29 @@ class DetectionSettingsDialog(QDialog):
         """
         super().__init__(parent, f)
 
-        self.config_copy = config.model_copy(deep=True)
+        self.model = model.model_copy(deep=True)
 
         self.prepopulate_detection_settings()
 
-        self.settings = settings.model_copy(deep=True)
-        self.setModal(True)
-
         l1 = QVBoxLayout(self)
-        self.settings_widget = DetectionSettings(settings, self)
+        self.settings_widget = DetectionSettings(self.model, self)
         l1.addWidget(self.settings_widget)
-
-        l2 = QHBoxLayout(self)
+        l2 = QHBoxLayout()
         l2.addStretch()
         self.cancel_button = QPushButton(self)
+        self.cancel_button.setDefault(True)
+        self.cancel_button.setAutoDefault(True)
         self.cancel_button.setText("Cancel")
         l2.addWidget(self.cancel_button)
         self.apply_button = QPushButton(self)
+        self.apply_button.setDefault(False)
         self.apply_button.setText("Apply")
         l2.addWidget(self.apply_button)
-
         l1.addLayout(l2)
-
         self.setLayout(l1)
+
+        self.cancel_button.clicked.connect(self.reject)
+        self.apply_button.clicked.connect(self.accept)
         # Add main widget
         # unmap enter
         # add signals -> get / set config
@@ -63,13 +63,24 @@ class DetectionSettingsDialog(QDialog):
 
         The goal is to add default detection settings for any new label.
         """
-        # TODO: write method
+        # get unique elements
+        labels = set([shade.get_label_id() for shade in self.model.shades])
+        labels = [label for label in labels if label != 0]
+        label_count = len(labels)
+        det_variant_count = len(self.model.det_params)
+        for label_id in range(det_variant_count, label_count):
+            self.model.det_params.append(DetParams.from_prepopulated_defaults(label_id))
+
+    def on_apply(self):
+        # Fetch model
+        # store as output data
+        # return
         ...
 
 
 if __name__ == "__main__":
-    settings = ColorAndParams.from_prepopulated_defaults(color_name="white")
+    model = ColorAndParams.from_prepopulated_defaults(color_name="white")
     app = QApplication(sys.argv)
-    dialog = DetectionSettingsDialog(settings)
+    dialog = DetectionSettingsDialog(model)
     dialog.show()
     sys.exit(app.exec())

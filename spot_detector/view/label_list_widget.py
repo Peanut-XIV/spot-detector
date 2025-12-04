@@ -55,6 +55,8 @@ class LabelListItem(QListWidgetItem):
 
 
 class LabelListWidget(MoveListWidget):
+    model_list_changed: Signal = Signal(list, name="list_widget_model_has_changed")
+    focused_changed: Signal = Signal(DetParams)
     update_names: Signal = Signal()
 
     def __init__(
@@ -85,6 +87,14 @@ class LabelListWidget(MoveListWidget):
                 item = LabelListItem(i, model, False, self)
             self.update_names.connect(item.update_text)
         self.show()
+        self.send_focused()
+
+    def send_focused(self):
+        self.focused_changed.emit(self.focused_item.model.model_copy(deep=True))
+
+    def send_new_models(self):
+        content = self.get_list()
+        self.model_list_changed.emit(content)
 
     @property
     def focused_item_index(self) -> int:
@@ -112,6 +122,12 @@ class LabelListWidget(MoveListWidget):
             prev_focused.set_focused_state(False)
         item.set_focused_state(True)
         self.focused_item = item
+        self.send_focused()
+
+    @Slot(DetParams)
+    def update_focused_model(self, model: DetParams):
+        self.focused_item.model = model
+        self.update_focused_item_name()
 
     @Slot()
     def reindex_items(self):
@@ -146,6 +162,7 @@ class LabelListWidget(MoveListWidget):
         item = LabelListItem(next_idx, model, False, None)
         self.insertItem(next_idx, item)
         self.reindex_items()
+        self.send_new_models()
 
     @Slot()
     def add_new_item(self):
@@ -153,6 +170,7 @@ class LabelListWidget(MoveListWidget):
         model = DetParams.from_prepopulated_defaults(idx + 1)
         LabelListItem(idx, model, False, self)
         self.reindex_items()
+        self.send_new_models()
 
     @Slot()
     def duplicate_focused_item(self):
@@ -163,11 +181,13 @@ class LabelListWidget(MoveListWidget):
         item = LabelListItem(next_idx, model, False, None)
         self.insertItem(next_idx, item)
         self.reindex_items()
+        self.send_new_models()
 
     @Slot()
     def delete_focused_item(self):
         items = self._get_items()
         if len(items) <= 1:
+            # TODO: Send audio feedback that it is impossible?
             return
         idx = self.focused_item_index
         self.takeItem(idx)
@@ -179,6 +199,8 @@ class LabelListWidget(MoveListWidget):
         if is_label_list_item(new_focus):
             self.focused_item = new_focus
             new_focus.set_focused_state(True)
+            self.send_focused()
+            self.send_new_models()
             return
 
         items = self._get_items()
@@ -186,6 +208,8 @@ class LabelListWidget(MoveListWidget):
 
         new_focus.set_focused_state(True)
         self.focused_item = new_focus
+        self.send_focused()
+        self.send_new_models()
 
     @Slot()
     def update_focused_item_name(self):
@@ -197,6 +221,11 @@ def is_label_list_item(item: QListWidgetItem) -> TypeGuard[LabelListItem]:
 
 
 class LabelWidget(QWidget):
+    model_list_changed: Signal = Signal(list)
+    focused_changed: Signal = Signal(DetParams)
+    update_models: Signal = Signal(list)
+    update_focused_model: Signal = Signal(DetParams)
+
     def __init__(
         self,
         model: list[DetParams],
@@ -208,18 +237,26 @@ class LabelWidget(QWidget):
         l1 = QVBoxLayout(self)
 
         self.list = LabelListWidget(model, parent)
+        self.list.focused_changed.connect(self.focused_changed)
+        self.list.model_list_changed.connect(self.model_list_changed)
+        self.update_focused_model.connect(self.list.update_focused_model)
+        self.update_models.connect(self.list.set_list)
         l1.addWidget(self.list)
 
-        l2 = QHBoxLayout(self)
+        l2 = QHBoxLayout()
         # TODO: create actions beforehand with attributed names, hover, icons...
         self.remove_button = QPushButton("Remove", self)
+        self.remove_button.setDefault(False)
         self.add_button = QPushButton("Add", self)
+        self.add_button.setDefault(False)
         l2.addWidget(self.remove_button)
         l2.addWidget(self.add_button)
         l2.addStretch()
 
         self.duplicate_button = QPushButton("Duplicate", self)
+        self.duplicate_button.setDefault(False)
         self.insert_button = QPushButton("Insert", self)
+        self.insert_button.setDefault(False)
         l2.addWidget(self.duplicate_button)
         l2.addWidget(self.insert_button)
         l1.addLayout(l2)
@@ -228,7 +265,6 @@ class LabelWidget(QWidget):
         self.add_button.clicked.connect(self.list.add_new_item)
         self.duplicate_button.clicked.connect(self.list.duplicate_focused_item)
         self.insert_button.clicked.connect(self.list.insert_new_after_focused_item)
-        # TODO: Implement insert
 
         self.setLayout(l1)
 

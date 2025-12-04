@@ -7,16 +7,18 @@ from PySide6.QtWidgets import (
     QSplitter,
     QWidget,
 )
-from PySide6.QtCore import (
-    Qt,
-)
+from PySide6.QtCore import Qt, Slot, Signal
 
-from spot_detector.model.models import ColorAndParams
+from spot_detector.model.models import ColorAndParams, DetParams
 from spot_detector.view.hint_panel import HintPanel
 from spot_detector.view.settings_fields import SettingsFields
+from spot_detector.view.label_list_widget import LabelWidget
 
 
 class DetectionSettings(QWidget):
+    focused_changed: Signal = Signal(DetParams)
+    focused_model_changed: Signal = Signal(DetParams)
+
     def __init__(
         self,
         model: ColorAndParams,
@@ -36,16 +38,14 @@ class DetectionSettings(QWidget):
 
         # Colors
         # TODO: change to a list that can add and remove entries
-        self.colors_list = QListWidget(split)
+        self.colors_list = LabelWidget(self.model.det_params, split)
         self.colors_list.setObjectName("Detection_settings_color_list")
-        self.colors_list.addItems(self.model.color_names)
-        self.colors_list.setMaximumWidth(200)
         split.addWidget(self.colors_list)
 
         # Fields
         fields_widget = QScrollArea(self)
         fields_widget.setObjectName("Detection_settings_Fields_container")
-        self.fields = SettingsFields(None, self)
+        self.fields = SettingsFields(self.model.det_params[0], self)
         self.fields.setObjectName("Detection_settings_Fields")
         self.fields.setMinimumWidth(300)
         self.fields.setMaximumWidth(300)
@@ -67,15 +67,22 @@ class DetectionSettings(QWidget):
         self.setLayout(layout)
 
         self.fields.clicked.connect(self.help_panel.select_hint)
+        self.fields.modelChanged.connect(self.colors_list.update_focused_model)
+        self.colors_list.focused_changed.connect(self.fields.load)
+        self.colors_list.model_list_changed.connect(self.handle_models_change)
 
     def load(self, model: ColorAndParams):
-        self.colors_list.clear()
-        self.colors_list.addItems(model.color_names)
+        self.colors_list.update_models.emit(model.det_params)
         self.fields.load(model.det_params[0])
+
+    @Slot(list)
+    def handle_models_change(self, models: list[DetParams]):
+        self.model.det_params = models
 
 
 if __name__ == "__main__":
     settings = ColorAndParams.from_prepopulated_defaults("white")
+    settings.append_new_color("orang")
     app = QApplication(sys.argv)
     bidule = DetectionSettings(settings)
     bidule.show()

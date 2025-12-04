@@ -78,21 +78,21 @@ class SettingsFields(QWidget):
 
         self.name_field.valueChanged.connect(self.change_color_name)
         self.min_dist.valueChanged.connect(self.change_min_dist)
-        self.thresh.modelChanged.connect(self.modelChanged)
-        self.area.modelChanged.connect(self.modelChanged)
-        self.convex.modelChanged.connect(self.modelChanged)
-        self.circ.modelChanged.connect(self.modelChanged)
-        self.inertia.modelChanged.connect(self.modelChanged)
+        self.thresh.modelChanged.connect(self.emit_new_model)
+        self.area.modelChanged.connect(self.emit_new_model)
+        self.convex.modelChanged.connect(self.emit_new_model)
+        self.circ.modelChanged.connect(self.emit_new_model)
+        self.inertia.modelChanged.connect(self.emit_new_model)
 
     @Slot(str)
     def change_color_name(self, name: str):
         self.model.color_name = name
-        self.modelChanged.emit()
+        self.emit_new_model()
 
     @Slot(str)
     def change_min_dist(self, dist: float):
         self.model.min_dist = dist
-        self.modelChanged.emit()
+        self.emit_new_model()
 
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -102,6 +102,7 @@ class SettingsFields(QWidget):
         else:
             super().mousePressEvent(event)
 
+    @Slot(DetParams)
     def load(self, model: DetParams):
         self.name_field.field.setText(model.color_name)
         self.min_dist.spinbox.setValue(model.min_dist or 0)
@@ -110,6 +111,15 @@ class SettingsFields(QWidget):
         self.convex.load(model.convex)
         self.circ.load(model.circ)
         self.inertia.load(model.inertia)
+
+    @Slot()
+    def emit_new_model(self):
+        """
+        Upon update, children widgets emit a signal that get caught by this
+        function. Then a different signal is emited containing a copy of the
+        new model.
+        """
+        self.modelChanged.emit(self.model.model_copy(deep=True))
 
 
 class TresholdWidget(QGroupBox):
@@ -132,7 +142,8 @@ class TresholdWidget(QGroupBox):
         self.automatic_checkbox.setCheckState(check_state)
         layout.addWidget(self.automatic_checkbox)
 
-        mini_layout = QHBoxLayout(self)
+        mini_layout = QHBoxLayout()
+        mini_layout.setObjectName("Threshold_layout_mini")
         mini_layout.addWidget(QLabel("Minimum", self))
         self.mini_spinbox = QSpinBox(self)
         self.mini_spinbox.setMinimum(0)
@@ -141,7 +152,8 @@ class TresholdWidget(QGroupBox):
         mini_layout.addWidget(self.mini_spinbox)
         layout.addLayout(mini_layout)
 
-        maxi_layout = QHBoxLayout(self)
+        maxi_layout = QHBoxLayout()
+        maxi_layout.setObjectName("Threshold_layout_maxi")
         maxi_layout.addWidget(QLabel("Maximum", self))
         self.maxi_spinbox = QSpinBox(self)
         self.maxi_spinbox.setMinimum(0)
@@ -150,7 +162,8 @@ class TresholdWidget(QGroupBox):
         maxi_layout.addWidget(self.maxi_spinbox)
         layout.addLayout(maxi_layout)
 
-        step_layout = QHBoxLayout(self)
+        step_layout = QHBoxLayout()
+        step_layout.setObjectName("Threshold_layout_step")
         step_layout.addWidget(QLabel("Step", self))
         self.step_spinbox = QSpinBox(self)
         self.step_spinbox.setMinimum(0)
@@ -171,7 +184,7 @@ class TresholdWidget(QGroupBox):
         self.maxi_spinbox.setEnabled(value)
         self.step_spinbox.setEnabled(value)
         self.model.automatic = value
-        self.modelChanged.emit()
+        self.modelChanged.emit()  # TODO: fix type signature
 
     def load(self, model: Threshold):
         check_state = bool2CheckState(model.automatic)
@@ -183,15 +196,21 @@ class TresholdWidget(QGroupBox):
 
     @Slot(int)
     def on_mini_changed(self, value: int):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         self.maxi_spinbox.setMinimum(value)
         self.model.mini = value
-        self.modelChanged.emit()
+        self.modelChanged.emit()  # TODO: fix type signature
 
     @Slot(int)
     def on_maxi_changed(self, value: int):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         self.mini_spinbox.setMaximum(value)
         self.model.maxi = value
-        self.modelChanged.emit()
+        self.modelChanged.emit()  # TODO: fix type signature
 
     def get_model(self):
         return self.model
@@ -238,7 +257,7 @@ class SimpleParamWidget(QGroupBox):
         self.enabled_checkbox.setCheckState(check_state)
         layout.addWidget(self.enabled_checkbox)
 
-        mini_layout = QHBoxLayout(self)
+        mini_layout = QHBoxLayout()
         mini_layout.addWidget(QLabel("Minimum", self))
         self.mini_spinbox = QDoubleSpinBox(self)
         self.mini_spinbox.setMinimum(0)
@@ -253,7 +272,7 @@ class SimpleParamWidget(QGroupBox):
         mini_layout.addWidget(self.mini_spinbox)
         layout.addLayout(mini_layout)
 
-        maxi_layout = QHBoxLayout(self)
+        maxi_layout = QHBoxLayout()
         self.maxi_enabled_checkbox = QCheckBox("Maximum", self)
         check_state = bool2CheckState(self.model.maxi is not None)
         self.maxi_enabled_checkbox.setCheckState(check_state)
@@ -283,18 +302,27 @@ class SimpleParamWidget(QGroupBox):
 
     @Slot(float)
     def on_maxi_changed(self, value):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         self.mini_spinbox.setMaximum(value)
         self.model.maxi = value
         self.modelChanged.emit()
 
     @Slot(float)
     def on_mini_changed(self, value):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         self.maxi_spinbox.setMinimum(value)
         self.model.mini = value
         self.modelChanged.emit()
 
     @Slot(Qt.CheckState)
     def on_enabled_changed(self, state: Qt.CheckState):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         enabled = checkState2Bool(state)
         maxi_enabled = checkState2Bool(self.maxi_enabled_checkbox.checkState())
         self.mini_spinbox.setEnabled(enabled)
@@ -304,6 +332,9 @@ class SimpleParamWidget(QGroupBox):
 
     @Slot(Qt.CheckState)
     def on_maxi_enabled_changed(self, state: Qt.CheckState):
+        """
+        updates the model then send emits a "modelChanged" signal
+        """
         maxi_enabled = checkState2Bool(state)
         enabled = checkState2Bool(self.enabled_checkbox.checkState())
         self.maxi_spinbox.setEnabled(enabled and maxi_enabled)
