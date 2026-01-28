@@ -27,12 +27,12 @@
      inkscape:deskcolor="#505050"
      inkscape:document-units="px"
      inkscape:zoom="1.272846"
-     inkscape:cx="230.19281"
+     inkscape:cx="229.79999"
      inkscape:cy="274.58153"
-     inkscape:window-width="1808"
-     inkscape:window-height="1126"
+     inkscape:window-width="2560"
+     inkscape:window-height="1440"
      inkscape:window-x="0"
-     inkscape:window-y="258"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="svg1" />
   <defs
@@ -45,7 +45,28 @@
          offset="0"
          id="stop2" />
     </linearGradient>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Blur"
+       id="filter1"
+       x="-0.05625"
+       y="-0.058212209"
+       width="1.1125"
+       height="1.1164244">
+      <feGaussianBlur
+         stdDeviation="12 12"
+         result="blur"
+         id="feGaussianBlur1" />
+    </filter>
   </defs>
+  <rect
+     style="fill:#000000;fill-opacity:0.5;stroke:none;stroke-width:6.10203;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter1)"
+     id="rect1-1"
+     width="512"
+     height="494.74158"
+     x="0"
+     y="8.6292152"
+     transform="matrix(0.8988764,0,0,0.8988764,25.88764,25.887642)" />
   <rect
      style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:5;stroke-dasharray:none;stroke-opacity:1"
      id="rect1"
