@@ -3,12 +3,12 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QHBoxLayout,
+    QMainWindow,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt
-from spot_detector.model.project import Project
+from PySide6.QtCore import Qt, Slot
 from spot_detector.view.detection_settings import DetectionSettings
 from spot_detector.model.models import ColorAndParams, DetParams
 
@@ -49,12 +49,6 @@ class DetectionSettingsDialog(QDialog):
 
         self.cancel_button.clicked.connect(self.reject)
         self.apply_button.clicked.connect(self.accept)
-        # Add main widget
-        # unmap enter
-        # add signals -> get / set config
-        # add save button
-        # add return button
-        # link close button to msgbox
 
     def prepopulate_detection_settings(self):
         """
@@ -71,16 +65,45 @@ class DetectionSettingsDialog(QDialog):
         for label_id in range(det_variant_count, label_count):
             self.model.det_params.append(DetParams.from_prepopulated_defaults(label_id))
 
-    def on_apply(self):
-        # Fetch model
-        # store as output data
-        # return
-        ...
-
 
 if __name__ == "__main__":
-    model = ColorAndParams.from_prepopulated_defaults(color_name="white")
+
+    class TestWindow(QMainWindow):
+        def __init__(
+            self,
+            parent: QWidget | None = None,
+            flags: Qt.WindowType = Qt.WindowType.Window,
+        ) -> None:
+            super().__init__(parent, flags)
+            self.button = QPushButton("open dialog")
+            self.setCentralWidget(self.button)
+            self.button.clicked.connect(self.handle_dialog)
+
+        @Slot()
+        def handle_dialog(self):
+            default_model = ColorAndParams.from_prepopulated_defaults(
+                color_name="white"
+            )
+            dump1 = default_model.model_dump_json()[:]
+            dialog = DetectionSettingsDialog(default_model)
+            result = dialog.exec()
+            if result == QDialog.DialogCode.Rejected:
+                print("the user cancelled the current action")
+                return
+            print("the user updated the detection settings")
+            output_model = dialog.model.model_copy(deep=True)
+            dump3 = output_model.model_dump_json()[:]
+
+            if dump1 == dump3:
+                print("no changes applied")
+            else:
+                print("changes detected between dump1 and dump3")
+                print("dump1:")
+                print(dump1)
+                print("dump3:")
+                print(dump3)
+
     app = QApplication(sys.argv)
-    dialog = DetectionSettingsDialog(model)
-    dialog.show()
+    window = TestWindow()
+    window.show()
     sys.exit(app.exec())

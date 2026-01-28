@@ -28,6 +28,7 @@ from spot_detector.errors import (
     InvalidFormatError,
     InvalidNameError,
 )
+from spot_detector.view.settings_dialog import DetectionSettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -52,18 +53,28 @@ class MainWindow(QMainWindow):
 
     def _create_palette(self, parent):
         """
-        A function for populating a palette widget with the projects shades.
+        A method for populating a palette widget with the projects shades.
         """
         self.palette_list = Palette_List(self.project.configuration.shades, parent)
 
     def _create_menu(self):
+        """
+        A private method to create the App menu and populate it with action objects
+        """
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
+
         self._create_set_ref_image_action()
         self.file_menu.addAction(self.set_ref_image_action)
+
         self._create_kmeans_action()
         self.file_menu.addAction(self.kmeans_action)
+
+        self._create_open_detection_settings_action()
+        self.file_menu.addAction(self.open_detection_settings_action)
+
         self.file_menu.addAction("Quit", self.close, "Ctrl+Q")
+
         self.view_menu = self.menu.addMenu("View")
         self.view_menu.addActions(
             [
@@ -83,21 +94,26 @@ class MainWindow(QMainWindow):
         )
 
     def _create_set_ref_image_action(self):
+        # TODO: make it idempotent
         icon = QIcon(":resources/images/ref_image_icon.png")
         action = QAction(icon, "Set Reference Image", self)
         action.triggered.connect(self.select_reference_image)
         self.set_ref_image_action = action
 
     def _create_kmeans_action(self):
+        # TODO: make it idempotent
         # TODO: ADD ICON
         # icon = QIcon(":resources/images/...")
         action = QAction("Compute k-means", self)
         action.triggered.connect(self.start_kmeans_dialog)
         self.kmeans_action = action
 
-    def _create_detection_settings_action(self):
-        action = QAction("Detection Settings", self)
-        action.triggered.connect(self.start_settings_window)
+    def _create_open_detection_settings_action(self):
+        # TODO: make it idempotent
+        icon = QIcon(":resources/images/detection_settings_icon.png")
+        action = QAction(icon, "Open Detection Settings", self)
+        action.triggered.connect(self.start_detection_settings_window)
+        self.open_detection_settings_action = action
 
     def _create_viewer(self, parent):
         self.viewer = ViewerWidget(self.project, parent)
@@ -105,13 +121,29 @@ class MainWindow(QMainWindow):
         self.viewer.request_highlight.connect(self.make_highlight)
 
     @Slot()
-    def start_settings_window(self): ...
+    def start_detection_settings_window(self):
+        # get current detection settings object
+        current_det_settings = self.project.configuration
+        # create the dialog box (with the settings passed as arguments)
+        dialog = DetectionSettingsDialog(current_det_settings, self)
+        # exec the settings dialog box
+        result = dialog.exec()
+        if result == QDialog.DialogCode.Rejected:
+            print("User cancelled action")
+            return
+        print("User confirmed action")
+        new_det_settings = dialog.model
+        # no need for copy as set_configuration does it already
+        self.project.set_configuration(new_det_settings)
+        # TODO: test it!!!
 
     @Slot()
     def make_highlight(self):
+        print("main_window.make_highlight() called")
         rows = self.palette_list.selected_rows()
         if rows == self.previous_rows:
             self.viewer.show_highlight()
+            print("no need for update")
             return
 
         if self.project.reference_image_model is None:
@@ -190,15 +222,12 @@ class MainWindow(QMainWindow):
         )
         if not dialog.exec():
             # no file selected
-            print("no file selected")
             return 0
         files = dialog.selectedFiles()
         if len(files) == 0:
-            print("0 file provided ??")
             # impossible put who knows
             return 0
         elif len(files) > 1:
-            print("more than one file selected")
             return len(files)
         file = files[0]
         return file

@@ -23,6 +23,8 @@ from spot_detector import rc_resources, rc_icons  # WARN: do not remove
 
 
 class ImageView(QGraphicsView):
+    max_exponent = 20
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.scale_power = 0
@@ -35,7 +37,7 @@ class ImageView(QGraphicsView):
         self.setMinimumWidth(200)
 
     def change_transform(self, value: int):
-        self.scale_power = max(-10, min(10, value))
+        self.scale_power = max(-self.max_exponent, min(self.max_exponent, value))
         k = self.scale_factor**self.scale_power
         transform = QTransform(k, 0, 0, 0, k, 0, 0, 0, 1)  # 3x3 matrix
         self.setTransform(transform)

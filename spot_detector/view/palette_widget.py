@@ -26,7 +26,7 @@ class Palette_List(MoveListWidget):
         super().__init__(parent)
         self.create_actions()
 
-        if table is not None:
+        if shades is not None:
             self.set_palette(shades)
 
     def create_actions(self):

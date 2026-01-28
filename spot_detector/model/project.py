@@ -72,6 +72,20 @@ class Project(BaseModel):
         color_data = [Shade.from_pix(tuple(row)) for row in lut]
         self.configuration.shades = color_data
 
+    def set_configuration(self, configuration: ColorAndParams):
+        """
+        Sets the configuration (the detection settings) of the project
+
+        Takes the config given as parameter makes a deep copy and sets it as
+        the detection settings configuration of this project object.
+
+        Parameters
+        ----------
+        configuration: ColorAndParams
+        """
+        config_copy = configuration.model_copy(deep=True)
+        self.configuration = config_copy
+
     def save_as(self, path: str):
         old_path = self.latest_save_path
         self.latest_save_path = path

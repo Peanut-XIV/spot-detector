@@ -138,7 +138,7 @@ class TresholdWidget(QGroupBox):
         layout = QVBoxLayout(self)
         layout.setObjectName("Threshold_layout")
         self.automatic_checkbox = QCheckBox("Automatic", self)
-        check_state = bool2CheckState(not self.model.automatic)
+        check_state = bool2CheckState(self.model.automatic)
         self.automatic_checkbox.setCheckState(check_state)
         layout.addWidget(self.automatic_checkbox)
 
@@ -179,12 +179,31 @@ class TresholdWidget(QGroupBox):
 
     @Slot(Qt.CheckState)
     def on_automatic_changed(self, state: Qt.CheckState):
-        value = False if state == Qt.CheckState.Checked else True
-        self.mini_spinbox.setEnabled(value)
-        self.maxi_spinbox.setEnabled(value)
-        self.step_spinbox.setEnabled(value)
+        """
+        Updates the UI and the model object
+
+        Takes the new check state as argument, updates both the UI and the
+        underlying data model but doesn't return anything. When Automatic goes
+        from unchecked to checked, the related manual controls should enter
+        a disabled state, become unresponsive to user interactions and appear
+        grey.
+
+        Parameters
+        ----------
+        state: Qt.CheckState
+            the new state of the checkbox
+
+        Returns
+        -------
+        None
+        """
+        value = True if state == Qt.CheckState.Checked else False
+        # disable manual settings fields if automatic == True
         self.model.automatic = value
-        self.modelChanged.emit()  # TODO: fix type signature
+        self.mini_spinbox.setEnabled(not value)
+        self.maxi_spinbox.setEnabled(not value)
+        self.step_spinbox.setEnabled(not value)
+        self.modelChanged.emit()
 
     def load(self, model: Threshold):
         check_state = bool2CheckState(model.automatic)
@@ -201,7 +220,7 @@ class TresholdWidget(QGroupBox):
         """
         self.maxi_spinbox.setMinimum(value)
         self.model.mini = value
-        self.modelChanged.emit()  # TODO: fix type signature
+        self.modelChanged.emit()
 
     @Slot(int)
     def on_maxi_changed(self, value: int):
@@ -210,7 +229,7 @@ class TresholdWidget(QGroupBox):
         """
         self.mini_spinbox.setMaximum(value)
         self.model.maxi = value
-        self.modelChanged.emit()  # TODO: fix type signature
+        self.modelChanged.emit()
 
     def get_model(self):
         return self.model

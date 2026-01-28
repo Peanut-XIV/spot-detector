@@ -26,19 +26,24 @@ def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:
 
 def to_3_channel_mat(mat: NDArray) -> NDArray:
     match mat.shape:
-        case [_, _] | [_, _, 1]:
+        case [x, y] | [x, y, 1] if x > 1 and y > 1:
             return mat.repeat(3, 2)
-        case [x, y, 2]:
+
+        case [x, y, 2] if x > 1 and y > 1:
             zeros = np.zeros([x, y])
             return np.stack([mat, zeros], 2)
-        case [_, _, 3]:
+
+        case [x, y, 3] if x > 1 and y > 1:
             return mat
-        case [_, _, 4]:
+
+        case [x, y, 4] if x > 1 and y > 1:
             return mat[:, :, 0:3]
+
         case other_shape:
             raise ValueError(
                 f"Unexpected ndarray shape {other_shape}. Expected one of the "
                 "following: [x, y], [x, y, 1], [x, y, 2], [x, y, 3], [x, y, 4]"
+                " where x and y are both greater than 1"
             )
 
 
@@ -183,9 +188,10 @@ class ReferenceImageMatrices:
 
     def load_kmeans_result(self, result: tuple[NDArray, NDArray, NDArray]):
         _, palettized, labeled = result
+        im_shape = (palettized.shape[0], palettized.shape[1])
         self.update_palettized(palettized)
         self.update_highlight(palettized)
-        self.labeled_mat = labeled
+        self.labeled_mat = labeled.reshape(im_shape)
 
     def apply_color_list(
         self, colors: list[ShadeTuple] | list[PixTuple]
