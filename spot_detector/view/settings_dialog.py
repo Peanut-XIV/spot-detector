@@ -45,7 +45,6 @@ class DetectionSettingsDialog(QDialog):
         self.apply_button.setText("Apply")
         l2.addWidget(self.apply_button)
         l1.addLayout(l2)
-        self.setLayout(l1)
 
         self.cancel_button.clicked.connect(self.reject)
         self.apply_button.clicked.connect(self.accept)

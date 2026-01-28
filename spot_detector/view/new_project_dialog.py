@@ -37,7 +37,7 @@ class NewProjectDialog(QDialog):
         left_panel = self.create_left_panel()
         layout.addWidget(left_panel)
         layout.addStretch(1)
-        layout_btm = QHBoxLayout(self)
+        layout_btm = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel", self)
         self.cancel_button.clicked.connect(self.reject)
         layout_btm.addWidget(self.cancel_button)
@@ -47,8 +47,6 @@ class NewProjectDialog(QDialog):
         self.create_button.clicked.connect(self.attempt_create)
         layout_btm.addWidget(self.create_button)
         layout.addLayout(layout_btm)
-
-        self.setLayout(layout)
 
     def create_left_panel(self):
         panel = QWidget(self)

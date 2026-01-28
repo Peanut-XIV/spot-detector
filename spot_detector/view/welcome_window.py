@@ -33,6 +33,7 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         super().__init__(None, Qt.WindowType.Window)
         self.start_manager = start_manager
         self.project: None | Project = None
+        self.setObjectName("main window")
         # layout
         layout = QHBoxLayout(self)
         splitter = QSplitter(self)
@@ -49,14 +50,17 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
 
     def _create_left_panel(self) -> QWidget:
         panel = QWidget(self, Qt.WindowType.Widget)
+        panel.setObjectName("left widget")
         layout = QVBoxLayout()
+        layout.setObjectName("base")
         self.open_button = QPushButton("Open an existing project", panel)
         layout.addWidget(self.open_button)
         self.new_button = QPushButton("Create a new project", panel)
         self.new_button.clicked.connect(self.create_new_project)
         layout.addWidget(self.new_button)
         layout.addStretch(1)
-        top_layout = QHBoxLayout(panel)
+        top_layout = QHBoxLayout()
+        top_layout.setObjectName("top")
         top_layout.addLayout(layout)
         top_layout.addStretch(1)
         panel.setLayout(top_layout)
@@ -64,12 +68,15 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
 
     def _create_right_panel(self) -> QWidget:
         panel = QWidget(self, Qt.WindowType.Widget)
+        panel.setObjectName("right widget")
         layout = QVBoxLayout(panel)
+        layout.setObjectName("base")
         layout.addWidget(QLabel("Recently opened projects", panel))
         self.recent_project_list = QListWidget(self)
         layout.addWidget(self.recent_project_list)
         layout.addStretch(1)
-        layout_2 = QHBoxLayout(panel)
+        layout_2 = QHBoxLayout()
+        layout_2.setObjectName("top")
         layout_2.addStretch(1)
         self.open_recent_button = QPushButton("open", panel)
         layout_2.addWidget(self.open_recent_button)

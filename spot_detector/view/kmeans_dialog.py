@@ -39,11 +39,10 @@ class KMeansDialog(QDialog):
         layout.addLayout(line1)
         line2 = self.create_line2()
         layout.addLayout(line2)
-        self.setLayout(layout)
         self.value = self.count_spinbox.value()
 
     def create_line1(self):
-        line1 = QHBoxLayout(self)
+        line1 = QHBoxLayout()
         line1.addWidget(QLabel("Number of labels:", self))
         spinbox = QSpinBox(self)
         spinbox.setMinimum(2)
@@ -55,7 +54,7 @@ class KMeansDialog(QDialog):
         return line1
 
     def create_line2(self):
-        line2 = QHBoxLayout(self)
+        line2 = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel", self)
         self.cancel_button.clicked.connect(self.reject)
         line2.addWidget(self.cancel_button)
