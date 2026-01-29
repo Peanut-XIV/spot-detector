@@ -57,9 +57,11 @@ class KMeansDialog(QDialog):
         line2 = QHBoxLayout()
         self.cancel_button = QPushButton("Cancel", self)
         self.cancel_button.clicked.connect(self.reject)
+        self.cancel_button.setDefault(False)
         line2.addWidget(self.cancel_button)
         self.start_button = QPushButton("Start", self)
         self.start_button.clicked.connect(self.accept)
+        self.start_button.setDefault(True)
         line2.addWidget(self.start_button)
         return line2
 

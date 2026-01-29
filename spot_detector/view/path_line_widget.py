@@ -30,7 +30,6 @@ class PathLineWidget(QLineEdit):
         elif self.path_type == "dir":
             self.dialog = OpenDirFileDialog(self, self.caption, self.starting_path)
 
-        self.setMinimumWidth(350)
         self.explore_button = QPushButton("Explore", parent)
         self.explore_button.clicked.connect(self.explore)
 
