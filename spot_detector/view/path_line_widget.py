@@ -9,7 +9,7 @@ from spot_detector.view.dialogs import OpenDirFileDialog, ReadOnlyImageFileDialo
 class PathLineWidget(QLineEdit):
     def __init__(
         self,
-        path_type: Literal["read_only_img", "dir", "other"],
+        path_type: Literal["read_only_img", "dir", "any_csv", "other"],
         caption: str = "",
         starting_path: str | None = None,
         parent: QWidget | None = None,
@@ -29,6 +29,10 @@ class PathLineWidget(QLineEdit):
             )
         elif self.path_type == "dir":
             self.dialog = OpenDirFileDialog(self, self.caption, self.starting_path)
+        elif self.path_type == "any_csv":
+            self.dialog =
+        else:
+            self.dialog = 
 
         self.explore_button = QPushButton("Explore", parent)
         self.explore_button.clicked.connect(self.explore)
