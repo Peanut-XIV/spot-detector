@@ -22,10 +22,16 @@ VALID_IMAGE_MIME_TYPES: list[str] = [
     "image/tiff",
 ]
 
+VALID_IMAGE_TYPES: str = (
+    "(*.jpg, *.jpeg, *jpe, *.jfif, *.png, *.bmp, *.dib, *.webp, *.tif, *.tiff)"
+)
+
 VALID_CSV_MIME_TYPES: list[str] = [
     "text/plain",
     "text/csv",
 ]
+
+VALID_CSV_TYPES: str = "(*.txt, *.csv)"
 
 
 def read_csv(csv_file: str | Path) -> DataTable:
