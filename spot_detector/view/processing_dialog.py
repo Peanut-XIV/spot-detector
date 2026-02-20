@@ -136,7 +136,19 @@ class ImageProcessingDialog(QDialog):
         self.df_check_dimensions_button = QPushButton("Check dimensions")
         layout.addWidget(self.df_check_dimensions_button)
         layout.addStretch()
+
+        self.dust_filter_checkbox.checkStateChanged.connect(
+            self.on_dust_filter_check_state_change
+        )
+        self.on_dust_filter_check_state_change(self.dust_filter_checkbox.checkState())
         return layout
+
+    @Slot(Qt.CheckState)
+    def on_dust_filter_check_state_change(self, new_state: Qt.CheckState):
+        self.dust_filter_pathline.setEnabled(new_state == Qt.CheckState.Checked)
+        self.dust_filter_pathline.explore_button.setEnabled(
+            new_state == Qt.CheckState.Checked
+        )
 
     def _create_output_path_layout(self) -> QVBoxLayout:
         """Creates the Third UI column and returns it as a layout
@@ -152,7 +164,7 @@ class ImageProcessingDialog(QDialog):
         layout.addWidget(QLabel("Select output file path"))
         # layout.addStretch()
         sub_layout = QHBoxLayout()
-        # TODO: Fix that vvvvv
+
         self.output_pathline = PathLineWidget(
             "other", "Output file path...", None, None
         )
