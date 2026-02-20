@@ -1,9 +1,14 @@
 from pathlib import Path
 from typing import Literal
-from PySide6.QtWidgets import QWidget, QLineEdit, QPushButton
+from PySide6.QtWidgets import QFileDialog, QWidget, QLineEdit, QPushButton
 from PySide6.QtCore import Slot
 
-from spot_detector.view.dialogs import OpenDirFileDialog, ReadOnlyImageFileDialog
+from spot_detector.file_utils import VALID_CSV_TYPES, VALID_IMAGE_TYPES
+from spot_detector.view.dialogs import (
+    OpenDirFileDialog,
+    ReadOnlyImageFileDialog,
+    OpenProcessingFileDialog,
+)
 
 
 class PathLineWidget(QLineEdit):
@@ -24,15 +29,19 @@ class PathLineWidget(QLineEdit):
 
         self.path_type = path_type
         if self.path_type == "read_only_img":
+            filter = "Valid Image Types " + VALID_IMAGE_TYPES
             self.dialog = ReadOnlyImageFileDialog(
-                self, self.caption, self.starting_path
+                self, self.caption, self.starting_path, filter
             )
         elif self.path_type == "dir":
             self.dialog = OpenDirFileDialog(self, self.caption, self.starting_path)
         elif self.path_type == "any_csv":
-            self.dialog =
+            filter = "Valid File Types " + VALID_CSV_TYPES
+            self.dialog = OpenProcessingFileDialog(
+                self, self.caption, self.starting_path, filter
+            )
         else:
-            self.dialog = 
+            self.dialog = QFileDialog(self, self.caption, self.starting_path)
 
         self.explore_button = QPushButton("Explore", parent)
         self.explore_button.clicked.connect(self.explore)
