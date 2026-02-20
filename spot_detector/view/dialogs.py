@@ -8,7 +8,12 @@ from PySide6.QtWidgets import (
     QLabel,
 )
 from PySide6.QtCore import Qt
-from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
+from spot_detector.file_utils import (
+    VALID_IMAGE_MIME_TYPES,
+    VALID_CSV_MIME_TYPES,
+    VALID_CSV_TYPES,
+    VALID_IMAGE_TYPES,
+)
 
 
 class ReadOnlyImageFileDialog(QFileDialog):
@@ -47,6 +52,25 @@ class OpenDirFileDialog(QFileDialog):
     ):
         super().__init__(parent, caption, directory)
         self.setFileMode(QFileDialog.FileMode.Directory)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+
+
+class OpenProcessingFileDialog(QFileDialog):
+    """
+    A dialog made to open a csv file that could be written to.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        caption: str = "",
+        directory: str = "",
+        filter: str = "",
+    ):
+        super().__init__(parent, caption, directory, filter)
+        if len(filter) == 0:
+            self.setMimeTypeFilters(VALID_CSV_MIME_TYPES)
+        self.setFileMode(QFileDialog.FileMode.AnyFile)
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
 
 
