@@ -332,14 +332,20 @@ def get_unprocessed_directories(
 
 def match_dir_items(
     dir: str | Path,
-    pattern: str,
+    pattern_string: str,
     inserted_value: str,
 ) -> list[Path]:
-    pattern = string.Template(pattern)  # type: ignore
-    pattern = pattern.substitute(value=re.escape(inserted_value))  # pyright: ignore[reportAttributeAccessIssue]
-    regex = re.compile(pattern)
+    pattern_string = string.Template(pattern_string)  # type: ignore
+    pattern_string = pattern_string.substitute(value=re.escape(inserted_value))  # pyright: ignore[reportAttributeAccessIssue]
+    regex = re.compile(pattern_string)
     dir = Path(dir)
-    return list(filter(lambda x: regex.fullmatch(x.name), dir.iterdir()))
+    content = list(dir.iterdir())
+    matches = list(filter(lambda x: regex.fullmatch(x.name), content))
+    if len(matches) == 0:
+        print(f"0 match for pattern {pattern_string} within content of dir {str(dir)}:")
+        for file in content:
+            print(file.name)
+    return matches
 
 
 def confirm_new_cfg_file(path):

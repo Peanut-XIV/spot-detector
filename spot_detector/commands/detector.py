@@ -3,26 +3,21 @@ from pathlib import Path
 
 # Other dependancies
 import click
-from click import (
-    argument, command, confirm, echo, option
-)
+from click import argument, command, confirm, echo, option
 
 # Project files
 from spot_detector.core import detect
 from spot_detector.file_utils import check_img_count
 from spot_detector.misc import fit_elements
 
+
 @command()
 @argument(
     "config",
-    type=click.Path(
-        file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
-    ),
+    type=click.Path(file_okay=True, dir_okay=True, resolve_path=True, path_type=Path),
 )
 @argument(
-    "dir",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    default=None
+    "dir", type=click.Path(exists=True, file_okay=False, dir_okay=True), default=None
 )
 @argument(
     "depths",
@@ -86,10 +81,12 @@ def detector(
     img_directories = list(filter(lambda x: x.is_dir(), dir.iterdir()))
     mismatches, counts = check_img_count(len(depths_list), img_directories)
     if mismatches and not y:
-        bad_dirs = filter(lambda p: p[1] != len(depths_list), zip(img_directories, counts))
+        bad_dirs = filter(
+            lambda p: p[1] != len(depths_list), zip(img_directories, counts)
+        )
         dir_and_count = list(map(lambda p: f"{p[0].name}: {p[1]}", bad_dirs))
         lines = fit_elements(dir_and_count)
-        if mismatches > 1:
+        if mismatches > 0:
             echo(
                 f"{mismatches} dossiers ont un nombre d'images "
                 f"inattendu. (attendait {len(depths_list)} images) :\n"
