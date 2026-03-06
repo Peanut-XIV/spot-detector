@@ -38,6 +38,7 @@ class Palette_List(MoveListWidget):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         key = event.key()
         if key == Qt.Key.Key_Up:
+            # call action move up
             self.move_sel_up_action.trigger()
         elif key == Qt.Key.Key_Down:
             # call action move down
