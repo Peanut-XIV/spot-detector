@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QPushButton,
+    QTableView,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -17,6 +18,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Slot, Signal
 from PySide6.QtGui import QKeyEvent
+from spot_detector.model import image_set_model
+from spot_detector.model.image_set_model import ImageEntry, ImageSetModel
 from spot_detector.model.project import Project
 from spot_detector.view.path_line_widget import PathLineWidget
 
@@ -30,7 +33,7 @@ class ImageProcessingDialog(QDialog):
 
     def __init__(
         self,
-        project: Project | None,  # WARN: None only during dev
+        project: Project,
         parent: QWidget | None = None,
         f: Qt.WindowType = Qt.WindowType.Window,
     ) -> None:
@@ -42,13 +45,15 @@ class ImageProcessingDialog(QDialog):
         super().__init__(parent, f)
         self.setWindowTitle("Start Processing")
 
+        self.project_copy = project.model_copy(deep=True)
         self.user_starts_processing = False
         self.saved_config = None
 
         base_layout = QVBoxLayout(self)
         content_layout = QHBoxLayout()
+
         # UI divided in 3 columns
-        file_selection_layout = self._create_file_selection_layout()
+        file_selection_layout = self._create_file_selection_layout(None)
         content_layout.addLayout(file_selection_layout)
         content_layout.addWidget(self.make_vline())
         dust_filter_layout = self._create_dust_filter_layout()
@@ -57,6 +62,7 @@ class ImageProcessingDialog(QDialog):
         output_path_layout = self._create_output_path_layout()
         content_layout.addLayout(output_path_layout)
         base_layout.addLayout(content_layout)
+
         # Finally buttons to cancel or continue
         accept_reject_layout = self._create_accept_reject_layout()
         base_layout.addLayout(accept_reject_layout)
@@ -69,7 +75,9 @@ class ImageProcessingDialog(QDialog):
         self.accepted.connect(self.save_config)
         self.rejected.connect(self.null_config)
 
-    def _create_file_selection_layout(self) -> QVBoxLayout:
+    def _create_file_selection_layout(
+        self, file_entries: list[ImageEntry] | None
+    ) -> QVBoxLayout:
         """Creates the first UI column and returns it as a layout
 
         Initialises `self.file_list`, `self.element_counter`, `self.error_box`
@@ -81,7 +89,8 @@ class ImageProcessingDialog(QDialog):
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Select Input Files"))
         # layout.addStretch()
-        self.file_tree = self._create_file_tree()
+        self._image_set_model = ImageSetModel(file_entries)
+        self.file_tree = self._create_image_set_view(self._image_set_model)
         layout.addWidget(self.file_tree)
         self.add_files_button = QPushButton("Add Files")
         layout.addWidget(self.add_files_button)
@@ -95,13 +104,21 @@ class ImageProcessingDialog(QDialog):
         layout.addStretch()
         return layout
 
-    def _create_file_tree(self) -> QTreeWidget:
-        file_tree = QTreeWidget()
-        file_tree.setColumnCount(2)
-        header = QTreeWidgetItem(["Name", "Full Path"])
-        file_tree.setHeaderItem(header)
-        file_tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
-        return file_tree
+    def _create_image_set_view(self, model: ImageSetModel | None) -> QTableView:
+        view = QTableView()
+
+        view.setSortingEnabled(False)
+        view.setAcceptDrops(False)
+        view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        view.horizontalHeader().setStretchLastSection(True)
+        view.setEditTriggers(QTableView.EditTrigger.DoubleClicked)
+        view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+
+        if model is not None:
+            view.setModel(model)
+            view.resizeColumnToContents(0)
+
+        return view
 
     def _create_dust_filter_layout(self) -> QVBoxLayout:
         """Creates the second UI column and returns it as a layout
@@ -128,8 +145,8 @@ class ImageProcessingDialog(QDialog):
         path_layout.addWidget(self.dust_filter_pathline.get_button())
         layout.addLayout(path_layout)
         note = QLabel(
-            "Note: if the dust filter is used, all provided"
-            " files must have the same dimensions."
+            "Note: if the dust filter is used, all provided files must"
+            " come from the same camera and have the same dimensions."
         )
         note.setWordWrap(True)
         layout.addWidget(note)
@@ -141,6 +158,9 @@ class ImageProcessingDialog(QDialog):
             self.on_dust_filter_check_state_change
         )
         self.on_dust_filter_check_state_change(self.dust_filter_checkbox.checkState())
+        self.df_check_dimensions_button.clicked.connect(
+            self.dust_filter_check_dimensions
+        )
         return layout
 
     @Slot(Qt.CheckState)
@@ -149,6 +169,20 @@ class ImageProcessingDialog(QDialog):
         self.dust_filter_pathline.explore_button.setEnabled(
             new_state == Qt.CheckState.Checked
         )
+
+    @Slot()
+    def dust_filter_check_dimensions(self):
+        entries = self._image_set_model._entries[:]
+        filter = self.project_copy.dust_filter_image_path
+
+        if filter is None:
+            ...  # handle this code path
+            return
+
+        ref_width, ref_height = get_img_size(filter)
+
+        for img in images:
+            width, height = get_img_size(img)
 
     def _create_output_path_layout(self) -> QVBoxLayout:
         """Creates the Third UI column and returns it as a layout
@@ -293,9 +327,15 @@ class ImageProcessingDialog(QDialog):
             _ = self.file_tree.takeTopLevelItem(index)
         self.update_file_count()
 
+    def get_images_to_process(self):
+        for item_idx in range(self.file_tree.topLevelItemCount()):
+            print(item_idx)
+        return [str(i) for i in range(21)]
+
 
 if __name__ == "__main__":
+    project = Project(name="some_project")
     app = QApplication(sys.argv)
-    diag = ImageProcessingDialog(None)
+    diag = ImageProcessingDialog(project)
     diag.show()
     sys.exit(app.exec())
