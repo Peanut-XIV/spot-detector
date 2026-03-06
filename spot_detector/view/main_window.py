@@ -56,6 +56,7 @@ class MainWindow(QMainWindow):
         A method for populating a palette widget with the projects shades.
         """
         self.palette_list = Palette_List(self.project.configuration.shades, parent)
+        self.palette_list.palette_changed.connect(self.on_palette_list_update)
 
     def _create_menu(self):
         """
@@ -63,6 +64,9 @@ class MainWindow(QMainWindow):
         """
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
+
+        self._create_save_as_action()
+        self.file_menu.addAction(self.save_as_action)
 
         self._create_set_ref_image_action()
         self.file_menu.addAction(self.set_ref_image_action)
@@ -114,6 +118,12 @@ class MainWindow(QMainWindow):
         action = QAction(icon, "Open Detection Settings", self)
         action.triggered.connect(self.start_detection_settings_window)
         self.open_detection_settings_action = action
+
+    def _create_save_as_action(self):
+        # TODO: icon = QIcon(":path/to/icon")
+        action = QAction("Save As", self)
+        action.triggered.connect(self.dialog_save_project_as)
+        self.save_as_action = action
 
     def _create_viewer(self, parent):
         self.viewer = ViewerWidget(self.project, parent)
@@ -272,6 +282,10 @@ class MainWindow(QMainWindow):
         shades = [Shade.from_pix(tuple(row[0:3])) for row in lut]
         self.project.set_shades(lut)
         self.palette_list.set_palette(shades)
+
+    @Slot(list)
+    def on_palette_list_update(self, shades: list[Shade]):
+        self.project.configuration.shades = shades
 
     # TODO: create the function
     # 1 - Validate source path
