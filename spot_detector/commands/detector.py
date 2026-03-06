@@ -103,3 +103,4 @@ def detector(
         confirm("Continuer ?", abort=True)
 
     detect(dir, depths_list, csv, regex, config, proc)
+    print("\a")
