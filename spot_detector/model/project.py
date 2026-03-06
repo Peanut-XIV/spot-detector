@@ -33,17 +33,19 @@ class Project(BaseModel):
         "dust_filter_image_path",
         "image_directory_path",
     )
+    @classmethod
     def is_printable(cls, string: str | None):
         if string is not None and not string.isprintable():
             error = ValidationError()
             error.add_note(
                 "A field within the config file contains non printable characters,"
-                " it is therfore invalid"
+                " it is therefore invalid"
             )
             raise error
+        return string
 
     @classmethod
-    def from_path(cls, project_file: str) -> Self:
+    def from_path(cls, project_file: str | Path) -> Self:
         with open(project_file, mode="r", encoding="UTF-8") as file:
             json_dict = json.load(file)
             content = cls(**json_dict)
@@ -86,9 +88,9 @@ class Project(BaseModel):
         config_copy = configuration.model_copy(deep=True)
         self.configuration = config_copy
 
-    def save_as(self, path: str):
+    def save_as(self, path: str | Path):
         old_path = self.latest_save_path
-        self.latest_save_path = path
+        self.latest_save_path = str(path)
         try:
             with open(path, "w", encoding="UTF-8") as file:
                 json.dump(self.model_dump(), file)
