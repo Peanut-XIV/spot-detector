@@ -1,10 +1,131 @@
 # Python standard library
+from math import sqrt
+
+# Third party imports
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 
 # Project files
 from .types import T
+
+
+def crop_to_dish_roi(
+    img: NDArray,
+    radius_range: tuple[int, int] = (-1, -1),
+    subsample_rate: int = 16,
+    initial_threshold: int = 16,
+    threshold_step: int = 16,
+    minDist: int = 100,
+) -> NDArray:
+    """
+    Detects the visible circle of a petri dish within an image, based on some
+    assumptions on its content, position, environment and lighting conditions.
+    This algorithm simplifies the image with a given binary threshold value
+    and applies morphological operations on it. The result is then fed to
+    openCV's `HoughCirles` and evaluates the first candidate.
+
+    Params
+    ----
+    img:
+        an image, rgb or grayscale, any depth.
+
+    radius_range:
+        range of possible values in pixel for the radius of the circle to find.
+        The smaller the faster. If left as (-1, -1), the range will be between
+        70% to 110% of the radius of the largest circle that can fit in the image.
+
+    subsample_rate:
+        number by which the pixel count of the image is reduced.
+        For example, 16 samples 1 in 4 pixels both verticaly and horizontaly.
+        Making the image to process 16x smaller. Should be a square number.
+        If not, will be rounded down. Set it to 1 or less to detect the ROI
+        from the whole picture.
+
+    minimum_threshold:
+        Sets the first value to use for the threshold filter.
+
+    threshold_step:
+        Sets the incrementation step of the threshold value, should the previous
+        one fail to detect a satisfying circle.
+    """
+    ss_rate = max(int(sqrt(subsample_rate)), 1)
+    sub = img[::ss_rate, ::ss_rate, :]
+
+    if len(img.shape) == 3:
+        gray = cv.cvtColor(sub, cv.COLOR_BGR2GRAY)
+    else:
+        gray = sub
+
+    if radius_range == (-1, -1):
+        fit_r = min(gray.shape[0], gray.shape[1]) / 2
+        small_r, big_r = fit_r * 0.7, fit_r * 1.1
+    else:
+        small_r = radius_range[0] / ss_rate
+        big_r = radius_range[1] / ss_rate
+
+    if small_r < 0:
+        raise ValueError("Argument radius_range contains invalid negative numbers")
+
+    kernel = np.array(
+        [
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+        ],
+        dtype=np.uint8,
+    )
+
+    candidates = np.empty(0)
+    for thresh in range(initial_threshold, 256, threshold_step):
+        _, binary = cv.threshold(gray, thresh, 255, cv.THRESH_BINARY)
+        opened = cv.morphologyEx(binary, cv.MORPH_OPEN, kernel)
+        closed = cv.morphologyEx(opened, cv.MORPH_CLOSE, kernel)
+        grad = cv.morphologyEx(closed, cv.MORPH_GRADIENT, kernel)
+
+        candidates = cv.HoughCircles(
+            image=grad,
+            method=cv.HOUGH_GRADIENT,  # simplest of the two
+            dp=2,
+            minDist=minDist,
+            param1=128,  # our image is binary... no need to fine tune?
+            param2=0.8,  # our processing causes jagged edges
+            minRadius=int(small_r),  # we expect the Petri dish to
+            maxRadius=int(big_r),  # occupy as much of the frame
+        )
+
+        if len(candidates) > 0:
+            break
+        else:
+            print(f"failed with threshold {thresh}")
+
+    if len(candidates) == 0:
+        print("failed to crop image")
+        return img
+
+    x, y, r = candidates[0, 0, :] * ss_rate
+    min_y, max_y = max(0, int(y - r) + 1), min(int(y + r), img.shape[0])
+    min_x, max_x = max(0, int(x - r) + 1), min(int(x + r), img.shape[1])
+
+    crop = img[min_y:max_y, min_x:max_x, :]
+    new_center = (int(x - min_x), int(y - min_y))
+
+    # fill outside of circle
+    # TODO: check if works with dtypes other than uint8
+    mask = cv.circle(
+        np.zeros(crop.shape, crop.dtype),
+        new_center,
+        int(r),
+        [255, 255, 255],
+        -1,
+        cv.FILLED,
+    )
+
+    with_circle = cv.bitwise_and(crop, mask)
+
+    return with_circle
 
 
 def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
@@ -238,5 +359,9 @@ def evenly_spaced_values(gs_palette: NDArray) -> NDArray:
     u_vals = sorted(unique_values(gs_palette))
     u_vals = np.array(u_vals)
     index = np.arange(u_vals.size)
+    # if index.size <= 1:
+    #     print("palette with 1 unique element...", index.shape)
+    #     print("gs_palette", gs_palette)
+    #     print("u_vals", u_vals)
     index = np.round(index * 255 / (index.size - 1))
     return np.array([u_vals, index])
