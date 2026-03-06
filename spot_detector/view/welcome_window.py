@@ -32,7 +32,7 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
     def __init__(self, start_manager: QObject | None) -> None:
         super().__init__(None, Qt.WindowType.Window)
         self.start_manager = start_manager
-        self.project: None | Project = None
+        self.project: Project | None = None
         self.setObjectName("main window")
         # layout
         layout = QHBoxLayout(self)
