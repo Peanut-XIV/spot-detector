@@ -1,7 +1,7 @@
 from multiprocessing import Process, Queue, parent_process
 from pathlib import Path
 from time import sleep
-from typing import Union
+from typing import Callable, Union
 
 import cv2 as cv
 import numpy as np
@@ -27,11 +27,16 @@ def count_spots_fourth_method(
 ) -> list[int]:
     # crop_to_main_circle does not work
     # img = crop_to_main_circle(img)
+    labels = [int(x) for x in color_table[:, 3] if int(x) > 0]
     labeled = label_img_fastest(img, color_table)
     values = []
     for i, settings in enumerate(det_params):
-        detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         j = i + 1  # 0 is the bg
+        if j not in labels:
+            # skip unused labels
+            values.append(0)
+            continue
+        detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         isolated_color = isolate_categories(color_table, [j])
         gs_palette = evenly_spaced_gray_palette(isolated_color)
         gs_img = gs_palette[labeled.flatten()]
@@ -60,28 +65,6 @@ def expand_debug(string: str) -> str:
     return str(debug_path.joinpath(string))
 
 
-def init_workers(
-    count: int,
-    config: ColorAndParams,
-    in_queue: Queue,
-    out_queue: Queue,
-) -> list[Process]:
-    """
-    Creates a list of multiprocessing process objects but does not call
-    their start method.
-    :param count: The number of processes to create
-    :param project: The project, including configuration of the detector for each label
-    :param in_queue: The queue from which the processes fetch their input data
-    :param out_queue: The queue to which the processed data is output
-    :return: The list of process objects
-    """
-    workers_list = []
-    for _ in range(count):
-        worker = Process(target=img_processer, args=(in_queue, out_queue, config))
-        workers_list.append(worker)
-    return workers_list
-
-
 def img_processer(
     in_queue: Queue,
     out_queue: Queue,
@@ -98,21 +81,47 @@ def img_processer(
     """
     color_table = np.array([shade.as_row() for shade in config.shades])
     parent = parent_process()
+
     if parent is None:
         return
+
     while parent.is_alive():
         if in_queue.empty():
             sleep(1)
-        else:
-            job: Union[str, ImageElement] = in_queue.get()
-            if isinstance(job, str):
-                if job == "STOP":
-                    break
-                else:
-                    print("How? WHy?")
-            else:
-                folder_row, depth_col, path = job
-                img = cv.imread(path)
-                values = count_spots_fourth_method(img, color_table, config.det_params)
-                result: DataElement = (folder_row, depth_col, values)
-                out_queue.put(result)
+            continue
+
+        job: Union[str, ImageElement] = in_queue.get()
+        if isinstance(job, str):
+            if job == "STOP":
+                break
+            print(f"Unexpected message recieved: {job}")
+            continue
+
+        folder_row, depth_col, path = job
+        img = cv.imread(path)
+        values = count_spots_fourth_method(img, color_table, config.det_params)
+        result: DataElement = (folder_row, depth_col, values)
+        out_queue.put(result)
+
+
+def init_workers(
+    count: int,
+    config: ColorAndParams,
+    in_queue: Queue,
+    out_queue: Queue,
+    proc_func: Callable[[Queue, Queue, ColorAndParams], None] = img_processer,
+) -> list[Process]:
+    """
+    Creates a list of multiprocessing process objects but does not call
+    their start method.
+    :param count: The number of processes to create
+    :param project: The project, including configuration of the detector for each label
+    :param in_queue: The queue from which the processes fetch their input data
+    :param out_queue: The queue to which the processed data is output
+    :return: The list of process objects
+    """
+    workers_list = []
+    for _ in range(count):
+        worker = Process(target=proc_func, args=(in_queue, out_queue, config))
+        workers_list.append(worker)
+    return workers_list
