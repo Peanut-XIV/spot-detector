@@ -22,7 +22,7 @@ def filter_background(sigma_1: float,
         while destination_path.exists():
             if count > 99:
                 raise IsADirectoryError(
-                        "to many directories named \"filtered_xx\","
+                        "too many directories named \"filtered_xx\","
                         " please set the destination path manually"
                 )
             destination_path = source_path.joinpath(f"filtered_{count}")

@@ -58,17 +58,24 @@ def fit_elements(elements: list[str]) -> list[str]:
 
 
 def input_img() -> NDArray:
+
     _str = input("chemin de l'image : ")
-    _path = Path(_str)
     if _str == "":
-        return cv.imread("/Users/Louis/Desktop/test.JPG")
+        _str = "~/Desktop/test.JPG"
+        print("Le chemin procuré est vide. '~/Desktop/test.JPG' utilisé comme chemin par défaut")
+
+    _path = Path(_str)
     if not _path.is_file():
-        print(f"'{_path.stem}' n'est pas un fichier !\nFin de l'exécution.")
+        print(f"'{_path.stem}' n'est pas un fichier !")
+        print("Fin de l'exécution.")
         quit()
+
     _image = cv.imread(str(_path))
     if _image is None:
-        print(f"'{_path.stem}' n'est pas une image !\nFin de l'exécution.")
+        print(f"'{_path.stem}' n'est pas une image !")
+        print("Fin de l'exécution.")
         quit()
+
     return _image
 
 

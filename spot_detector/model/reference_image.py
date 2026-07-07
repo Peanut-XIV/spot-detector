@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field, PrivateAttr
 from spot_detector.model.models import Shade
 from spot_detector.transformations import (
     get_k_means,
-    label_img_fastest_uint16,
 )
 from spot_detector.errors import (
     InvalidFormatError,
@@ -147,12 +146,13 @@ class ReferenceImageMatrices:
         #     > If labeled mat exists, the rest can be generated maybe they
         #       should belong to another object that could be initialized or
         #       not.
+
         self.palettized: ImageCache | None = None
         self.highlight: ImageCache | None = None
 
-        self.labeled_mat: NDArray | None = None
+        self.labels: NDArray | None = None
 
-    def palettize_reference_from_kmeans(self, shade_count):
+    def palettize_reference_from_kmeans(self, shade_count: int):
         """
         UNUSED - NEEDS TO BE THREADED
 
@@ -161,13 +161,15 @@ class ReferenceImageMatrices:
         with the new colortable.
         """
         palettizable = to_3_channel_mat(to_uint16_mat(self.reference.raw_mat))
-        result = get_k_means(palettizable, shade_count)
-        self.load_kmeans_result(result)
-        lut = result[0]
+        lut, palettized, labels = get_k_means(palettizable, shade_count)
+        self.update_palettized_and_labels(palettized, labels)
         return lut
 
-    def palettize_and_label_reference_from_shades(
-        self, shades: list[Shade], do_update_highlight: bool = True
+    def update_labels(
+        self,
+        labels: NDArray,
+        label_shades: list[Shade],
+        do_update_highlight: bool = True,
     ) -> None:
         """
         UNUSED - NEEDS CORRESPONDING ACTION
@@ -176,22 +178,20 @@ class ReferenceImageMatrices:
         Could be used to generate the image cache from an existing project
         file.
         """
-        palettizable_ref = to_3_channel_mat(to_uint16_mat(self.reference.raw_mat))
-        table = [shade.as_row() for shade in shades]
-        lut = np.array(table, dtype=np.uint16)[:, 0:3]
-        labels = label_img_fastest_uint16(palettizable_ref, lut)
-        self.labeled_mat = labels
+        table = [shade.as_row() for shade in label_shades]
+        lut = np.array(table)[:, 0:3].astype(np.uint16)
+        self.labels = labels
+
         palettized = lut[labels]
         self.update_palettized(palettized)
         if do_update_highlight:
             self.update_highlight(palettized)
 
-    def load_kmeans_result(self, result: tuple[NDArray, NDArray, NDArray]):
-        _, palettized, labeled = result
+    def update_palettized_and_labels(self, palettized: NDArray, labels: NDArray):
         im_shape = (palettized.shape[0], palettized.shape[1])
         self.update_palettized(palettized)
         self.update_highlight(palettized)
-        self.labeled_mat = labeled.reshape(im_shape)
+        self.labels = labels.reshape(im_shape)
 
     def apply_color_list(
         self, colors: list[ShadeTuple] | list[PixTuple]
@@ -199,9 +199,9 @@ class ReferenceImageMatrices:
         """
         can raise a ValueError if labeled_mat is not initialized yet
         """
-        if self.labeled_mat is not None:
-            lut = np.array(colors, dtype=np.uint16)[:, 0:3]
-            return lut[self.labeled_mat]
+        if self.labels is not None:
+            lut = np.array(colors).astype(np.uint16)[:, 0:3]
+            return lut[self.labels]
         else:
             raise ValueError(
                 "'labeled_mat' must be non null. Palettize the reference image"
@@ -237,9 +237,10 @@ class ReferenceImageModel(BaseModel):
     path: str = Field()
     _cache: ReferenceImageMatrices = PrivateAttr()
 
-    def __init__(self, /, **data: Any) -> None:
+    def __init__(self, /, init_cache: bool = True, **data: Any) -> None:
         super().__init__(**data)
-        self.generate_cache_from_path()
+        if init_cache:
+            self.generate_cache_from_path()
 
     @property
     def mats(self):

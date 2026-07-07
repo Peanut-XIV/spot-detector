@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 
 from spot_detector.model.models import DetParams
 from spot_detector.view.base_list_widget import MoveListWidget
-from spot_detector import rc_icons  # noqa: F401
+from spot_detector import rc_icons  # noqa: F401 WARN: Do not remove
 
 
 class LabelListItem(QListWidgetItem):
@@ -54,9 +54,9 @@ class LabelListItem(QListWidgetItem):
         self.update_text()
 
 
-class LabelListWidget(MoveListWidget):
+class LabelClassListWidget(MoveListWidget):
     model_list_changed: Signal = Signal(list, name="list_widget_model_has_changed")
-    focused_changed: Signal = Signal(DetParams)
+    class_focus_changed: Signal = Signal(DetParams)
     update_names: Signal = Signal()
 
     def __init__(
@@ -90,7 +90,7 @@ class LabelListWidget(MoveListWidget):
         self.send_focused()
 
     def send_focused(self):
-        self.focused_changed.emit(self.focused_item.model.model_copy(deep=True))
+        self.class_focus_changed.emit(self.focused_item.model.model_copy(deep=True))
 
     def send_new_models(self):
         content = self.get_list()
@@ -128,6 +128,7 @@ class LabelListWidget(MoveListWidget):
     def update_focused_model(self, model: DetParams):
         self.focused_item.model = model
         self.update_focused_item_name()
+        self.send_new_models()
 
     @Slot()
     def reindex_items(self):
@@ -220,9 +221,9 @@ def is_label_list_item(item: QListWidgetItem) -> TypeGuard[LabelListItem]:
     return isinstance(item, LabelListItem)
 
 
-class LabelWidget(QWidget):
+class LabelClassWidget(QWidget):
     model_list_changed: Signal = Signal(list)
-    focused_changed: Signal = Signal(DetParams)
+    class_focus_changed: Signal = Signal(DetParams)
     update_models: Signal = Signal(list)
     update_focused_model: Signal = Signal(DetParams)
 
@@ -236,8 +237,8 @@ class LabelWidget(QWidget):
 
         l1 = QVBoxLayout(self)
 
-        self.list = LabelListWidget(model, parent)
-        self.list.focused_changed.connect(self.focused_changed)
+        self.list = LabelClassListWidget(model, parent)
+        self.list.class_focus_changed.connect(self.class_focus_changed)
         self.list.model_list_changed.connect(self.model_list_changed)
         self.update_focused_model.connect(self.list.update_focused_model)
         self.update_models.connect(self.list.set_list)
@@ -275,6 +276,6 @@ if __name__ == "__main__":
         model.append(DetParams.from_prepopulated_defaults(i + 1))
 
     app = QApplication(sys.argv)
-    win = LabelWidget(model)
+    win = LabelClassWidget(model)
     win.show()
     sys.exit(app.exec())

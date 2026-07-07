@@ -6,12 +6,14 @@ from typing import Callable, Union
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
+import random
 
 from spot_detector.model.models import ColorAndParams, DetParams
 from spot_detector.transformations import (
     evenly_spaced_gray_palette,
     isolate_categories,
-    label_img_fastest,
+    # label_img_fastest,
+    label_img_fastest_uint16,
 )
 
 from .types import DataElement, ImageElement
@@ -20,16 +22,27 @@ RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
 
 def count_spots_fourth_method(
-    img: NDArray,
+    image: NDArray,
     color_table: NDArray,
     det_params: list[DetParams],
     debug: int = 0,
 ) -> list[int]:
     # crop_to_main_circle does not work
     # img = crop_to_main_circle(img)
-    labels = [int(x) for x in color_table[:, 3] if int(x) > 0]
-    labeled = label_img_fastest(img, color_table)
+
+    labels = list(set([int(x) for x in color_table[:, 3] if int(x) > 0]))
+
+    # labeled = label_img_fastest(img, color_table)
+    labeled = label_img_fastest_uint16(image, color_table)
     values = []
+
+    # print()
+    # print(f"image : {image.shape} px of type {image.dtype}")
+    # print(f"labels :\n{labels}")
+    # print(f"color_table :\n{color_table}")
+
+    im_id = random.randint(0, 65536)
+
     for i, settings in enumerate(det_params):
         j = i + 1  # 0 is the bg
         if j not in labels:
@@ -38,11 +51,17 @@ def count_spots_fourth_method(
             continue
         detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         isolated_color = isolate_categories(color_table, [j])
+
+        # print(isolated_color)
+
         gs_palette = evenly_spaced_gray_palette(isolated_color)
+
         gs_img = gs_palette[labeled.flatten()]
         gs_img = gs_img.reshape(labeled.shape).astype(np.uint8)
+
         key_points = detector.detect(gs_img)
         values.append(len(key_points))
+
         if debug >= 1:
             kp = cv.drawKeypoints(
                 gs_img,
@@ -51,17 +70,19 @@ def count_spots_fourth_method(
                 [0, 0, 255],
                 RICH_KEYPOINTS,
             )
-            cv.imwrite(expand_debug(f"col{j}_kp_km.jpg"), kp)
-            cv.imwrite(expand_debug(f"col{j}_gs_km.jpg"), gs_img)
+            cv.imwrite(expand_debug(f"col{j}_kp_km_{im_id}.jpg"), kp)
+            cv.imwrite(expand_debug(f"col{j}_gs_km_{im_id}.jpg"), gs_img)
+
     if debug >= 1:
-        cv.imwrite(expand_debug("crop_km.jpg"), img)
+        cv.imwrite(expand_debug(f"crop_km_{im_id}.jpg"), image)
     if debug >= 3:
-        cv.imwrite(expand_debug("labled_km.png"), labeled)
+        cv.imwrite(expand_debug(f"labled_km_{im_id}.png"), labeled)
+
     return values
 
 
 def expand_debug(string: str) -> str:
-    debug_path = Path.home().joinpath("Desktop/debug")
+    debug_path = Path("/Users/louis/Desktop/etalonnage/debug/")
     return str(debug_path.joinpath(string))
 
 
@@ -98,11 +119,14 @@ def img_processer(
             continue
 
         folder_row, depth_col, path = job
-        img = cv.imread(path)
-        values = count_spots_fourth_method(img, color_table, config.det_params)
+        image = cv.imread(path, cv.IMREAD_ANYDEPTH | cv.IMREAD_COLOR_BGR)
+        if image is None:
+            print(f"Failed reading image at path {path} and got None instead")
+            continue
+
+        values = count_spots_fourth_method(image, color_table, config.det_params, debug=0)
         result: DataElement = (folder_row, depth_col, values)
         out_queue.put(result)
-
 
 def init_workers(
     count: int,

@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QApplication
 from spot_detector.controller.start_manager_interface import StartManagerInterface
 from spot_detector.view.main_window import MainWindow
 from spot_detector.view.welcome_window import WelcomeWindow
-from spot_detector.model.project import Project
 
 
 class AppStartManager(QObject, StartManagerInterface):

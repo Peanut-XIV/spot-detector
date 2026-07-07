@@ -2,8 +2,11 @@
 import csv
 import re
 import string
+import os
+import platform
 from os import mkdir
 from pathlib import Path
+
 
 # Other dependancies
 import numpy as np
@@ -363,3 +366,57 @@ def confirm_new_cfg_file(path):
                 abort=True,
             )
             mkdir(path.parent)
+
+def get_local_data_dir() -> Path:
+    match platform.system():
+        case "Windows":
+            base_path = Path(os.getenv("LOCALAPPDATA", default="~"))
+        case "Darwin":
+            home = os.getenv("HOME")
+            if home is not None:
+                base_path = Path(home) / "Library" / "Application Support"
+            else:
+                base_path = Path("~/.local/share/")
+        case "Linux":
+            base_path = Path(os.getenv("XDG_DATA_HOME", default="~/.local/share/"))
+        case _:
+            print(f"unknown system: {platform.system()}")
+            base_path = Path("~/.local/share")
+    return base_path
+
+
+def add_to_recent_projects(file_path: Path) -> bool:
+    projects_file = get_local_data_dir() / "spot-detector" / "recent_projects.txt"
+
+    recent_projects: list[Path] = []
+    try:
+        with open(projects_file, "r") as f:
+            for file in f.readlines():
+                recent_projects.append(Path(file.strip("\n\r ")).expanduser())
+    except IOError:
+        return False
+
+    file_path = file_path.expanduser()
+
+    for project in recent_projects:
+        if project.samefile(file_path):
+            return False
+
+    recent_projects.insert(0, file_path)
+
+    count = len(recent_projects)
+    lines = [str(path) for path in recent_projects][:min(10, count)]
+
+    try:
+        with open(projects_file, "w") as f:
+            f.writelines(lines)
+
+    except IOError:
+        return False
+    except BaseException as other:
+        print(f"unexpected error {other}")
+
+    return True
+
+
+

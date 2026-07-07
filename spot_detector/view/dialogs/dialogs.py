@@ -11,8 +11,6 @@ from PySide6.QtCore import Qt
 from spot_detector.file_utils import (
     VALID_IMAGE_MIME_TYPES,
     VALID_CSV_MIME_TYPES,
-    VALID_CSV_TYPES,
-    VALID_IMAGE_TYPES,
 )
 
 
@@ -83,7 +81,7 @@ class OpenProjectDialog(QFileDialog):
         self,
         parent: QWidget | None = None,
         caption: str = "Open an existing project",
-        directory: str = "",
+        directory: str = "~/Desktop/",
     ):
         super().__init__(parent, caption, directory)
         self.setFileMode(QFileDialog.FileMode.ExistingFile)
@@ -129,3 +127,48 @@ class ConfirmOverwriteDialog(QDialog):
         layout.addLayout(layout)
         cancel.clicked.connect(self.reject)
         overwrite.clicked.connect(self.accept)
+
+
+class LoadPaletteDialog(QDialog):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        f: Qt.WindowType = Qt.WindowType.Window,
+    ) -> None:
+        super().__init__(parent, f)
+
+        self.load_current_palette: bool = False
+
+        prompt = QLabel(
+            "Do you wish to apply the current palette on this reference image?\n"
+            "\nYou can instead generate a new palette from the reference image."
+        )
+        yes = QPushButton("Yes, apply.")
+        no = QPushButton("No, generate a new palette.")
+        cancel = QPushButton("cancel")
+
+        l1 = QVBoxLayout()
+        l1.addWidget(prompt)
+
+        l2 = QHBoxLayout()
+        l2.addWidget(yes)
+        l2.addWidget(no)
+        l2.addWidget(cancel)
+
+        l1.addLayout(l2)
+
+        self.setLayout(l1)
+
+        yes.clicked.connect(self.on_click_yes)
+        no.clicked.connect(self.on_click_no)
+        cancel.clicked.connect(self.reject)
+
+    def on_click_yes(self):
+        self.load_current_palette = True
+        self.accept()
+
+    def on_click_no(self):
+        self.load_current_palette = False
+        self.accept()
+
+

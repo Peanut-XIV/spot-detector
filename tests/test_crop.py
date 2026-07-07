@@ -2,16 +2,13 @@ import sys
 import os
 from typing import Any, Literal
 from pathlib import Path
-import time
 
 import numpy as np
 from numpy.typing import NDArray
 import cv2
 
-from math import sqrt
 
 from spot_detector.transformations import crop_to_dish_roi
-from test_type_cast import test_my_function
 
 KERNEL = np.array(
     [
@@ -141,7 +138,7 @@ def main(im_path: str):
         if not src_path.is_file():
             skips += 1
             continue
-        img = cv2.imread(str(src_path))
+        img = cv2.imread(str(src_path), cv2.IMREAD_ANYDEPTH + cv2.IMREAD_COLOR_BGR)
 
         if img is None:
             print(f"failed opening image {str(src_path)}")
@@ -152,6 +149,8 @@ def main(im_path: str):
 
         try:
             new_img = crop_to_dish_roi(img)
+            if new_img.shape == img.shape:
+                fails += 1
             cv2.imwrite(str(dest_path), new_img)
         except Exception as e:
             error += 1

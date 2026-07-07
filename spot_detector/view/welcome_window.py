@@ -1,7 +1,11 @@
+import os
 import sys
+import platform
+from pathlib import Path
 from PySide6.QtWidgets import (
     QApplication,
     QLabel,
+    QListWidgetItem,
     QMessageBox,
     QSplitter,
     QVBoxLayout,
@@ -20,6 +24,7 @@ from PySide6.QtCore import (
 from pydantic import ValidationError
 
 from spot_detector.controller.start_manager_interface import StartManagerInterface
+from spot_detector.file_utils import get_local_data_dir
 from spot_detector.view.dialogs import OpenProjectDialog
 from spot_detector.view.new_project_dialog import NewProjectDialog
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
@@ -44,6 +49,9 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         splitter.addWidget(self.right_panel)
         layout.addWidget(splitter)
         self.setLayout(layout)
+
+        self.load_project_entries()
+
         self.setMinimumSize(QSize(500, 300))
         self.setMaximumSize(QSize(1000, 600))
         self.setWindowTitle("Welome to spot-detector!")
@@ -54,6 +62,7 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         layout = QVBoxLayout()
         layout.setObjectName("base")
         self.open_button = QPushButton("Open an existing project", panel)
+        self.open_button.clicked.connect(self.open_existing_project)
         layout.addWidget(self.open_button)
         self.new_button = QPushButton("Create a new project", panel)
         self.new_button.clicked.connect(self.create_new_project)
@@ -72,8 +81,8 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         layout = QVBoxLayout(panel)
         layout.setObjectName("base")
         layout.addWidget(QLabel("Recently opened projects", panel))
-        self.recent_project_list = QListWidget(self)
-        layout.addWidget(self.recent_project_list)
+        self.recent_projects_list = QListWidget(self)
+        layout.addWidget(self.recent_projects_list)
         layout.addStretch(1)
         layout_2 = QHBoxLayout()
         layout_2.setObjectName("top")
@@ -82,7 +91,40 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         layout_2.addWidget(self.open_recent_button)
         layout.addLayout(layout_2)
         panel.setLayout(layout)
+
         return panel
+
+
+    def load_project_entries(self):
+        projects_cache = get_local_data_dir() / "spot-detector" / "recent_projects.txt"
+        entries = []
+
+        with open(projects_cache, "r") as f:
+            for line in f.readlines():
+                entries.append(Path(line.strip("\n\r ")))
+
+        for project_path in entries:
+            name = self.get_project_name(project_path)
+            QListWidgetItem(f"{name}: {str(project_path)}", self.recent_projects_list)
+
+
+    def get_project_name(self, project_path: Path) -> str:
+        if project_path.exists():
+            try:
+                project = Project.from_path(project_path)
+                name = project.name
+            except IOError:
+                name = "[Failed Opening]"
+            except ValidationError:
+                name = "[Invalid JSON]"
+            except BaseException as other:
+                print(f"unexpected error {other}")
+                name = "[Error]"
+            return name
+        print("this path does not exist")
+        print(str(project_path))
+        return "[Not Found]"
+
 
     @Slot(Project)
     def setProject(self, project: Project):

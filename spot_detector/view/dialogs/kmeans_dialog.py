@@ -78,11 +78,13 @@ class KmeansProcessor(QThread):
 
     def __init__(self, image: NDArray, k: int, parent: QObject | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("Kmeans Processor Thread")
         self.k = k
-        self.image = to_uint16_mat(to_3_channel_mat(image))
+        self.image = image
 
     def run(self) -> None:
-        result = get_k_means(self.image, self.k, 1e-4, 1000)
+        cast = to_uint16_mat(to_3_channel_mat(self.image))
+        result = get_k_means(cast, self.k, 1e-4, 1000)
         self.result_ready.emit(result)
 
 

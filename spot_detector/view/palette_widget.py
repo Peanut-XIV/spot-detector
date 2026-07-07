@@ -106,11 +106,21 @@ class Palette_Item(QListWidgetItem):
         # to 8 bit to generate a thumbnail the 8 bit values are discarded and
         # the 16 bit values are kept
 
-        image = QImage(50, 50, QImage.Format.Format_RGBA8888)
+        image = QImage(100, 100, QImage.Format.Format_RGBA8888)
         r, g, b = shade.rgb_u8
-        image.fill(QColor(r, g, b, 255))
+        color = QColor(r, g, b, 255)
+        image.fill(color)
 
         super().__init__(QPixmap(image), str(shade.label_id), listview)
+
+        self.setBackground(color)
+
+        average = (r+g*2+b)/4
+
+        if 128 < average:
+            self.setForeground(QColor(0, 0, 0))
+        else:
+            self.setForeground(QColor(255, 255, 255))
 
         self.index: int = index
         self.shade = shade.model_copy()

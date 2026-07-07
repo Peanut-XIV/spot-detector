@@ -1,5 +1,6 @@
 # Python standard library
 from math import sqrt
+from typing import TypeAlias, Union
 
 # Third party imports
 import cv2 as cv
@@ -8,6 +9,71 @@ from numpy.typing import NDArray
 
 # Project files
 from .types import T
+
+SignedIntegerType: TypeAlias = Union[np.int8, np.int16, np.int32, np.int64]
+UnsignedIntegerType: TypeAlias = Union[np.uint8, np.uint16, np.uint32, np.uint64]
+IntegerType: TypeAlias = Union[SignedIntegerType, UnsignedIntegerType]
+
+def convert_mat_uint16(mat: NDArray[IntegerType]) -> NDArray[np.uint16]:
+    match mat.dtype:
+
+        case np.uint8:
+            copy = np.bitwise_left_shift(mat.astype(np.uint16), 8).astype(np.uint16)
+        case np.uint16:
+            copy = mat.copy().astype(np.uint16)
+        case np.uint32:
+            copy = np.bitwise_right_shift(mat, 8).astype(np.uint16)
+        case np.uint64:
+            copy = np.bitwise_right_shift(mat, 24).astype(np.uint16)
+
+        case np.int8:
+            unsigned = np.bitwise_xor(mat, np.uint8(0x80)).astype(np.uint8)
+            copy = np.bitwise_left_shift(mat, 8).astype(np.uint16)
+        case np.int16:
+            copy = np.bitwise_xor(mat, np.uint16(0x8000)).astype(np.uint16)
+        case np.int32:
+            unsigned = np.bitwise_xor(mat, np.uint32(0x80000000)).astype(np.uint32)
+            copy = np.bitwise_right_shift(unsigned, 16).astype(np.uint16)
+        case np.int64:
+            unsigned = np.bitwise_xor(mat, np.uint64(0x8000000000000000)).astype(np.uint64)
+            copy = np.bitwise_right_shift(unsigned, 48).astype(np.uint16)
+
+        case _:
+            raise TypeError("Unsupported datatype for argument mat. Datatype must be an integer type")
+
+    return copy
+
+def convert_mat_uint8(mat: NDArray[IntegerType]) -> NDArray[np.uint8]:
+
+    # cast to U8 :
+    match mat.dtype:
+
+        case np.uint8:
+            copy = mat.copy().astype(np.uint8)
+        case np.uint16:
+            copy = np.bitwise_right_shift(mat, 8).astype(np.uint8)
+        case np.uint32:
+            copy = np.bitwise_right_shift(mat, 24).astype(np.uint8)
+        case np.uint64:
+            copy = np.bitwise_right_shift(mat, 56).astype(np.uint8)
+
+        case np.int8:
+            copy = np.bitwise_xor(mat, np.uint8(0x80)).astype(np.uint8)
+        case np.int16:
+            unsigned = np.bitwise_xor(mat, np.uint16(0x8000)).astype(np.uint16)
+            copy = np.bitwise_right_shift(unsigned, 8).astype(np.uint8)
+        case np.int32:
+            unsigned = np.bitwise_xor(mat, np.uint32(0x80000000)).astype(np.uint32)
+            copy = np.bitwise_right_shift(unsigned, 24).astype(np.uint8)
+        case np.int64:
+            unsigned = np.bitwise_xor(mat, np.uint64(0x8000000000000000)).astype(np.uint64)
+            copy = np.bitwise_right_shift(unsigned, 56).astype(np.uint8)
+
+        case _:
+            raise TypeError("Unsupported datatype for argument mat. Datatype must be an integer type")
+
+    return copy
+
 
 
 def crop_to_dish_roi(
@@ -56,6 +122,12 @@ def crop_to_dish_roi(
         gray = cv.cvtColor(sub, cv.COLOR_BGR2GRAY)
     else:
         gray = sub
+
+    try:
+        gray = convert_mat_uint8(gray)  # type:ignore
+    except TypeError:
+        raise TypeError("Unsupported floating point tiff image datatype")
+
 
     if radius_range == (-1, -1):
         fit_r = min(gray.shape[0], gray.shape[1]) / 2
@@ -112,13 +184,15 @@ def crop_to_dish_roi(
     crop = img[min_y:max_y, min_x:max_x, :]
     new_center = (int(x - min_x), int(y - min_y))
 
+    max_dtype = np.iinfo(img.dtype).max
+    white = [max_dtype] * 3
     # fill outside of circle
     # TODO: check if works with dtypes other than uint8
     mask = cv.circle(
         np.zeros(crop.shape, crop.dtype),
         new_center,
         int(r),
-        [255, 255, 255],
+        white,
         -1,
         cv.FILLED,
     )
@@ -213,31 +287,36 @@ def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     ┌──────────┬───────────┬───────────┬───────────┬───────────┐
     │ axes     │     0     │     1     │     2     │     3     │
     ╞══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
-    │col table │   shade   │     4     │    -/-    │    -/-    │
-    │->palette │     1     │     1     │   shade   │     3     │
+    │col table │  shades   │ [b,g,r,n] │    -/-    │    -/-    │
     ├──────────┼───────────┼───────────┼───────────┼───────────│
-    │ im       │     Y     │     X     │     3     │    -/-    │
-    │->im      │     Y     │     X     │     1     │     3     │
+    │ palette  │     1     │     1     │  shades   │  [b,g,r]  │
+    └──────────┴───────────┴───────────┴───────────┴───────────┘
+    ┌──────────┬───────────┬───────────┬───────────┬───────────┐
+    │ axes     │     0     │     1     │     2     │     3     │
+    ╞══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
+    │ im       │   rows    │   cols    │  [b,g,r]  │    -/-    │
+    ├──────────┼───────────┼───────────┼───────────┼───────────│
+    │ reshaped │   rows    │   cols    │     1     │  [b,g,r]  │
     └──────────┴───────────┴───────────┴───────────┴───────────┘
     """
     palette = color_table[None, None, :, 0:3].astype(np.float32)
     im = im[:, :, None, :].astype(np.float32)
     """
-    Now Both palette and im have broadcastable shapes.
+    Now Both palette and im have compatible shapes.
     ┌──────────┬───────────┬───────────┬───────────┬───────────┐
-    │ palette  │     1     │     1     │  [shade]  │    -3-    │
-    │ im       │    [Y]    │    [X]    │     1     │    -3-    │
+    │ palette  │     1     │     1     │   shades  │  [b,g,r]  │
+    │ im       │   rows    │   cols    │     1     │  [b,g,r]  │
     └──────────┴───────────┴───────────┴───────────┴───────────┘
     which allows us to compute the distance between to bgr colors.
     ┌──────────┬───────────┬───────────┬───────────┐
-    │ norm     │     Y     │     X     │  shades   │
+    │ norm     │   rows    │   cols    │  shades   │
     └──────────┴───────────┴───────────┴───────────┘
     """
     norm = np.linalg.norm(im - palette, axis=3)
     """
-    And get the index of the lowest along axis 2 as value
+    And get the index of the lowest distance along axis 2 as value
     ┌──────────┬───────────┬───────────┐
-    │ labeled  │     Y     │     X     │
+    │ labeled  │   rows    │   cols    │
     └──────────┴───────────┴───────────┘
     """
     labeled = norm.argmin(axis=2).astype(np.uint8)

@@ -7,7 +7,7 @@ import json
 # Other
 import cv2 as cv
 import numpy as np
-import numpy.typing as npT
+from numpy.typing import NDArray
 from click import FileError, echo
 
 # Project files
@@ -127,9 +127,9 @@ def edit_project_file(k: int, project_path: Path, from_image: Path | None):
     config_table: list[list[int]] = [
         list(shade.as_row()) for shade in project.configuration.shades
     ]
-    color_table: npT.NDArray
-    palette: npT.NDArray
-    labeled_img: npT.NDArray
+    color_table: NDArray
+    palette: NDArray
+    labeled_img: NDArray
 
     if k == 1 and from_image is None:
         if project.reference_image_model is None:

@@ -1,19 +1,26 @@
+from enum import Enum
 import sys
 from PySide6.QtWidgets import (
     QApplication,
-    QDialog,
     QHBoxLayout,
     QMainWindow,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, Slot
-from spot_detector.view.detection_settings import DetectionSettings
+from PySide6.QtCore import Qt, Slot, Signal
+from spot_detector.view.detection_settings.detection_settings import DetectionSettings
 from spot_detector.model.models import ColorAndParams, DetParams
 
 
-class DetectionSettingsDialog(QDialog):
+class SettingsWindow(QWidget):
+
+    class ExitStatus(Enum):
+        Accepted = 0
+        Rejected = 1
+
+    exited: Signal = Signal(ExitStatus)
+
     def __init__(
         self,
         model: ColorAndParams,
@@ -21,13 +28,13 @@ class DetectionSettingsDialog(QDialog):
         f: Qt.WindowType = Qt.WindowType.Window,
     ) -> None:
         """
-        A dialog for updating and managing detection settings for all the
-        labels created by the user.
+        A dialog for updating and managing detection settings for each label
+        class created by the user.
         """
         super().__init__(parent, f)
 
         self.model = model.model_copy(deep=True)
-
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.prepopulate_detection_settings()
 
         l1 = QVBoxLayout(self)
@@ -49,12 +56,13 @@ class DetectionSettingsDialog(QDialog):
         self.cancel_button.clicked.connect(self.reject)
         self.apply_button.clicked.connect(self.accept)
 
+
     def prepopulate_detection_settings(self):
         """
-        During init, updates config_copy to have as many detection settings
-        as there are unique non-zero labels in ColorData.
+        During init, updates attribute model to have as many settings object as
+        there are unique non-zero label classes in ColorData.
 
-        The goal is to add default detection settings for any new label.
+        The goal is to add default detection settings for any newly added class.
         """
         # get unique elements
         labels = set([shade.get_label_id() for shade in self.model.shades])
@@ -63,6 +71,16 @@ class DetectionSettingsDialog(QDialog):
         det_variant_count = len(self.model.det_params)
         for label_id in range(det_variant_count, label_count):
             self.model.det_params.append(DetParams.from_prepopulated_defaults(label_id))
+
+    @Slot()
+    def reject(self):
+        self.close()
+        self.exited.emit(self.ExitStatus.Rejected)
+
+    @Slot()
+    def accept(self):
+        self.close()
+        self.exited.emit(self.ExitStatus.Accepted)
 
 
 if __name__ == "__main__":
@@ -76,29 +94,39 @@ if __name__ == "__main__":
             super().__init__(parent, flags)
             self.button = QPushButton("open dialog")
             self.setCentralWidget(self.button)
-            self.button.clicked.connect(self.handle_dialog)
+            self.button.clicked.connect(self.start_dialog)
 
         @Slot()
-        def handle_dialog(self):
+        def start_dialog(self):
             default_model = ColorAndParams.from_prepopulated_defaults(
                 color_name="white"
             )
-            dump1 = default_model.model_dump_json()[:]
-            dialog = DetectionSettingsDialog(default_model)
-            result = dialog.exec()
-            if result == QDialog.DialogCode.Rejected:
-                print("the user cancelled the current action")
-                return
-            print("the user updated the detection settings")
-            output_model = dialog.model.model_copy(deep=True)
-            dump3 = output_model.model_dump_json()[:]
+            self.dump1 = default_model.model_dump_json()[:]
+            self.dialog = SettingsWindow(default_model)
+            self.dialog.exited.connect(self.handle_dialog_exit)
+            self.dialog.show()
 
-            if dump1 == dump3:
+        @Slot(SettingsWindow.ExitStatus)
+        def handle_dialog_exit(self, status):
+            match status:
+                case SettingsWindow.ExitStatus.Rejected:
+                    print("the user cancelled the current action")
+                    return
+
+                case SettingsWindow.ExitStatus.Accepted:
+                    print("the user updated the detection settings")
+                    output_model = self.dialog.model.model_copy(deep=True)
+                    dump3 = output_model.model_dump_json()[:]
+
+                case _:
+                    raise NotImplementedError()
+
+            if self.dump1 == dump3:
                 print("no changes applied")
             else:
                 print("changes detected between dump1 and dump3")
                 print("dump1:")
-                print(dump1)
+                print(self.dump1)
                 print("dump3:")
                 print(dump3)
 

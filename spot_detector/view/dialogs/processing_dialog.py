@@ -8,17 +8,16 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QListWidget,
     QPushButton,
     QTableView,
-    QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import Qt, Slot, Signal
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QKeyEvent
-from spot_detector.model import image_set_model
+import cv2
+from numpy.typing import NDArray
 from spot_detector.model.image_set_model import ImageEntry, ImageSetModel
 from spot_detector.model.project import Project
 from spot_detector.view.path_line_widget import PathLineWidget
@@ -173,13 +172,20 @@ class ImageProcessingDialog(QDialog):
     @Slot()
     def dust_filter_check_dimensions(self):
         entries = self._image_set_model._entries[:]
-        filter = self.project_copy.dust_filter_image_path
+
+        if self.project_copy.dust_filter_image_path is None:
+            ...  # handle this code path
+            return
+
+        filter = cv2.imread(self.project_copy.dust_filter_image_path)
 
         if filter is None:
             ...  # handle this code path
             return
 
         ref_width, ref_height = get_img_size(filter)
+
+        image_paths = self.get_
 
         for img in images:
             width, height = get_img_size(img)
@@ -331,6 +337,10 @@ class ImageProcessingDialog(QDialog):
         for item_idx in range(self.file_tree.topLevelItemCount()):
             print(item_idx)
         return [str(i) for i in range(21)]
+
+
+def get_img_size(mat: NDArray) -> tuple[int, int]:
+    raise NotImplementedError("sorry")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QFileDialog, QWidget, QLineEdit, QPushButton
 from PySide6.QtCore import Slot
 
 from spot_detector.file_utils import VALID_CSV_TYPES, VALID_IMAGE_TYPES
-from spot_detector.view.dialogs import (
+from spot_detector.view.dialogs.dialogs import (
     OpenDirFileDialog,
     ReadOnlyImageFileDialog,
     OpenProcessingFileDialog,

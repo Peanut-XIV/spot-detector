@@ -19,7 +19,7 @@ from PySide6.QtCore import (
 )
 
 # //////// DO NOT REMOVE ////////
-from spot_detector import rc_resources, rc_documentation
+from spot_detector import rc_resources, rc_documentation  # noqa: F401 WARN: Do not remove
 
 from spot_detector.types import Hint
 

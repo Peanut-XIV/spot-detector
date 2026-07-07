@@ -2,7 +2,6 @@ import sys
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
-    QListWidget,
     QScrollArea,
     QSplitter,
     QWidget,
@@ -10,9 +9,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Slot, Signal
 
 from spot_detector.model.models import ColorAndParams, DetParams
-from spot_detector.view.hint_panel import HintPanel
-from spot_detector.view.settings_fields import SettingsFields
-from spot_detector.view.label_list_widget import LabelWidget
+from spot_detector.view.detection_settings.hint_panel import HintPanel
+from spot_detector.view.detection_settings.settings_fields import SettingsFields
+from spot_detector.view.detection_settings.label_list_widget import LabelClassWidget
 
 
 class DetectionSettings(QWidget):
@@ -38,9 +37,9 @@ class DetectionSettings(QWidget):
 
         # Colors
         # TODO: change to a list that can add and remove entries
-        self.colors_list = LabelWidget(self.model.det_params, split)
-        self.colors_list.setObjectName("Detection_settings_color_list")
-        split.addWidget(self.colors_list)
+        self.label_classes = LabelClassWidget(self.model.det_params, split)
+        self.label_classes.setObjectName("Detection_settings_color_list")
+        split.addWidget(self.label_classes)
 
         # Fields
         fields_widget = QScrollArea(self)
@@ -67,16 +66,17 @@ class DetectionSettings(QWidget):
         self.setLayout(layout)
 
         self.fields.clicked.connect(self.help_panel.select_hint)
-        self.fields.modelChanged.connect(self.colors_list.update_focused_model)
-        self.colors_list.focused_changed.connect(self.fields.load)
-        self.colors_list.model_list_changed.connect(self.handle_models_change)
+        self.fields.modelChanged.connect(self.label_classes.update_focused_model)
+        self.label_classes.class_focus_changed.connect(self.fields.load)
+        self.label_classes.model_list_changed.connect(self.handle_models_change)
 
     def load(self, model: ColorAndParams):
-        self.colors_list.update_models.emit(model.det_params)
+        self.label_classes.update_models.emit(model.det_params)
         self.fields.load(model.det_params[0])
 
     @Slot(list)
     def handle_models_change(self, models: list[DetParams]):
+        # print("updating model")
         self.model.det_params = models
 
 

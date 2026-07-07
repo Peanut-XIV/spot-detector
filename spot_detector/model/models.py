@@ -36,7 +36,7 @@ class Shade(BaseModel):
     @classmethod
     def with_conversion(
         cls,
-        values: tuple[int, int, int],
+        values: PixTuple,
         label_id: int,
         input_order: ChannelOrder = ChannelOrder.BGR,
         input_depth: ChannelDepth = ChannelDepth.U16,
@@ -82,7 +82,7 @@ class Shade(BaseModel):
 
     def set_color(
         self,
-        values: tuple[int, int, int],
+        values: PixTuple,
         order: ChannelOrder = ChannelOrder.BGR,
         depth: ChannelDepth = ChannelDepth.U16,
     ):
@@ -297,7 +297,7 @@ class DetParams(BaseModel):
 
 
 class ColorAndParams(BaseModel):
-    reference_image: str  # path string to the reference image
+    reference_image: str  # path string to the reference image (may be obsolete)
     shades: list[Shade]
     det_params: list[DetParams]
 

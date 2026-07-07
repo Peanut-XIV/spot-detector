@@ -104,6 +104,7 @@ class SettingsFields(QWidget):
 
     @Slot(DetParams)
     def load(self, model: DetParams):
+        # print("Settings Fields: loading model")
         self.name_field.field.setText(model.color_name)
         self.min_dist.spinbox.setValue(model.min_dist or 0)
         self.thresh.load(model.thresh)
@@ -119,6 +120,7 @@ class SettingsFields(QWidget):
         function. Then a different signal is emited containing a copy of the
         new model.
         """
+        # print("emiting updated model")
         self.modelChanged.emit(self.model.model_copy(deep=True))
 
 
@@ -206,6 +208,7 @@ class TresholdWidget(QGroupBox):
         self.modelChanged.emit()
 
     def load(self, model: Threshold):
+        # print("Threshold widget: loading model")
         check_state = bool2CheckState(model.automatic)
         self.on_automatic_changed(check_state)
         self.automatic_checkbox.setCheckState(check_state)
@@ -324,6 +327,7 @@ class SimpleParamWidget(QGroupBox):
         """
         updates the model then send emits a "modelChanged" signal
         """
+        # print("maximum changed")
         self.mini_spinbox.setMaximum(value)
         self.model.maxi = value
         self.modelChanged.emit()
@@ -333,6 +337,7 @@ class SimpleParamWidget(QGroupBox):
         """
         updates the model then send emits a "modelChanged" signal
         """
+        # print("minimum changed")
         self.maxi_spinbox.setMinimum(value)
         self.model.mini = value
         self.modelChanged.emit()
@@ -342,6 +347,7 @@ class SimpleParamWidget(QGroupBox):
         """
         updates the model then send emits a "modelChanged" signal
         """
+        # print("enabled state changed")
         enabled = checkState2Bool(state)
         maxi_enabled = checkState2Bool(self.maxi_enabled_checkbox.checkState())
         self.mini_spinbox.setEnabled(enabled)
@@ -354,6 +360,7 @@ class SimpleParamWidget(QGroupBox):
         """
         updates the model then send emits a "modelChanged" signal
         """
+        # print("maximum enabled state changed")
         maxi_enabled = checkState2Bool(state)
         enabled = checkState2Bool(self.enabled_checkbox.checkState())
         self.maxi_spinbox.setEnabled(enabled and maxi_enabled)
@@ -365,6 +372,7 @@ class SimpleParamWidget(QGroupBox):
 
     @Slot(SimpleParam)
     def load(self, model: SimpleParam):
+        # print("Simple Param: loading model")
         check_state = bool2CheckState(model.enabled)
         self.on_enabled_changed(check_state)
         self.enabled_checkbox.setCheckState(check_state)
