@@ -26,7 +26,7 @@ VALID_IMAGE_MIME_TYPES: list[str] = [
 ]
 
 VALID_IMAGE_TYPES: str = (
-    "(*.jpg, *.jpeg, *jpe, *.jfif, *.png, *.bmp, *.dib, *.webp, *.tif, *.tiff)"
+    "(*.jpg *.jpeg *jpe *.jfif *.png *.bmp *.dib *.webp *.tif *.tiff)"
 )
 
 VALID_CSV_MIME_TYPES: list[str] = [
