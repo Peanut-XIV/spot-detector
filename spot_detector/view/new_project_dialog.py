@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from spot_detector.model.project import Project
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
-from spot_detector.view.path_line_widget import PathLineWidget
+from spot_detector.view.path_line_widget import PathEdit
 
 
 class NewProjectDialog(QDialog):
@@ -58,7 +58,7 @@ class NewProjectDialog(QDialog):
         layout.addWidget(self.name_line, 0, 1)
 
         l1 = QLabel("Dust Filter path:", self)
-        self.dust_filter_field = PathLineWidget(
+        self.dust_filter_field = PathEdit(
             "read_only_img", "Select a dust filter", None, self
         )
         layout.addWidget(l1, 1, 0)
@@ -67,7 +67,7 @@ class NewProjectDialog(QDialog):
         layout.addWidget(self.dust_filter_field.get_button(), 1, 2)
 
         l2 = QLabel("Reference image path:", self)
-        self.ref_image_field = PathLineWidget(
+        self.ref_image_field = PathEdit(
             "read_only_img", "Select a reference image", None, self
         )
         layout.addWidget(l2, 2, 0)
@@ -76,7 +76,7 @@ class NewProjectDialog(QDialog):
         layout.addWidget(self.ref_image_field.get_button(), 2, 2)
 
         l3 = QLabel("Image directory path:", self)
-        self.image_directory_field = PathLineWidget(
+        self.image_directory_field = PathEdit(
             "dir", "Select an image directory", None, self
         )
         layout.addWidget(l3, 3, 0)

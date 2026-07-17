@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from typing_extensions import Self
 import json
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -131,7 +131,7 @@ def homogenous_color_table(levels: int) -> list[ShadeTuple]:
     Values for `levels` above 5 are not recommended.
     """
     base = [int(i * 65535 / (levels - 1)) for i in range(levels)]
-    table = []
+    table: list[ShadeTuple] = []
     id = 0
     for x in base:
         for y in base:
@@ -161,15 +161,15 @@ class Threshold(BaseModel):
 class SimpleParam(BaseModel):
     enabled: bool
     mini: float = Field(ge=0, default=0)
-    maxi: Optional[float] = None
+    maxi: float | None = None
 
-    def __init__(self, /, **data: Any) -> None:
+    def __init__(self, /, **data: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
         super().__init__(**data)
 
     @field_validator("maxi")
     def maxi_greater_than_mini(
-        cls, maxi: Optional[float], info: FieldValidationInfo
-    ) -> Optional[float]:
+        cls, maxi: float | None, info: FieldValidationInfo
+    ) -> float | None:
         maxi_does_exist = bool(info.data["enabled"] and (maxi is not None) and maxi)
         try:
             if maxi_does_exist and (maxi <= info.data["mini"]):
@@ -179,7 +179,7 @@ class SimpleParam(BaseModel):
         return maxi
 
     @classmethod
-    def from_defaults(cls, enabled, mini: float, maxi: float | None) -> Self:
+    def from_defaults(cls, enabled: bool, mini: float, maxi: float | None) -> Self:
         return cls(enabled=enabled, mini=mini, maxi=maxi)
 
 
@@ -191,30 +191,22 @@ class DetParams(BaseModel):
 
     color_name: str
     thresh: Threshold
-    min_dist: Optional[float] = Field(gt=0, default=None)
-    filter_by_color: Optional[int] = Field(ge=0, le=255, default=255)
-    area: SimpleParam = Field(
-        default_factory=lambda: SimpleParam.from_defaults(False, 0, 4000)
-    )
-    circ: SimpleParam = Field(
-        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
-    )
-    convex: SimpleParam = Field(
-        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
-    )
-    inertia: SimpleParam = Field(
-        default_factory=lambda: SimpleParam.from_defaults(False, 0, 1)
-    )
+    min_dist: float | None = Field(gt=0, default=None)
+    filter_by_color: int | None = Field(ge=0, le=255, default=255)
+    area:    SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 4000))
+    circ:    SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
+    convex:  SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
+    inertia: SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
 
-    def __init__(self, /, **data: Any) -> None:
+    def __init__(self, /, **data: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
         super().__init__(**data)
 
     @classmethod
-    def from_defaults(cls, color_name) -> Self:
+    def from_defaults(cls, color_name: str) -> Self:
         return cls(color_name=color_name, thresh=Threshold.from_defaults())
 
     @classmethod
-    def from_prepopulated_defaults(cls, name: str | int | Any) -> Self:
+    def from_prepopulated_defaults(cls, name: str | int | None) -> Self:
         """
         Returns an instance of DetParams for the settings of a OpenCV
         SimpleBlobDetector instance. Takes the name of the only label as input.
@@ -265,34 +257,31 @@ class DetParams(BaseModel):
             params.thresholdStep = thresh.step
 
         area = self.area
-        if area is not None:
-            if area.enabled:
-                params.filterByArea = True
-                params.minArea = area.mini
-                if area.maxi is not None:
-                    params.maxArea = area.maxi
-            else:
-                params.filterByArea = False
+        if area.enabled:
+            params.filterByArea = True
+            params.minArea = area.mini
+            if area.maxi is not None:
+                params.maxArea = area.maxi
+        else:
+            params.filterByArea = False
 
         circ = self.circ
-        if circ is not None:
-            if circ.enabled:
-                params.filterByCircularity = True
-                params.minCircularity = circ.mini
-                if circ.maxi is not None:
-                    params.maxCircularity = circ.maxi
-            else:
-                params.filterByCircularity = False
+        if circ.enabled:
+            params.filterByCircularity = True
+            params.minCircularity = circ.mini
+            if circ.maxi is not None:
+                params.maxCircularity = circ.maxi
+        else:
+            params.filterByCircularity = False
 
         convex = self.convex
-        if convex is not None:
-            if convex.enabled:
-                params.filterByConvexity = True
-                params.minConvexity = convex.mini
-                if convex.maxi is not None:
-                    params.maxConvexity = convex.maxi
-            else:
-                params.filterByConvexity = False
+        if convex.enabled:
+            params.filterByConvexity = True
+            params.minConvexity = convex.mini
+            if convex.maxi is not None:
+                params.maxConvexity = convex.maxi
+        else:
+            params.filterByConvexity = False
         return params
 
 
@@ -302,7 +291,7 @@ class ColorAndParams(BaseModel):
     det_params: list[DetParams]
 
     @classmethod
-    def from_defaults(cls, color_name="color_1") -> Self:
+    def from_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
             reference_image="",
             shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
@@ -318,8 +307,8 @@ class ColorAndParams(BaseModel):
         )
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        return cls(**data)
+    def from_dict(cls, data: dict[str, Any]) -> Self:  # pyright: ignore[reportExplicitAny]
+        return cls(**data)  # pyright: ignore[reportAny]
 
     def generate_detection_parameters(self):
         """
@@ -377,10 +366,10 @@ class ColorAndParams(BaseModel):
 
 
 class CLIDefaults(BaseModel):
-    image_dir: Optional[str] = None
-    csv_path: Optional[str] = None
-    depths: Optional[list[str]] = None
-    regex: Optional[str] = None
+    image_dir: str | None = None
+    csv_path: str | None = None
+    depths: list[str] | None = None
+    regex: str | None = None
 
     @classmethod
     def from_path(cls, file_path: str | Path) -> Self:
@@ -388,8 +377,8 @@ class CLIDefaults(BaseModel):
         Unused code, check before removing though
         """
         with open(file_path, "r", encoding="UTF-8") as cfg_file:
-            content = json.load(cfg_file).__getitem__("CLI")
+            content = json.load(cfg_file).__getitem__("CLI")  # pyright: ignore[reportAny]
         if content is None:
             raise ValidationError(f"CLI not found in file {str(file_path)}")
-        output = cls(**content)
+        output = cls(**content)  # pyright: ignore[reportAny]
         return output

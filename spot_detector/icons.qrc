@@ -5,17 +5,19 @@
   <file>resources/images/loupe_neutre.png</file>
   <file>resources/images/ref_image_icon.png</file>
   <file>resources/images/detection_settings_icon.png</file>
-  <file>resources/icons/select_off_16.png</file>
-  <file>resources/icons/select_off_32.png</file>
-  <file>resources/icons/select_off_64.png</file>
-  <file>resources/icons/select_off_128.png</file>
-  <file>resources/icons/select_off_256.png</file>
-  <file>resources/icons/select_off_512.png</file>
-  <file>resources/icons/select_on_16.png</file>
-  <file>resources/icons/select_on_32.png</file>
-  <file>resources/icons/select_on_64.png</file>
-  <file>resources/icons/select_on_128.png</file>
-  <file>resources/icons/select_on_256.png</file>
-  <file>resources/icons/select_on_512.png</file>
+  <file>resources/icons/select_icon/select_off_16.png</file>
+  <file>resources/icons/select_icon/select_off_32.png</file>
+  <file>resources/icons/select_icon/select_off_64.png</file>
+  <file>resources/icons/select_icon/select_off_128.png</file>
+  <file>resources/icons/select_icon/select_off_256.png</file>
+  <file>resources/icons/select_icon/select_off_512.png</file>
+  <file>resources/icons/select_icon/select_on_16.png</file>
+  <file>resources/icons/select_icon/select_on_32.png</file>
+  <file>resources/icons/select_icon/select_on_64.png</file>
+  <file>resources/icons/select_icon/select_on_128.png</file>
+  <file>resources/icons/select_icon/select_on_256.png</file>
+  <file>resources/icons/select_icon/select_on_512.png</file>
+  <file>resources/icons/app_icon/spot_detector_logo_full.png</file>
+  <file>resources/icons/app_icon/spot_detector_logo_small.png</file>
 </qresource>
 </RCC>

@@ -1,10 +1,14 @@
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypeVar
 
 import cv2 as cv
-from numpy.typing import DTypeLike
+import numpy as np
+from numpy import uint8
+from numpy.typing import DTypeLike, NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_TYPES
+from spot_detector.model.processing_settings_models import CroppingSettings
+from spot_detector.transformations import convert_mat_uint8, crop_to_dish_roi
 from spot_detector.view.file_selection.file_selection_items import (
     FileStatus,
     QualityFlag,
@@ -108,3 +112,60 @@ def make_dust_filter_compat_checker(
         return check_dust_filter_compat(shape, data_type, file_path)
 
     return checker
+
+def make_autocropping_checker(config: CroppingSettings) -> Callable[[Path], tuple[NDArray[uint8] | None, StatusUpdate]]:
+    def checker(image_path: Path) -> tuple[NDArray[uint8] | None, StatusUpdate]:
+        return check_autocropping(image_path, config)
+    return checker
+
+
+def check_autocropping(image_path: Path, config: CroppingSettings) -> tuple[NDArray[uint8] | None, StatusUpdate]:
+    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR)
+
+    if image is None:
+        return (None, file_error_in_quality_check(Path(image_path)))
+
+    image_mat = convert_mat_uint8(image)  # pyright: ignore[reportArgumentType]
+
+    shortest_edge = min(int(image_mat.shape[0]), int(image_mat.shape[1]))  # pyright: ignore[reportAny]
+    longest_edge  = max(int(image_mat.shape[0]), int(image_mat.shape[1]))  # pyright: ignore[reportAny]
+    ideal_radius = shortest_edge / 2
+
+    if config.min_radius_enabled:
+        mini = int(ideal_radius * config.min_radius_value / 100)
+    else:
+        mini = 0
+
+    if config.max_radius_enabled:
+        maxi = int(ideal_radius * config.max_radius_value / 100)
+    else:
+        maxi = longest_edge
+
+    print(f"before: {image_mat.shape}:{image_mat.dtype}")
+
+    cropped_image = crop_to_dish_roi(image_mat, (mini, maxi)).astype(np.uint8)
+
+    print(f"after: {cropped_image.shape}:{cropped_image.dtype}")
+
+    status = StatusUpdate(Path(image_path), FileStatus.Ok,
+        (QualityFlag.Checked | QualityFlag.RoiFail, QualityFlag.Checked), [],)
+
+    return cropped_image, status
+
+T = TypeVar("T")
+U = TypeVar("U")
+V = TypeVar("V")
+
+def weird_tee(func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],V]]:
+    def teed_func(t: T) -> tuple[tuple[T,U],V]:
+        u, v = func(t)
+        return ((t,u),v)
+    return teed_func
+
+def check_blur(image_path: Path, blur_threshold: float) -> StatusUpdate:
+    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR)
+    grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    laplacian = cv.Laplacian(grayscale, cv.CV_64F)
+    variance = np.var(laplacian)
+    return StatusUpdate(image_path, FileStatus.Ok, (QualityFlag.Checked | QualityFlag.Blurry, QualityFlag.Checked), [])
+

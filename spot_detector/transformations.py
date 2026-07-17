@@ -1,73 +1,72 @@
 # Python standard library
 from math import sqrt
-from typing import TypeAlias, Union
+from typing import TypeAlias, TypeVar
 
 # Third party imports
 import cv2 as cv
 import numpy as np
+from numpy import int8, int16, int32, int64, uint8, uint16, uint32, uint64
 from numpy.typing import NDArray
 
-# Project files
-from .types import T
 
-SignedIntegerType: TypeAlias = Union[np.int8, np.int16, np.int32, np.int64]
-UnsignedIntegerType: TypeAlias = Union[np.uint8, np.uint16, np.uint32, np.uint64]
-IntegerType: TypeAlias = Union[SignedIntegerType, UnsignedIntegerType]
+SignedIntegerType: TypeAlias = int8 | int16 | int32 | int64
+UnsignedIntegerType: TypeAlias = uint8 | uint16 | uint32 | uint64
+IntegerType: TypeAlias = SignedIntegerType | UnsignedIntegerType
 
-def convert_mat_uint16(mat: NDArray[IntegerType]) -> NDArray[np.uint16]:
+def convert_mat_uint16(mat: NDArray[IntegerType]) -> NDArray[uint16]:
     match mat.dtype:
 
         case np.uint8:
-            copy = np.bitwise_left_shift(mat.astype(np.uint16), 8).astype(np.uint16)
+            copy = np.bitwise_left_shift(mat.astype(uint16), 8).astype(uint16)
         case np.uint16:
-            copy = mat.copy().astype(np.uint16)
+            copy = mat.copy().astype(uint16)
         case np.uint32:
-            copy = np.bitwise_right_shift(mat, 8).astype(np.uint16)
+            copy = np.bitwise_right_shift(mat, 8).astype(uint16)
         case np.uint64:
-            copy = np.bitwise_right_shift(mat, 24).astype(np.uint16)
+            copy = np.bitwise_right_shift(mat, 24).astype(uint16)
 
         case np.int8:
-            unsigned = np.bitwise_xor(mat, np.uint8(0x80)).astype(np.uint8)
-            copy = np.bitwise_left_shift(mat, 8).astype(np.uint16)
+            unsigned = np.bitwise_xor(mat, uint8(0x80)).astype(uint8)
+            copy = np.bitwise_left_shift(mat, 8).astype(uint16)
         case np.int16:
-            copy = np.bitwise_xor(mat, np.uint16(0x8000)).astype(np.uint16)
+            copy = np.bitwise_xor(mat, uint16(0x8000)).astype(uint16)
         case np.int32:
-            unsigned = np.bitwise_xor(mat, np.uint32(0x80000000)).astype(np.uint32)
-            copy = np.bitwise_right_shift(unsigned, 16).astype(np.uint16)
+            unsigned = np.bitwise_xor(mat, uint32(0x80000000)).astype(uint32)
+            copy = np.bitwise_right_shift(unsigned, 16).astype(uint16)
         case np.int64:
-            unsigned = np.bitwise_xor(mat, np.uint64(0x8000000000000000)).astype(np.uint64)
-            copy = np.bitwise_right_shift(unsigned, 48).astype(np.uint16)
+            unsigned = np.bitwise_xor(mat, uint64(0x8000000000000000)).astype(uint64)
+            copy = np.bitwise_right_shift(unsigned, 48).astype(uint16)
 
         case _:
             raise TypeError("Unsupported datatype for argument mat. Datatype must be an integer type")
 
     return copy
 
-def convert_mat_uint8(mat: NDArray[IntegerType]) -> NDArray[np.uint8]:
+def convert_mat_uint8(mat: NDArray[IntegerType]) -> NDArray[uint8]:
 
     # cast to U8 :
     match mat.dtype:
 
         case np.uint8:
-            copy = mat.copy().astype(np.uint8)
+            copy = mat.copy().astype(uint8)
         case np.uint16:
-            copy = np.bitwise_right_shift(mat, 8).astype(np.uint8)
+            copy = np.bitwise_right_shift(mat, 8).astype(uint8)
         case np.uint32:
-            copy = np.bitwise_right_shift(mat, 24).astype(np.uint8)
+            copy = np.bitwise_right_shift(mat, 24).astype(uint8)
         case np.uint64:
-            copy = np.bitwise_right_shift(mat, 56).astype(np.uint8)
+            copy = np.bitwise_right_shift(mat, 56).astype(uint8)
 
         case np.int8:
-            copy = np.bitwise_xor(mat, np.uint8(0x80)).astype(np.uint8)
+            copy = np.bitwise_xor(mat, uint8(0x80)).astype(uint8)
         case np.int16:
-            unsigned = np.bitwise_xor(mat, np.uint16(0x8000)).astype(np.uint16)
-            copy = np.bitwise_right_shift(unsigned, 8).astype(np.uint8)
+            unsigned = np.bitwise_xor(mat, uint16(0x8000)).astype(uint16)
+            copy = np.bitwise_right_shift(unsigned, 8).astype(uint8)
         case np.int32:
-            unsigned = np.bitwise_xor(mat, np.uint32(0x80000000)).astype(np.uint32)
-            copy = np.bitwise_right_shift(unsigned, 24).astype(np.uint8)
+            unsigned = np.bitwise_xor(mat, uint32(0x80000000)).astype(uint32)
+            copy = np.bitwise_right_shift(unsigned, 24).astype(uint8)
         case np.int64:
-            unsigned = np.bitwise_xor(mat, np.uint64(0x8000000000000000)).astype(np.uint64)
-            copy = np.bitwise_right_shift(unsigned, 56).astype(np.uint8)
+            unsigned = np.bitwise_xor(mat, uint64(0x8000000000000000)).astype(uint64)
+            copy = np.bitwise_right_shift(unsigned, 56).astype(uint8)
 
         case _:
             raise TypeError("Unsupported datatype for argument mat. Datatype must be an integer type")
@@ -75,15 +74,16 @@ def convert_mat_uint8(mat: NDArray[IntegerType]) -> NDArray[np.uint8]:
     return copy
 
 
+T: TypeVar = TypeVar("T")
 
 def crop_to_dish_roi(
-    img: NDArray,
+    img: NDArray[IntegerType],
     radius_range: tuple[int, int] = (-1, -1),
     subsample_rate: int = 16,
     initial_threshold: int = 16,
     threshold_step: int = 16,
     minDist: int = 100,
-) -> NDArray:
+) -> NDArray[IntegerType]:
     """
     Detects the visible circle of a petri dish within an image, based on some
     assumptions on its content, position, environment and lighting conditions.
@@ -106,7 +106,7 @@ def crop_to_dish_roi(
         For example, 16 samples 1 in 4 pixels both verticaly and horizontaly.
         Making the image to process 16x smaller. Should be a square number.
         If not, will be rounded down. Set it to 1 or less to detect the ROI
-        from the whole picture.
+        from the unmodified picture.
 
     minimum_threshold:
         Sets the first value to use for the threshold filter.
@@ -115,29 +115,31 @@ def crop_to_dish_roi(
         Sets the incrementation step of the threshold value, should the previous
         one fail to detect a satisfying circle.
     """
-    ss_rate = max(int(sqrt(subsample_rate)), 1)
-    sub = img[::ss_rate, ::ss_rate, :]
 
-    if len(img.shape) == 3:
+    ss_rate = max(int(sqrt(subsample_rate)), 1)
+    sub = img[::ss_rate, ::ss_rate, :3]
+
+    dims = len(img.shape)
+    if dims == 3:
         gray = cv.cvtColor(sub, cv.COLOR_BGR2GRAY)
-    else:
+    elif dims == 2:
         gray = sub
+    else:
+        raise ValueError("Unsupported image array shape")
 
     try:
-        gray = convert_mat_uint8(gray)  # type:ignore
+        gray = convert_mat_uint8(gray)
     except TypeError:
         raise TypeError("Unsupported floating point tiff image datatype")
 
 
-    if radius_range == (-1, -1):
-        fit_r = min(gray.shape[0], gray.shape[1]) / 2
-        small_r, big_r = fit_r * 0.7, fit_r * 1.1
-    else:
-        small_r = radius_range[0] / ss_rate
-        big_r = radius_range[1] / ss_rate
+    h, w = int(gray.shape[0]), int(gray.shape[1])  # pyright: ignore[reportAny]
+    small_edge = min(h,w)
 
-    if small_r < 0:
-        raise ValueError("Argument radius_range contains invalid negative numbers")
+    ideal_radius = small_edge/2
+
+    small_radius = ideal_radius * 0.7 if radius_range[0] < 0 else radius_range[0] / ss_rate
+    big_radius   = ideal_radius * 1.1 if radius_range[1] < 0 else radius_range[1] / ss_rate
 
     kernel = np.array(
         [
@@ -147,7 +149,7 @@ def crop_to_dish_roi(
             [1, 1, 1, 1, 1],
             [0, 1, 1, 1, 0],
         ],
-        dtype=np.uint8,
+        dtype=uint8,
     )
 
     candidates = np.empty(0)
@@ -161,11 +163,11 @@ def crop_to_dish_roi(
             image=grad,
             method=cv.HOUGH_GRADIENT,  # simplest of the two
             dp=2,
-            minDist=minDist,
+            minDist=minDist/ss_rate,
             param1=128,  # our image is binary... no need to fine tune?
             param2=0.8,  # our processing causes jagged edges
-            minRadius=int(small_r),  # we expect the Petri dish to
-            maxRadius=int(big_r),  # occupy as much of the frame
+            minRadius=int(small_radius),  # we expect the Petri dish to
+            maxRadius=int(big_radius),  # occupy as much of the frame
         )
 
         if len(candidates) > 0:
@@ -273,8 +275,8 @@ def crop_to_main_circle(src: NDArray, print_debug: bool = False) -> NDArray:
 
 def isolate_categories(
     color_table: NDArray, categories: list[int]
-) -> NDArray[np.uint8]:
-    color: NDArray[np.uint8] = np.uint8(color_table[:, 0:3].copy())  # type: ignore
+) -> NDArray[uint8]:
+    color: NDArray[uint8] = uint8(color_table[:, 0:3].copy())  # type: ignore
     for i in range(color_table.shape[0]):
         if color_table[i, 3] not in categories:
             color[i, :] = 0
@@ -319,7 +321,7 @@ def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     │ labeled  │   rows    │   cols    │
     └──────────┴───────────┴───────────┘
     """
-    labeled = norm.argmin(axis=2).astype(np.uint8)
+    labeled = norm.argmin(axis=2).astype(uint8)
     return labeled
 
 
@@ -356,12 +358,12 @@ def label_img_fastest_uint16(im: NDArray, color_table: NDArray) -> NDArray:
     │ labeled  │     Y     │     X     │
     └──────────┴───────────┴───────────┘
     """
-    labeled = norm.argmin(axis=2).astype(np.uint16)
+    labeled = norm.argmin(axis=2).astype(uint16)
     return labeled
 
 
 def get_k_means(
-    img: NDArray[np.uint8 | np.uint16],
+    img: NDArray[uint8 | uint16],
     k: int,
     epsilon: float = 1e-4,
     max_iter: int = 60,
@@ -377,7 +379,7 @@ def get_k_means(
 
     """
     original_dtype = img.dtype
-    if original_dtype not in (np.uint8, np.uint16):
+    if original_dtype not in (uint8, uint16):
         raise NotImplementedError
     flags = 0
     if epsilon:
@@ -431,7 +433,7 @@ def evenly_spaced_gray_palette(palette: NDArray) -> NDArray:
             if shade == cur_shade:
                 output_palette[i] = new_shades[j]
                 break
-    return output_palette.astype(np.uint8)
+    return output_palette.astype(uint8)
 
 
 def evenly_spaced_values(gs_palette: NDArray) -> NDArray:

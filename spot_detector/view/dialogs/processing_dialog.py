@@ -1,351 +1,152 @@
 from pathlib import Path
 import sys
-from PySide6.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QDialog,
-    QFileDialog,
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QTableView,
-    QTreeWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
+
+from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout, QWidget, QPushButton
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QKeyEvent
-import cv2
-from numpy.typing import NDArray
-from spot_detector.model.image_set_model import ImageEntry, ImageSetModel
+
+from spot_detector.model.models import ColorAndParams
+from spot_detector.model.processing_settings_models import ProcessingSettingsModel
 from spot_detector.model.project import Project
-from spot_detector.view.path_line_widget import PathLineWidget
+from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog, DialogExitStatus
+from spot_detector.view.file_selection.file_selection_widget import FileSelectionPanel
+from spot_detector.view.processing.output_panel import OutputFilePanel
+from spot_detector.view.processing.processing_settings_widget import ProcessingSettingsPanel
 
 
-class ImageProcessingDialog(QDialog):
-    """
-    The dialog Window that appears when the user wishes to process a set of pictures
-    """
-
-    spacer_size = 5
+class ProcessingDialog(CustomModalDialog):
 
     def __init__(
         self,
         project: Project,
+        previous_directory: Path | None = None,
         parent: QWidget | None = None,
-        f: Qt.WindowType = Qt.WindowType.Window,
+        f: Qt.WindowType = Qt.WindowType.Window
     ) -> None:
-        """Constructor of the ImageProcessingDialogue object
-
-        This should only be called once a proper detection settings model is made.
-        Checking the existence of a valid set of detection settings is left to the caller.
-        """
         super().__init__(parent, f)
-        self.setWindowTitle("Start Processing")
 
-        self.project_copy = project.model_copy(deep=True)
-        self.user_starts_processing = False
-        self.saved_config = None
+        self.project: Project = project
+        self._previous_directory: Path = previous_directory or Path.home()
 
-        base_layout = QVBoxLayout(self)
-        content_layout = QHBoxLayout()
+        self.setWindowTitle("Processing Dialog")
+        self._init_layout()
 
-        # UI divided in 3 columns
-        file_selection_layout = self._create_file_selection_layout(None)
-        content_layout.addLayout(file_selection_layout)
-        content_layout.addWidget(self.make_vline())
-        dust_filter_layout = self._create_dust_filter_layout()
-        content_layout.addLayout(dust_filter_layout)
-        content_layout.addWidget(self.make_vline())
-        output_path_layout = self._create_output_path_layout()
-        content_layout.addLayout(output_path_layout)
-        base_layout.addLayout(content_layout)
+        _ = self.reject_button.clicked.connect(self.reject)
+        _ = self.export_button.clicked.connect(self.on_save_requested)
 
-        # Finally buttons to cancel or continue
-        accept_reject_layout = self._create_accept_reject_layout()
-        base_layout.addLayout(accept_reject_layout)
+        _ = self._settings_panel.filter_box.dust_filter_test_requested.connect(self._selection_panel.check_all_files_for_filter_compat)
+        _ = self._settings_panel.cropping_box.cropping_test_requested.connect(self._selection_panel.check_selection_for_cropping)
 
-        self.add_files_button.clicked.connect(self.add_files_dialog)
-        self.cancel_button.clicked.connect(self.exit_without_saving)
-        self.save_and_exit_button.clicked.connect(self.save_and_exit)
-        self.save_and_start_button.clicked.connect(self.save_and_start)
 
-        self.accepted.connect(self.save_config)
-        self.rejected.connect(self.null_config)
 
-    def _create_file_selection_layout(
-        self, file_entries: list[ImageEntry] | None
-    ) -> QVBoxLayout:
-        """Creates the first UI column and returns it as a layout
+    def _init_layout(self):
+        main_layout: QVBoxLayout = QVBoxLayout(self)
 
-        Initialises `self.file_list`, `self.element_counter`, `self.error_box`
+        panels_layout = QHBoxLayout()
+        panels_layout.setContentsMargins(0,0,0,0)
 
-        Returns
-        -------
-        QVBoxLayout() The created layout containing different widgets
-        """
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Select Input Files"))
-        # layout.addStretch()
-        self._image_set_model = ImageSetModel(file_entries)
-        self.file_tree = self._create_image_set_view(self._image_set_model)
-        layout.addWidget(self.file_tree)
-        self.add_files_button = QPushButton("Add Files")
-        layout.addWidget(self.add_files_button)
-        self.element_counter = QLabel("Total files: 0")
-        layout.addWidget(self.element_counter)
-        self.error_box = QLabel("")
-        self.error_box.setFrameShape(QFrame.Shape.Panel)
-        self.error_box.setFrameShadow(QFrame.Shadow.Sunken)
-        self.error_box.setWordWrap(False)
-        layout.addWidget(self.error_box)
-        layout.addStretch()
-        return layout
+        self._selection_panel: FileSelectionPanel = FileSelectionPanel(self._previous_directory, self)
+        panels_layout.addWidget(self._selection_panel, stretch=1)
 
-    def _create_image_set_view(self, model: ImageSetModel | None) -> QTableView:
-        view = QTableView()
+        self._settings_panel: ProcessingSettingsPanel = ProcessingSettingsPanel(self._previous_directory, self)
+        panels_layout.addWidget(self._settings_panel, stretch=1)
 
-        view.setSortingEnabled(False)
-        view.setAcceptDrops(False)
-        view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        view.horizontalHeader().setStretchLastSection(True)
-        view.setEditTriggers(QTableView.EditTrigger.DoubleClicked)
-        view.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self._output_panel: OutputFilePanel = OutputFilePanel(self._previous_directory, self)
+        panels_layout.addWidget(self._output_panel, stretch=1)
 
-        if model is not None:
-            view.setModel(model)
-            view.resizeColumnToContents(0)
+        main_layout.addLayout(panels_layout)
+        buttons_layout = QHBoxLayout()
 
-        return view
+        self.reject_button: QPushButton = QPushButton("Exit", self)
+        buttons_layout.addWidget(self.reject_button)
 
-    def _create_dust_filter_layout(self) -> QVBoxLayout:
-        """Creates the second UI column and returns it as a layout
+        buttons_layout.addStretch()
 
-        Initialises `self.dust_filter_checkbox` and `self.dust_filter_pathline`
+        self.export_button: QPushButton = QPushButton("Export Settings",self)
+        buttons_layout.addWidget(self.export_button)
 
-        Returns
-        -------
-        QVBoxLayout()
-            The created layout containing different widgets
-        """
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Choose dust filter"))
-        # layout.addStretch()
-        self.dust_filter_checkbox = QCheckBox()
-        self.dust_filter_checkbox.setCheckState(Qt.CheckState.Unchecked)
-        self.dust_filter_checkbox.setText("Enable dust filter")
-        layout.addWidget(self.dust_filter_checkbox)
-        path_layout = QHBoxLayout()
-        self.dust_filter_pathline = PathLineWidget(
-            "read_only_img", "Dust filter path...", None, None
+        self.start_button: QPushButton = QPushButton("Start Processing", self)
+        buttons_layout.addWidget(self.start_button)
+
+        main_layout.addLayout(buttons_layout)
+
+
+    def get_model(self) -> ProcessingSettingsModel:
+        model = ProcessingSettingsModel(
+            entries=self._selection_panel.get_model(),
+            preprocessing=self._settings_panel.get_model(),
+            output=self._output_panel.get_model()
         )
-        path_layout.addWidget(self.dust_filter_pathline)
-        path_layout.addWidget(self.dust_filter_pathline.get_button())
-        layout.addLayout(path_layout)
-        note = QLabel(
-            "Note: if the dust filter is used, all provided files must"
-            " come from the same camera and have the same dimensions."
-        )
-        note.setWordWrap(True)
-        layout.addWidget(note)
-        self.df_check_dimensions_button = QPushButton("Check dimensions")
-        layout.addWidget(self.df_check_dimensions_button)
-        layout.addStretch()
+        return model
 
-        self.dust_filter_checkbox.checkStateChanged.connect(
-            self.on_dust_filter_check_state_change
-        )
-        self.on_dust_filter_check_state_change(self.dust_filter_checkbox.checkState())
-        self.df_check_dimensions_button.clicked.connect(
-            self.dust_filter_check_dimensions
-        )
-        return layout
-
-    @Slot(Qt.CheckState)
-    def on_dust_filter_check_state_change(self, new_state: Qt.CheckState):
-        self.dust_filter_pathline.setEnabled(new_state == Qt.CheckState.Checked)
-        self.dust_filter_pathline.explore_button.setEnabled(
-            new_state == Qt.CheckState.Checked
-        )
+    @Slot(ProcessingSettingsModel)
+    def set_model(self, model: ProcessingSettingsModel) -> None:
+        self._selection_panel.set_model(model.entries)
+        self._settings_panel.set_model(model.preprocessing)
+        self._output_panel.set_model(model.output)
 
     @Slot()
-    def dust_filter_check_dimensions(self):
-        entries = self._image_set_model._entries[:]
+    def on_save_requested(self) -> None:
+        print("save_requested")
+        proc_model = self.get_model()
+        model_copy = self.project.model_copy(deep=True)
+        model_copy.set_processing_settings(proc_model)
 
-        if self.project_copy.dust_filter_image_path is None:
-            ...  # handle this code path
-            return
+        save_dialog = QFileDialog(self, "Save Project", model_copy.latest_save_path or str(Path.home()))
+        save_dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+        save_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
 
-        filter = cv2.imread(self.project_copy.dust_filter_image_path)
-
-        if filter is None:
-            ...  # handle this code path
-            return
-
-        ref_width, ref_height = get_img_size(filter)
-
-        image_paths = self.get_
-
-        for img in images:
-            width, height = get_img_size(img)
-
-    def _create_output_path_layout(self) -> QVBoxLayout:
-        """Creates the Third UI column and returns it as a layout
-
-        initialises `self.output_pathline` and `self.resume_postcrash_checkbox`
-
-        Returns
-        -------
-        QVBoxLayout()
-            The created layout containing different widgets
-        """
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel("Select output file path"))
-        # layout.addStretch()
-        sub_layout = QHBoxLayout()
-
-        self.output_pathline = PathLineWidget(
-            "other", "Output file path...", None, None
-        )
-        sub_layout.addWidget(self.output_pathline)
-        sub_layout.addWidget(self.output_pathline.get_button())
-        layout.addLayout(sub_layout)
-        self.resume_postcrash_checkbox = QCheckBox()
-        self.resume_postcrash_checkbox.setCheckState(Qt.CheckState.Unchecked)
-        self.resume_postcrash_checkbox.setText("Resume after crash")
-        layout.addWidget(self.resume_postcrash_checkbox)
-        note = QLabel(
-            "If this option is selected and the given output file already "
-            "exists, ignores files that were already processed and appends "
-            "data about the remaining ones."
-        )
-        note.setWordWrap(True)
-        layout.addWidget(note)
-        layout.addStretch()
-        return layout
-
-    def _create_accept_reject_layout(self) -> QHBoxLayout:
-        """Creates the bottom line of the UI and returns it as a UI
-
-        initialises `self.cancel_button`, `self.save_and_exit_button` and `self.save_and_start_button`
-
-        Returns
-        -------
-        QHBoxLayout()
-            The created layout containing different widgets
-        """
-        layout = QHBoxLayout()
-        self.cancel_button = QPushButton("Exit")
-        layout.addWidget(self.cancel_button)
-        layout.addStretch()
-        self.save_and_exit_button = QPushButton("Save and Exit")
-        layout.addWidget(self.save_and_exit_button)
-        self.save_and_start_button = QPushButton("Save and Start Processing")
-        self.save_and_start_button.setDefault(True)
-        layout.addWidget(self.save_and_start_button)
-        return layout
-
-    @Slot()
-    def add_files_dialog(self):
-        dialog = QFileDialog()
-        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-        if dialog.exec():
-            self.add_paths(dialog.selectedFiles())
-
-    def add_paths(self, paths: list[str]):
-        for fpath in paths:
-            fpath = Path(fpath)
-
-            if fpath.is_file():
-                self.add_file(fpath)
-
-            else:
-                print("unexpected path object:", fpath)
-        self.update_file_count()
-
-    def update_file_count(self):
-        filecount = self.file_tree.topLevelItemCount()
-        self.element_counter.setText(f"Total files: {filecount}")
-
-    def add_file(self, new_file: Path):
-        exp_path = str(new_file.expanduser())
-        # This kind of match may fail if hardlinks are used...
-        matches = self.file_tree.findItems(exp_path, Qt.MatchFlag.MatchExactly, 1)
-        if len(matches) > 0:
-            return
-
-        new_entry = QTreeWidgetItem(self.file_tree)
-        new_entry.setData(0, Qt.ItemDataRole.DisplayRole, new_file.name)
-        new_entry.setData(1, Qt.ItemDataRole.DisplayRole, exp_path)
-
-    @staticmethod
-    def make_vline() -> QFrame:
-        """Makes a vertical separator widget
-
-        Returns
-        -------
-        QFrame
-            A QFrame with shape type `VLine`,
-            shadow type `Plain` and line width 0.
-        """
-        sep = QFrame()
-        sep.setFrameStyle(QFrame.Shadow.Plain | QFrame.Shape.VLine)
-        sep.setLineWidth(0)
-        return sep
-
-    @Slot()
-    def exit_without_saving(self):
-        self.user_starts_processing = False
-        self.reject()
-
-    @Slot()
-    def save_and_exit(self):
-        self.user_starts_processing = False
-        self.accept()
-
-    @Slot()
-    def save_and_start(self):
-        self.user_starts_processing = True
-        self.accept()
-
-    @Slot()
-    def save_config(self):
-        print("saving config (to be implemented)")
-        # TODO: implement config saving
-
-    @Slot()
-    def null_config(self):
-        print("nulling config")
-        self.saved_config = None
-
-    def keyPressEvent(self, arg__1: QKeyEvent):
-        key = arg__1.key()
-        if key == Qt.Key.Key_Delete:
-            self.remove_selected_files()
-
-    def remove_selected_files(self):
-        selection = self.file_tree.selectedItems()
-        for item in selection:
-            index = self.file_tree.indexOfTopLevelItem(item)
-            print(f"removing item at index {index}")
-            _ = self.file_tree.takeTopLevelItem(index)
-        self.update_file_count()
-
-    def get_images_to_process(self):
-        for item_idx in range(self.file_tree.topLevelItemCount()):
-            print(item_idx)
-        return [str(i) for i in range(21)]
-
-
-def get_img_size(mat: NDArray) -> tuple[int, int]:
-    raise NotImplementedError("sorry")
+        res = save_dialog.exec()
+        print("exited save dialog")
+        if res:
+            print("user selected an item")
+            selection = save_dialog.selectedFiles()
+            if len(selection) != 1:
+                print(f"expected 1 item, got {len(selection)}")
+                return
+            model_copy.save_as(selection[0])
+            print("commiting changes to the project object")
+            self.project.processing_settings = proc_model
+        else:
+            print("user selected nothing")
+            print("not commiting changes to the project object")
 
 
 if __name__ == "__main__":
-    project = Project(name="some_project")
+    from PySide6.QtWidgets import QMainWindow, QApplication
+
+    project: Project = Project(name="default", configuration=ColorAndParams.from_defaults("blaune"))
+
+    class TestWindow(QMainWindow):
+        def __init__(
+            self,
+            parent: QWidget | None = None,
+            flags: Qt.WindowType = Qt.WindowType.Window,
+        ) -> None:
+            super().__init__(parent, flags)
+            self.button: QPushButton = QPushButton("open dialog")
+            self.setCentralWidget(self.button)
+            _ = self.button.clicked.connect(self.start_dialog)
+            self.dialog: ProcessingDialog = ProcessingDialog(project, Path.home() / "Desktop", self)
+
+        @Slot()
+        def start_dialog(self):
+            _ = self.dialog.exited.connect(self.handle_dialog_exit)
+            self.dialog.show()
+
+
+        @Slot(DialogExitStatus)
+        def handle_dialog_exit(self, status: DialogExitStatus):
+            match status:
+                case DialogExitStatus.Rejected:
+                    print("the user cancelled the current action")
+                    return
+
+                case DialogExitStatus.Accepted:
+                    print("the user accepted the dialog")
+
+
     app = QApplication(sys.argv)
-    diag = ImageProcessingDialog(project)
-    diag.show()
+    window = TestWindow()
+    window.show()
+
     sys.exit(app.exec())

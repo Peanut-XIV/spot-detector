@@ -41,48 +41,40 @@ class SettingsFields(QWidget):
         self.setObjectName("Settings_Fields")
 
         if model is None:
-            self.model = DetParams.from_defaults(f"unnamed_color_{randint(0, 65535)}")
+            self.model: DetParams = DetParams.from_defaults(f"unnamed_color_{randint(0, 65535)}")
         else:
             self.model = model.model_copy(deep=True)
 
         layout = QVBoxLayout(self)
         layout.setObjectName("Settings_Fields_layout")
-        self.name_field = NameField(self.model.color_name, self)  # TODO: Handle Hint
+
+        self.name_field:      NameField = NameField(self.model.color_name, self)  # TODO: Handle Hint
+        self.min_dist:     MinDistField = MinDistField(self.model.min_dist, self)  # TODO: Handle Hint
+        self.thresh:     TresholdWidget = TresholdWidget(self.model.thresh, self)
+        self.area:    SimpleParamWidget = SimpleParamWidget("Filter by Area", Hint.AREA, self.model.area, 4000, 1, self)
+        self.convex:  SimpleParamWidget = SimpleParamWidget("Filter by Convexity", Hint.CONV, self.model.convex, 1, 0.05, self)
+        self.circ:    SimpleParamWidget = SimpleParamWidget("Filter by Circularity", Hint.CIRC, self.model.circ, 1, 0.05, self)
+        self.inertia: SimpleParamWidget = SimpleParamWidget("Filter by Inertia", Hint.INERTIA, self.model.inertia, 1, 0.05, self)
+
         layout.addWidget(self.name_field)
-        self.min_dist = MinDistField(self.model.min_dist, self)  # TODO: Handle Hint
         layout.addWidget(self.min_dist)
-        self.thresh = TresholdWidget(self.model.thresh, self)
         layout.addWidget(self.thresh)
-        self.area = SimpleParamWidget(
-            "Filter by Area", Hint.AREA, self.model.area, 4000, 1, self
-        )
         layout.addWidget(self.area)
-
-        self.convex = SimpleParamWidget(
-            "Filter by Convexity", Hint.CONV, self.model.convex, 1, 0.05, self
-        )
         layout.addWidget(self.convex)
-
-        self.circ = SimpleParamWidget(
-            "Filter by Circularity", Hint.CIRC, self.model.circ, 1, 0.05, self
-        )
         layout.addWidget(self.circ)
-
-        self.inertia = SimpleParamWidget(
-            "Filter by Inertia", Hint.INERTIA, self.model.inertia, 1, 0.05, self
-        )
         layout.addWidget(self.inertia)
 
         layout.addStretch(1)
+
         self.setLayout(layout)
 
-        self.name_field.valueChanged.connect(self.change_color_name)
-        self.min_dist.valueChanged.connect(self.change_min_dist)
-        self.thresh.modelChanged.connect(self.emit_new_model)
-        self.area.modelChanged.connect(self.emit_new_model)
-        self.convex.modelChanged.connect(self.emit_new_model)
-        self.circ.modelChanged.connect(self.emit_new_model)
-        self.inertia.modelChanged.connect(self.emit_new_model)
+        _ = self.name_field.valueChanged.connect(self.change_color_name)
+        _ = self.min_dist.valueChanged.connect(self.change_min_dist)
+        _ = self.thresh.modelChanged.connect(self.emit_new_model)
+        _ = self.area.modelChanged.connect(self.emit_new_model)
+        _ = self.convex.modelChanged.connect(self.emit_new_model)
+        _ = self.circ.modelChanged.connect(self.emit_new_model)
+        _ = self.inertia.modelChanged.connect(self.emit_new_model)
 
     @Slot(str)
     def change_color_name(self, name: str):
@@ -125,7 +117,7 @@ class SettingsFields(QWidget):
 
 
 class TresholdWidget(QGroupBox):
-    modelChanged = Signal()
+    modelChanged: Signal = Signal()
 
     def __init__(
         self,
@@ -135,11 +127,11 @@ class TresholdWidget(QGroupBox):
         super().__init__("Detection Thresholds", parent)
         self.setObjectName("Threshold_param_widget")
 
-        self.model = model
+        self.model: Threshold = model
 
         layout = QVBoxLayout(self)
         layout.setObjectName("Threshold_layout")
-        self.automatic_checkbox = QCheckBox("Automatic", self)
+        self.automatic_checkbox: QCheckBox = QCheckBox("Automatic", self)
         check_state = bool2CheckState(self.model.automatic)
         self.automatic_checkbox.setCheckState(check_state)
         layout.addWidget(self.automatic_checkbox)
@@ -147,36 +139,28 @@ class TresholdWidget(QGroupBox):
         mini_layout = QHBoxLayout()
         mini_layout.setObjectName("Threshold_layout_mini")
         mini_layout.addWidget(QLabel("Minimum", self))
-        self.mini_spinbox = QSpinBox(self)
-        self.mini_spinbox.setMinimum(0)
-        self.mini_spinbox.setMaximum(255)
-        self.mini_spinbox.setValue(self.model.mini)
+        self.mini_spinbox: QSpinBox = QSpinBox(self, minimum=0, maximum=255, value=self.model.mini)
         mini_layout.addWidget(self.mini_spinbox)
         layout.addLayout(mini_layout)
 
         maxi_layout = QHBoxLayout()
         maxi_layout.setObjectName("Threshold_layout_maxi")
         maxi_layout.addWidget(QLabel("Maximum", self))
-        self.maxi_spinbox = QSpinBox(self)
-        self.maxi_spinbox.setMinimum(0)
-        self.maxi_spinbox.setMaximum(255)
-        self.maxi_spinbox.setValue(self.model.maxi)
+        self.maxi_spinbox: QSpinBox = QSpinBox(self, minimum=0, maximum=255, value=self.model.maxi)
         maxi_layout.addWidget(self.maxi_spinbox)
         layout.addLayout(maxi_layout)
 
         step_layout = QHBoxLayout()
         step_layout.setObjectName("Threshold_layout_step")
         step_layout.addWidget(QLabel("Step", self))
-        self.step_spinbox = QSpinBox(self)
-        self.step_spinbox.setMinimum(0)
-        self.step_spinbox.setMaximum(255)
-        self.step_spinbox.setValue(self.model.step)
+        self.step_spinbox: QSpinBox = QSpinBox(self, minimum=0, maximum=255, value=self.model.step)
         step_layout.addWidget(self.step_spinbox)
         layout.addLayout(step_layout)
 
-        self.mini_spinbox.valueChanged.connect(self.on_mini_changed)
-        self.maxi_spinbox.valueChanged.connect(self.on_maxi_changed)
-        self.automatic_checkbox.checkStateChanged.connect(self.on_automatic_changed)
+        _ = self.mini_spinbox.valueChanged.connect(self.on_mini_changed)
+        _ = self.maxi_spinbox.valueChanged.connect(self.on_maxi_changed)
+        _ = self.automatic_checkbox.checkStateChanged.connect(self.on_automatic_changed)
+
         self.on_automatic_changed(self.automatic_checkbox.checkState())
 
     @Slot(Qt.CheckState)
@@ -249,7 +233,7 @@ class TresholdWidget(QGroupBox):
 
 
 class SimpleParamWidget(QGroupBox):
-    modelChanged = Signal()
+    modelChanged: Signal = Signal()
 
     def __init__(
         self,
@@ -267,21 +251,21 @@ class SimpleParamWidget(QGroupBox):
         super().__init__(name, parent)
         self.setObjectName("Simple_param_widget_" + name)
 
-        self.model = model
+        self.model: SimpleParam = model
 
-        self.hint_id = hint_id
+        self.hint_id: Hint = hint_id
 
         # Main Parameter Enabled checkbox
         layout = QVBoxLayout(self)
         layout.setObjectName("Simple_Param_layout")
-        self.enabled_checkbox = QCheckBox("Enabled", self)
+        self.enabled_checkbox: QCheckBox = QCheckBox("Enabled", self)
         check_state = bool2CheckState(self.model.enabled)
         self.enabled_checkbox.setCheckState(check_state)
         layout.addWidget(self.enabled_checkbox)
 
         mini_layout = QHBoxLayout()
         mini_layout.addWidget(QLabel("Minimum", self))
-        self.mini_spinbox = QDoubleSpinBox(self)
+        self.mini_spinbox: QDoubleSpinBox = QDoubleSpinBox(self)
         self.mini_spinbox.setMinimum(0)
         # setting maximum with priority for the model
         if self.model.maxi is not None:
@@ -295,11 +279,11 @@ class SimpleParamWidget(QGroupBox):
         layout.addLayout(mini_layout)
 
         maxi_layout = QHBoxLayout()
-        self.maxi_enabled_checkbox = QCheckBox("Maximum", self)
+        self.maxi_enabled_checkbox: QCheckBox = QCheckBox("Maximum", self)
         check_state = bool2CheckState(self.model.maxi is not None)
         self.maxi_enabled_checkbox.setCheckState(check_state)
         maxi_layout.addWidget(self.maxi_enabled_checkbox)
-        self.maxi_spinbox = QDoubleSpinBox(self)
+        self.maxi_spinbox: QDoubleSpinBox = QDoubleSpinBox(self)
         self.maxi_spinbox.setMinimum(self.model.mini)
         maxi_value = self.model.maxi or maximum or self.model.mini
         self.maxi_spinbox.setValue(maxi_value)
@@ -315,15 +299,15 @@ class SimpleParamWidget(QGroupBox):
 
         # Connect signals
         # Allows for smart behavior without needing the control layer
-        self.mini_spinbox.valueChanged.connect(self.on_mini_changed)
-        self.maxi_spinbox.valueChanged.connect(self.on_maxi_changed)
-        self.enabled_checkbox.checkStateChanged.connect(self.on_enabled_changed)
-        self.maxi_enabled_checkbox.checkStateChanged.connect(
+        _ = self.mini_spinbox.valueChanged.connect(self.on_mini_changed)
+        _ = self.maxi_spinbox.valueChanged.connect(self.on_maxi_changed)
+        _ = self.enabled_checkbox.checkStateChanged.connect(self.on_enabled_changed)
+        _ = self.maxi_enabled_checkbox.checkStateChanged.connect(
             self.on_maxi_enabled_changed
         )
 
     @Slot(float)
-    def on_maxi_changed(self, value):
+    def on_maxi_changed(self, value: float):
         """
         updates the model then send emits a "modelChanged" signal
         """
@@ -333,7 +317,7 @@ class SimpleParamWidget(QGroupBox):
         self.modelChanged.emit()
 
     @Slot(float)
-    def on_mini_changed(self, value):
+    def on_mini_changed(self, value: float):
         """
         updates the model then send emits a "modelChanged" signal
         """
@@ -407,7 +391,7 @@ class MinDistField(QGroupBox):
         self.setObjectName("Minimum_distance_field")
 
         layout = QHBoxLayout(self)
-        self.spinbox = QDoubleSpinBox(self)
+        self.spinbox: QDoubleSpinBox = QDoubleSpinBox(self)
         if value is not None:
             self.spinbox.setValue(value)
         self.spinbox.setMinimum(0.001)
@@ -417,7 +401,7 @@ class MinDistField(QGroupBox):
         layout.addWidget(self.spinbox)
         self.setLayout(layout)
 
-        self.spinbox.valueChanged.connect(self.valueChanged)
+        _ = self.spinbox.valueChanged.connect(self.valueChanged)
 
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -437,11 +421,11 @@ class NameField(QGroupBox):
         super().__init__("Color name", parent)
         self.setObjectName("Name_field")
         layout = QHBoxLayout(self)
-        self.field = QLineEdit(color_name, self)
+        self.field: QLineEdit = QLineEdit(color_name, self)
         layout.addWidget(self.field)
         self.setLayout(layout)
 
-        self.field.textChanged.connect(self.valueChanged)
+        _ = self.field.textChanged.connect(self.valueChanged)
 
     @override
     def mousePressEvent(self, event: QMouseEvent) -> None:

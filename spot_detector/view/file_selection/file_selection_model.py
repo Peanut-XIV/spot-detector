@@ -1,6 +1,10 @@
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypeVar
 
+T = TypeVar("T")
+
+from numpy import uint8
+from numpy.typing import NDArray
 from typing_extensions import override
 
 if TYPE_CHECKING:
@@ -8,7 +12,7 @@ if TYPE_CHECKING:
 
 from pathlib import Path
 from PySide6.QtGui import QColor
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, QSize, Qt, Signal, Slot
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 
 from spot_detector.view.file_selection.file_selection_items import (
     BaseItem,
@@ -176,14 +180,6 @@ class FileSelectionModel(QAbstractItemModel):
                 flag = Qt.AlignmentFlag.AlignVCenter
                 flag |= Qt.AlignmentFlag.AlignLeft if col < 2 else Qt.AlignmentFlag.AlignCenter
                 return flag
-        if role == Qt.ItemDataRole.SizeHintRole:
-            sizes: list[QSize] = [
-                QSize(100,20),
-                QSize(300,20),
-                QSize(50,20),
-                QSize(50,20),
-            ]
-            return sizes[col]
 
         return None
 
@@ -203,8 +199,6 @@ class FileSelectionModel(QAbstractItemModel):
                 return flag
             # if role == Qt.ItemDataRole.BackgroundRole:
             #     return QColor("lightGray")
-            if role == Qt.ItemDataRole.SizeHintRole:
-                return [QSize(100,20), QSize(300,20), QSize(50,20), QSize(50,20)][section]
 
         return None
 
@@ -440,7 +434,7 @@ class FileSelectionModel(QAbstractItemModel):
         row = index.row()
         parent_index = index.parent()
         from_cell = self.index(row, 0, parent_index)
-        to_cell = self.index(row, 4, parent_index)
+        to_cell = self.index(row, 3, parent_index)
         roles = [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.BackgroundRole]
 
         self.dataChanged.emit(from_cell, to_cell, roles)
@@ -477,6 +471,39 @@ class FileSelectionModel(QAbstractItemModel):
             return
 
         self.update_dir_status(parent_index)
+
+    def check_entry_2(self, index: QModelIndex, check_function: Callable[[Path], tuple[T, StatusUpdate]]) -> T | None:
+        """
+        index must point to a FileEntryItem instance, otherwise does nothing
+        """
+        item = self._item_from_index(index)
+        if not isinstance(item, FileEntryItem) or index.column() != 1:
+            return None
+
+        output, result = check_function(item.path)
+
+        self.new_error_messages.emit(result.error_messages)
+
+        if status := result.file_status:
+            item.file_status = status
+
+        if status := result.quality_status:
+            mask, value = status
+            item.apply_quality_status(mask, value)
+
+        row = index.row()
+        parent_index = index.parent()
+        from_cell = self.index(row, 0, parent_index)
+        to_cell = self.index(row, 3, parent_index)
+        roles = [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.BackgroundRole]
+
+        self.dataChanged.emit(from_cell, to_cell, roles)
+
+        parent_item = item.parent
+        if isinstance(parent_item, DirectoryEntryItem):
+            self.update_dir_status(parent_index)
+
+        return output
 
     def check_entries(self, entries: list[QModelIndex], check_function: Callable[[Path], StatusUpdate]):
         """
@@ -526,5 +553,3 @@ class FileSelectionModel(QAbstractItemModel):
             item.update_status()
 
         self.endResetModel()
-
-

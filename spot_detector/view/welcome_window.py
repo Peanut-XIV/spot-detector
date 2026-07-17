@@ -25,7 +25,7 @@ from pydantic import ValidationError
 
 from spot_detector.controller.start_manager_interface import StartManagerInterface
 from spot_detector.file_utils import get_local_data_dir
-from spot_detector.view.dialogs import OpenProjectDialog
+from spot_detector.view.dialogs.dialogs import OpenProjectDialog
 from spot_detector.view.new_project_dialog import NewProjectDialog
 from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
 from spot_detector.model.project import Project

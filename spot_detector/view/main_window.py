@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox
 from PySide6.QtGui import QAction, QIcon
 
-from spot_detector import rc_resources, rc_icons # noqa: F401  WARN: Do not remove
+from spot_detector import rc_resources, rc_icons # noqa: F401  WARN: Do not remove  # pyright: ignore[reportUnusedImport]
 from spot_detector.controller.worker_thread import ReloadPaletteProcessor
 from spot_detector.model.models import Shade
 from spot_detector.model.project import Project
@@ -30,6 +30,8 @@ from spot_detector.view.dialogs.dialogs import (
     LoadPaletteDialog,
 )
 
+from spot_detector.view.dialogs.custom_dialog_base import DialogExitStatus
+
 from spot_detector.view.dialogs.settings_dialog import SettingsWindow
 from spot_detector.view.dialogs.kmeans_dialog import KMeansDialog, KmeansProcessor
 
@@ -39,6 +41,10 @@ class MainWindow(QMainWindow):
     def __init__(self, project: Project):
         super().__init__()
         self.setWindowTitle("Spot Detector GUI")
+
+        app_icon = QIcon(":resources/icons/app_icon/spot_detector_full.png")
+        self.setWindowIcon(app_icon)
+
         self.project = project
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -174,8 +180,8 @@ class MainWindow(QMainWindow):
         self.settings_dialog.show()
 
     @Slot()
-    def handle_detection_settings_exit(self, status: SettingsWindow.ExitStatus):
-        if status == SettingsWindow.ExitStatus.Rejected:
+    def handle_detection_settings_exit(self, status: DialogExitStatus):
+        if status == DialogExitStatus.Rejected:
             return
         if self.settings_dialog is None:
             return

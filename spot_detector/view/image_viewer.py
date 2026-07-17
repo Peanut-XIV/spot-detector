@@ -22,7 +22,7 @@ from spot_detector.model.project import Project
 from spot_detector import rc_resources, rc_icons  # noqa: F401 WARN: Do not remove
 
 class ImageView(QGraphicsView):
-    max_exponent = 20
+    max_exponent = 40
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)

@@ -33,6 +33,8 @@ class AppStartManager(QObject, StartManagerInterface):
 
 if __name__ == "__main__":
     app = QApplication()
+    app.setApplicationName("Spot Detector")
+    app.setApplicationDisplayName("Spot Detector")
     start_manager = AppStartManager()
     start_manager.start_from_welcome()
     sys.exit(app.exec())

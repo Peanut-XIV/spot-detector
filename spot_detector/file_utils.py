@@ -351,20 +351,16 @@ def match_dir_items(
     return matches
 
 
-def confirm_new_cfg_file(path):
+def confirm_new_cfg_file(path: Path):
     if path.exists():
         if not path.is_file():
             raise FileError("Le chemin ne désigne pas un fichier.")
-        confirm(
-            "Ce fichier existe déjà. Souhaitez-vous écrire par dessus ?",
-            abort=True,
-        )
+
+        _ = confirm("Ce fichier existe déjà. Souhaitez-vous écrire par dessus ?", abort=True)
+
     else:
         if not path.parent.exists():
-            confirm(
-                "Ce chemin n'existe pas encore. Créer les dossiers manquants ?",
-                abort=True,
-            )
+            _ = confirm("Ce chemin n'existe pas encore. Créer les dossiers manquants ?", abort=True)
             mkdir(path.parent)
 
 def get_local_data_dir() -> Path:
@@ -399,13 +395,16 @@ def add_to_recent_projects(file_path: Path) -> bool:
     file_path = file_path.expanduser()
 
     for project in recent_projects:
-        if project.samefile(file_path):
-            return False
+        try:
+            if project.samefile(file_path):
+                return False
+        except FileNotFoundError:
+            continue
 
     recent_projects.insert(0, file_path)
 
     count = len(recent_projects)
-    lines = [str(path) for path in recent_projects][:min(10, count)]
+    lines = [str(path) + "\n" for path in recent_projects][:min(10, count)]
 
     try:
         with open(projects_file, "w") as f:

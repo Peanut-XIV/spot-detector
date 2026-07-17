@@ -53,7 +53,7 @@ class OpenDirFileDialog(QFileDialog):
         self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
 
 
-class OpenProcessingFileDialog(QFileDialog):
+class SaveProcessingFileDialog(QFileDialog):
     """
     A dialog made to open a csv file that could be written to.
     """
@@ -69,7 +69,7 @@ class OpenProcessingFileDialog(QFileDialog):
         if len(filter) == 0:
             self.setMimeTypeFilters(VALID_CSV_MIME_TYPES)
         self.setFileMode(QFileDialog.FileMode.AnyFile)
-        self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
 
 
 class OpenProjectDialog(QFileDialog):
