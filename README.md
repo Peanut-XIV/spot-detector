@@ -1,199 +1,522 @@
-# Spot Detector
+<h1>
+  <img src="docs/images/00_spot_detector_logo_small.png" height="48" align="left">
+  &nbsp; Spot Detector
+</h1>
+
+*Automated counting of fluorescent tracer particles in sediment images.*
 
 ---
 
-## Introduction :
+## Table of contents
 
-Spot detector est un programme écrit en septembre et octobre 2023 dans l'objectif de compter des luminophores 
-dans des boites de Pétri. Il utilise la bibliothèque OpenCV 2 ainsi que Numpy afin de manipuler des images. 
-
-Ce programme prend en entrée un chemin de dossier de travail, un chemin de fichier csv, un ensemble
-de valeurs de profondeur et un format de nom d'image. 
-
-En retour, il produit un document CSV contenant le nombre de luminophores dans chacune des images présentes dans le 
-dossier de travail, ainsi que le pourcentage par rapport au total dans un sous-dossier. Différentes colonnes 
-correspondent à différentes profondeurs et couleurs de luminophores. 
-
-Par exemple, le tableau peut prendre la forme suivante :
-
-|                      | Nbr Orange |     |     |     | Nbr Vert |     | Nbr Orange+Vert |     | %ge Orange |     |
-|:---------------------|-----------:|----:|----:|----:|---------:|----:|----------------:|----:|-----------:|----:|
-| Dossier / Profondeur |        0.0 | 0.2 | ... | 2.0 |      0.0 | ... |             0.0 | ... |        0.0 | ... |
-| experience1_rep10    |     11 200 | 234 | ... |   1 |      724 | ... |          11 924 | ... |  99.8753 % | ... |
-| experience2_rep4     |      9 371 | 192 | ... |   0 |      338 | ... |           9 709 | ... |  98.7927 % | ... |
-| experience2_rep5     |        ... | ... | ... | ... |      ... | ... |             ... | ... |        ... | ... |
-
----
-
-## Installation :
-
-Pour l'instant, l'installation du programme se fait en téléchargeant le projet
-depuis github, puis en créant un environnement
-virtuel dans lequel exécuter le programme.
-
-### 1 - Télécharger
-
-D'abord, vous devez choisir le répertoire dans lequel vous allez installer
-l'application. Ça peut être votre bureau, mais je conseillerais un
-répertoire qui lui est propre (ce dernier peut être dans le bureau).
-
-Par exemple, créons  un dossier `applications-python` sur le bureau.
-C'est ici que l'on installera l'application. Téléchargez ensuite le projet sur
-votre ordinateur. Pour cela, cliquez sur le bouton vert en haut de la page
-intitulé `code` puis sur `Download ZIP`.
-
-Décompressez le dossier zip, copiez et collez-le dans le dossier 
-`applications-python` précédamment créé. Vous devriez avoir une arborescence de
-la forme suivante :
-
-```
-~/Bureau/applications-python/spot-detector-main/
-                                        |- pyproject.toml
-                                        |- README.md
-                                        |- spot_detector
-                                        |- spot_detector.egg-info
-                                        |- tests
-```
-
-### 2 - Créer l'environnement virtuel (venv)
-
-Maintenant que le projet est présent sur l'ordinateur, il faut créer
-l'environnement virtuel dans lequel il sera exécuté. La création de cet
-environnement nécessite Python (≥ 3.11 dans notre cas) et se fait de manière
-différente sur Windows et sur MacOS / Linux.
-
-#### Sur MacOS :
-
-Ouvrez une fenêtre de terminal au dossier `spot-detector-main`. Pour cela,
-ouvrez le dossier dans Finder, appuyez sur la touche `control` en
-même temps de cliquer sur le nom de dossier et cliquez sur `Services` puis
-`Nouveau terminal au dossier`. Vous êtes dans le terminal !
-
-Maintenant, demandons quelle version de python est utilisée. Écrivez la
-commande suivante et appuyez sur entrer:
-
-```
-python3 --version
-```
-
-* Si le terminal vous répond un message du genre :
-
-```
-zsh: command not found: python3
-```
-
-Alors c'est que vous n'avez pas Python (version 3.0 ou supérieure) d'installé.
-Alternativement, si le terminal vous répond une version de Python inferieure à
-3.11.7, votre version de python n'est pas assez rescente. Dans les deux cas,
-il vous faudra installer Python 3.11.7, Python 3.12 ou la version la plus
-rescente [ici](https://www.python.org/downloads/).
-
-Une fois Python installé, retournez sur le terminal au dossier
-`spot-detector-main` et entrez la commande suivante :
-
-```
-python3.11 -m venv venv
-```
-
-Puis
-
-```
-source venv/bin/activate
-```
-en
-
-
-
-## Comment l'utiliser :
-
-
-### Le dossier de travail
-
-    Le dossier de travail doit avoir la structure suivante :
-
-```
-.../dossier_principal/
-    |- test_1_replicat_1/
-    |   |- image_1.jpeg
-    |   |- image_2.jpeg
-    |   |- image_3.jpeg
-    |   |- ...
-    |
-    |- test_1_replicat_2/
-    |   |- image_1.jpeg
-    |   |- image_2.jpeg
-    |   |- image_3.jpeg
-    |   |- ...
-    |
-    |- ...
-    |
-    |- test_X_replicat_Y/
-        |- image_1.jpeg
-        |- image_2.jpeg
-        |- image_3.jpeg
-        |- ...
-```
-
-Les noms de dossiers, nom et formats d'images sont à but explicatif, l'important est qu'il n'y ait pas de 
-sous-sous-dossier. Aussi, les images dans des arborescences supérieures ous inférieures ne seront pas traitées.
-Ces sous-dossiers constituent le premier axe du tableau avec leur nom comme nom de ligne.
-
-Par ailleurs, il est préférable que le nombre d'images soit le même dans chaque dossier. Sinon, il est possible 
-d'utiliser une règle de tri que l'on verra plus tard. Dans ce cas, si une image manque, la valeur associée vaudra 0.
-
-### Le chemin de fichier CSV
-
-Le chemin de fichier CSV indique au programme où écrire les données qu'il vient de calculer. Il est recommandé 
-d'indiquer un fichier inexistant et que l'extension soit ".csv". Cependant, si le programme a été interrompu et que 
-certains dossiers n'ont pas encore été traités, il est possible de reprendre là où le programme s'est arrêté, il suffit 
-d'indiquer le nom de chemin du fichier inachevé. Dans ce cas, il cherchera les noms de dossiers déjà présents et ne les 
-traitera pas.
-
-> ⚠️ **Avertissement** : Le programme ne fait pas la différence entre un fichier .csv quelconque et un fichier qu'il a 
-> écrit lui-même. Pour cette raison, prenez garde à bien indiquer un fichier que vous êtes sûr de vouloir modifier !
-> (Il n'y a pas de risque important en soi, le programme ne peut qu'ajouter des lignes, pas les réécrire ou les 
-> supprimer.):
-
-### Les valeurs de "profondeur"
-
-Ces valeurs sont appelées profondeurs puisque c'est cette grandeur qui était indiquée dans l'expérience pour laquelle 
-le programme a été écrit. Il s'agit du deuxième axe du tableau, les valeurs entrées serviront de noms de colonne. 
-Elles sont également utilisées pour identifier les images par profondeur grâce à leur nom de fichier lors du traitement. 
-Pour cela, il est important que ces valeurs soient cohérentes par rapport au nom des images et cohérent d'une image à 
-l'autre.
-
-Ces valeurs doivent être séparées par des espaces ou autres caractères similaires et peuvent contenir n'importe quel 
-symbole du moment que ce n'est pas un espace, naturellement. Par ailleurs, les caractères doivent être 
-compatibles avec votre système de fichiers.
-
-### Le format de nom d'image
-
-Le format de nom d'image est utile si les images, lorsqu'elles sont triées par profondeur, n'apparaissent pas dans 
-l'ordre alphabétique. Sinon, ce format permet de prendre en compte le fait que certaines images soient manquantes. 
-Ce format indique les parties invariantes, variantes ou qui contiennent la profondeur entre les noms 
-de fichier des différentes images. Dans le cas pour lequel le programme a été écrit, les images avaient ce genre de nom :
-
-`A6_1 0.4-0.6.JPG` `C30_4 0.6-0.8.JPG` `Cb2 0.0-0.2.JPG`
-
-De manière générale, ils sont composés comme la séquence suivante :
-
-| Caractères     | `A6_1`                                                                                            | ` `                                                                                           | `0.4`                                          | ` ` `-` ` `                                                                                                                                                                                                                                                         | `0.6`                                                                                    | `.JPG`             |
-|----------------|---------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|--------------------|
-| description    | une lettre majuscule, suivie ou non d'un chiffre, suivi ou non d'un tiret bas, suivi d'un chiffre | un espace                                                                                     | une valeur de profondeur                       | un tiret ou un tiret entouré d'espaces                                                                                                                                                                                                                              | la valeur de profondeur suivante                                                         | le nom d'extension |
-| représentation | `*` permet de représenter n'importe quelle chaine de caractères                                   | À l'exception de `*` `?` `[` `]` `{` `}`, tous les caractères sont interprétés littéralement. | `{}` insert la valeur de profondeur recherchée | `[ -]` : Les symboles entre crochets indiquent un ensemble de possibilités pour un caractère. Attention, entre crochets, le tiret peut avoir un autre sens : `[a-zA-Z0-9]` indique n'importe quel caractère entre `a` et `z`, entre `A` et `Z` ou entre `0` et `9`. | `*` : on ne peut pas indiquer la valeur de profondeur de manière simple, d'où l'étoile.  | `.JPG`             |
-
-Mis bouts-à-bouts, les éléments donnent la séquence suivante : `* {}[ -]*.JPG`.
-
-> 📝 **Note** : La représentation de format est faite avec la méthode `str.format()` et la méthode de chemin `Path.glob()`.
-Pour en savoir plus, voir la documentation de [Format String Syntax](https://docs.python.org/3/library/string.html#formatstrings) et 
-[Path.glob](https://docs.python.org/3/library/pathlib.html?highlight=pathlib%20glob#pathlib.Path.glob) sur le site officiel 
-du langage Python.
-
-
-### Déroulement de l'exécution
-
-
+- [Overview](#overview)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Projects](#projects)
+  - [File format](#file-format)
+  - [Creating a project](#creating-a-project)
+  - [Opening a project](#opening-a-project)
+  - [Saving a project](#saving-a-project)
+- [Building the palette](#building-the-palette)
+  - [Choosing a reference image](#choosing-a-reference-image)
+  - [Choosing the number of labels](#choosing-the-number-of-labels)
+- [Assigning hues to categories](#assigning-hues-to-categories)
+- [Detection parameters](#detection-parameters)
+  - [The category list](#the-category-list)
+  - [Criteria](#criteria)
+- [Processing](#processing)
+  - [File selection](#file-selection)
+  - [Dust filter](#dust-filter)
+  - [Automatic cropping](#automatic-cropping)
+  - [Image quality reporting](#image-quality-reporting)
+  - [Output location](#output-location)
+- [Output format](#output-format)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## Le fonctionnement de la détection de point :
+## Overview
+
+Spot Detector counts fluorescent particles (luminophores) in photographs of sediment
+samples.
+
+The workflow has three stages. A **reference image** is reduced to a palette of a few dozen
+colours. Those colours are grouped into **categories**, one per particle type, plus a
+background category for everything that is not a particle. Each category then receives its
+own **detection criteria**, and the whole configuration is applied to any number of target
+images.
+
+Every category is counted independently of the others. The result is a CSV with one row per
+image, giving a count per category along with image metadata and quality indicators.
+
+The unit of work is the **project**: the settings for **one type of luminophore
+photographed under one specific camera configuration**. When either the tracer or the
+acquisition setup changes, a new project is required, since settings are not transferable
+between them.
+
+### Getting help inside the application
+
+Two help mechanisms are available during use:
+
+- The **`?` badge** next to a section heading opens a short note on what that section does.
+  Each one links to the matching section of this guide.
+- The **help panel** of the Detection Parameters dialog documents the counting algorithm.
+  Clicking a setting field displays more information about that field.
+
+---
+
+## Installation
+
+Spot Detector currently ships as a **macOS application bundle**.
+
+1. Download the latest release and unzip it.
+2. Move `Spot Detector.app` to `/Applications`.
+3. The first launch is refused, because the application is not signed by an identified
+   developer. **Right-click the app and choose `Open`**, then confirm. macOS remembers the
+   exception, and subsequent launches are normal.
+
+<details>
+<summary>If macOS reports the app as damaged</summary>
+
+Files downloaded through a browser carry a quarantine flag that can block an unsigned
+bundle outright. Clearing it once resolves this:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Spot Detector.app"
+```
+
+</details>
+
+> **Note**
+>
+> Windows and Linux builds are not available yet.
+
+---
+
+## Quick start
+
+From a cold start to a first CSV:
+
+1. **Create a project.** `Create a new project`, then give it a name and an image directory. → [Creating a project](#creating-a-project)
+2. **Load a reference image.** `File` ▸ `Set Reference Image`. → [Choosing a reference image](#choosing-a-reference-image)
+3. **Compute the palette.** `File` ▸ `Compute k-means`, then choose a number of labels. → [Choosing the number of labels](#choosing-the-number-of-labels)
+4. **Group the hues into categories.** Leave background at `0`, assign particle hues to `1`, `2`, … → [Assigning hues to categories](#assigning-hues-to-categories)
+5. **Name and tune each category.** `File` ▸ `Open Detection Settings`. → [Detection parameters](#detection-parameters)
+6. **Run.** Add the target images, set an output file, then `Start Processing`. → [Processing](#processing)
+
+---
+
+## Projects
+
+A project holds the palette, the category assignments, the detection parameters and the
+paths of the reference material. It covers **one luminophore under one camera
+configuration**; when either changes, a new project is needed.
+
+### File format
+
+Project files are **JSON**. The conventional extension is `.spot`, but a `.json` file is
+read just the same, as the extension is a label rather than a different format. Should a
+project file become unreadable, it may be repairable by hand in a plain-text editor, such as
+Notepad on Windows, TextEdit on macOS, or gedit on some Linux distributions.
+
+### Creating a project
+
+`Create a new project` on the welcome screen opens the creation dialog.
+
+<img src="docs/images/01_welcome_screen.jpeg" width="600" alt="Spot Detector welcome screen">
+
+<img src="docs/images/02_new_project.jpeg" width="600" alt="New project creation dialog">
+
+| Field | Required | Description |
+|---|---|---|
+| `Name` | yes | Project name, shown in the recent projects list. |
+| `Dust Filter path` | no | Image used to subtract sensor dust. Must have the same dimensions as the target images. |
+| `Reference image path` | no | Image the palette will be computed from. |
+| `Image directory path` | no | Default directory when adding target images. |
+
+Only the name is required. Everything else can be set later: the reference image from
+`File` ▸ `Set Reference Image`, the dust filter and the image directory from the Processing
+Dialog. `Create` opens an empty project.
+
+<img src="docs/images/03_empty_project.jpeg" width="600" alt="Empty project with the File menu open">
+
+### Opening a project
+
+`Open an existing project` browses for a project file. The welcome screen also lists
+recently opened projects with their state:
+
+| State | Meaning |
+|---|---|
+| *(name shown)* | Readable, ready to open. |
+| `[Not Found]` | The file has been moved or deleted. Recent entries store absolute paths. |
+| `[Invalid JSON]` | The file exists but is malformed. |
+
+Since project files are plain JSON, an `[Invalid JSON]` entry can be inspected and repaired
+in a text editor rather than rebuilt from scratch.
+
+### Saving a project
+
+`File` ▸ `Save As` writes the current settings to disk. The `Export Settings` button of the
+Processing Dialog does the same thing without leaving that dialog, which is convenient once
+the processing setup is well under way and walking back would be a nuisance.
+
+---
+
+## Building the palette
+
+### Choosing a reference image
+
+The reference image is the one the palette is computed from. Every target image is then
+matched against that palette, so a good reference is one whose colours represent the batch
+to be processed.
+
+There is no single correct choice, and finding a good one is part of the calibration work:
+try a candidate, apply it, compare the counts against a known truth, and iterate. The aim is
+the palette whose result is closest to reality.
+
+`File` ▸ `Set Reference Image` loads it.
+
+<img src="docs/images/04_reference_image.jpeg" width="600" alt="Reference image loaded in the viewer">
+
+### Choosing the number of labels
+
+`File` ▸ `Compute k-means` asks how many colours to reduce the reference image to.
+
+<img src="docs/images/05_kmeans_dialog.jpeg" width="600" alt="Number of labels dialog">
+
+> **Important**
+>
+> This is a trade-off. More labels separate close hues more finely, which improves the
+> fidelity of the segmentation, but k-means runs in O(*n*·*K*·*i*·*d*), so computation time
+> grows linearly with the number of labels. On a full-resolution image the difference is
+> noticeable. A low value is the safe start, to be raised only if distinct particle colours
+> are being merged into a single label.
+
+Once computed, the palette replaces the default entries in the left-hand panel. Each row
+shows a colour swatch and a category index, initially `0`.
+
+<img src="docs/images/06_palette_computed.jpeg" width="600" alt="Computed palette in the side panel">
+
+---
+
+## Assigning hues to categories
+
+Each entry of the palette carries a **category index**:
+
+| Index | Meaning |
+|---|---|
+| `0` | Background. Not counted. |
+| `1`, `2`, … | Particle categories. Counted independently, each with its own detection criteria. |
+
+Everything starts at `0`. Every entry that corresponds to a particle type receives an index.
+One category serves one population to be counted separately: if orange and blue particles
+must be reported apart, they are categories `1` and `2`, not one merged group. Each index
+becomes a category in the [Detection parameters](#detection-parameters) dialog and a column
+in the [output file](#output-format).
+
+Two toolbar toggles assist the decision:
+
+| Toggle | Shows |
+|---|---|
+| `Show Palettized` | The reference image redrawn using only the palette colours. Reveals how each region was quantized. |
+| `Show Highlight` | The pixels belonging to the assigned entries, drawn over the reference image. |
+
+The workflow is iterative: assign an entry, look at the highlight, keep or revert.
+
+<img src="docs/images/07_palettized_view.jpeg" width="600" alt="Palettized view of the reference image">
+
+<img src="docs/images/08_highlight_view.jpeg" width="600" alt="Highlighted categories over the reference image">
+
+Under-assigning leaves particles uncounted; over-assigning pulls background into a category
+and inflates its count. The highlight view is the fastest way to see which of the two is
+happening.
+
+---
+
+## Detection parameters
+
+`File` ▸ `Open Detection Settings` is where each category is named and given its criteria.
+Categories are counted in separate passes, so these values apply to one category at a time.
+
+<img src="docs/images/09_detection_parameters.jpeg" width="700" alt="Detection parameters dialog">
+
+The right-hand panel of the dialog explains the algorithm and documents each criterion.
+Clicking a setting field displays more information about it.
+
+### The category list
+
+Entries appear as `index - name`, matching the indexes assigned in the palette. The name
+given here becomes the column header for that category in the output file.
+
+| Button | Action |
+|---|---|
+| `Add` | Append a new category. |
+| `Insert` | Insert one before the selection. |
+| `Duplicate` | Copy the selected category with all its criteria. The shortcut when two categories differ by only one value. |
+| `Remove` | Delete the selection. |
+
+### Criteria
+
+| Field | Default | Notes |
+|---|---|---|
+| `Color name` | | Becomes the column header for this category in the output CSV. |
+| `Minimum distance` | `1.00px` | Minimum distance between two spots. Below it, neighbours merge into one. |
+| **Detection Thresholds** | | The binary thresholds the image is quantized through. |
+| `Automatic` | on | Lets the program derive the sweep. Unchecking it enables the three fields below. |
+| `Minimum` / `Maximum` | `0` / `255` | Bounds of the sweep. |
+| `Step` | `16` | Increment. A smaller step separates more clusters, at a cost in time. |
+| **Shape filters** | | `Filter by Area`, `Convexity`, `Circularity`, `Inertia`. Each has an `Enabled` toggle plus `Minimum` and `Maximum` bounds, individually switchable. |
+
+`Apply` commits the changes; `Cancel` discards them.
+
+> **Note**
+>
+> The shape filters are those of OpenCV's `SimpleBlobDetector`. Their exact definitions
+> (how area, circularity, convexity and inertia are computed) are given in the OpenCV
+> documentation for that class, and the help panel inside the dialog restates the essential
+> points.
+
+<details>
+<summary>How the counting works</summary>
+
+The image is quantized through a set of binary thresholds. At each threshold, shape contours
+are detected and each contour becomes a node in a tree, its parent being the shape at the
+same location detected at a lower threshold. This is what separates clusters into individual
+spots, as long as the spots do not overlap. The nodes are then filtered against the shape
+descriptor criteria above, and the remaining branches are counted. The process repeats for
+each category.
+
+</details>
+
+---
+
+## Processing
+
+The Processing Dialog is where target images are selected, pre-processed and counted. It
+maps onto three columns: file selection, pre-processing, output.
+
+<img src="docs/images/10_processing_dialog.jpeg" width="700" alt="Empty processing dialog">
+
+### File selection
+
+The list of images to count. It has four columns (`Name`, `Directory`, `Count` and
+`Status`), and directories added wholesale appear as expandable nodes.
+
+| Button | Action |
+|---|---|
+| `Add Files` | Add individual images. |
+| `Add Directory` | Add a directory as an expandable node. |
+| `Remove` | Remove the current selection. |
+| `Check Files` | Validate every listed file and fill the `Status` column. |
+| `Clear Messages` | Empty the message log. |
+
+`Check Files` resolves each entry and reports problems in the log below: unreadable files,
+dust filter dimension mismatches, data type mismatches. `Total Files` counts the current
+selection. Clearing the log before a run keeps the messages that follow tied to that run.
+
+<img src="docs/images/11_file_selection.jpeg" width="700" alt="Processing dialog with files selected">
+
+### Dust filter
+
+Sensor dust appears in the same place on every frame and is bright enough to be counted as a
+particle. The filter is a reference shot of that dust, subtracted from each target image
+before counting.
+
+| Control | Effect |
+|---|---|
+| `Apply filter` | Enable the subtraction. |
+| `Include the filter's file path in the output file` | Record which filter was used, in the output file. |
+| `Dust filter location` | Path of the filter image. |
+| `Check Files` | Verify the filter against the current selection. |
+
+The filter and the target images must have the same dimensions and the same bit depth.
+Checking before a long run rather than after avoids wasted processing.
+
+### Automatic cropping
+
+Counting is restricted to the inside of the Petri dish, which is located by detecting a
+circle in the image. The radius bounds constrain that search, keeping the detector from
+locking onto the wrong edge: the rim of a tray, a reflection, the frame of the shot.
+
+| Control | Default | Effect |
+|---|---|---|
+| `Enable automatic image cropping` | off | Turn cropping on. The controls below stay disabled until it is. |
+| `Save cropped images` | off | Write the cropped images to a chosen directory. |
+| `minimum radius (% largest inscribed circle)` | `70%` | Lower bound of the circle search. |
+| `Maximum radius (% largest inscribed circle)` | `110%` | Upper bound of the circle search. |
+| `Test on selection` | | Preview the crop on the selected images. |
+
+Both bounds are expressed as a **percentage of the largest circle that fits in the image**,
+not in pixels. They therefore describe how the dish fills the frame, which is a property of
+the acquisition setup rather than of any one file. Values tuned once hold across a project
+even when the resolution changes, and a bound above `100%` is meaningful, covering a dish
+whose edges run slightly outside the frame.
+
+Testing before a full run matters: a circle found in the wrong place silently changes every
+count that follows.
+
+<details>
+<summary>Cropping preview</summary>
+
+<img src="docs/images/12_cropping_preview.jpeg" width="700" alt="Cropping preview dialog">
+
+<img src="docs/images/13_cropping_preview_detail.jpeg" width="500" alt="Cropping preview, last image">
+
+`First`, `Previous`, `Next` and `Last` step through the selection; `Ok` closes the preview.
+
+</details>
+
+### Image quality reporting
+
+These options add indicators and warnings to each row of the output file. They describe the
+images; they never discard them. What to exclude remains a manual decision, made on the CSV,
+after the fact.
+
+| Option | Adds |
+|---|---|
+| `Report overexposure` | Share of overexposed pixels. |
+| `Report underexposure` | Share of underexposed pixels. |
+| `Report brightness` | A signed deviation from a neutral exposure. |
+| `Report blurry images` | A sharpness score. |
+
+`Test on selection` previews the values on the current selection.
+
+### Output location
+
+The output file location sets the CSV to be written.
+
+`Resume interrupted processing on this file` makes a run additive: when the target file
+already exists, images already recorded as processed are skipped, and only the remaining
+ones are appended. This is what allows a long batch to be stopped and picked up later.
+
+`Export Settings` saves the project without leaving the dialog. `Start Processing` launches
+the run.
+
+<img src="docs/images/14_processing_configured.jpeg" width="700" alt="Fully configured processing dialog">
+
+---
+
+## Output format
+
+The output is a semicolon-separated CSV, one row per image.
+
+### Columns
+
+| Column | Description |
+|---|---|
+| `UUID` | Unique identifier of the row. |
+| `Directory path` | Directory of the source image. |
+| `File name` | Name of the source image. |
+| `Project file` | Project the settings came from. |
+| `Processed` | `TRUE` if the image has been counted, `FALSE` if it is still pending. |
+| *one column per category* | Particle count for that category. Headers are the names given in the Detection Parameters dialog. |
+| `Total` | Sum of the per-category counts. |
+| `format` | `Tiff`, `Jpeg`, `Png`, … |
+| `Dimensions` | Width × height in pixels. |
+| `Color depth` | e.g. `3x16 bits RGB`, `8:4:4 YCbCr`. |
+| `Capture date` | From the image metadata. |
+| `Processing date` | When the row was written. |
+| `Dust filter` | Path of the filter applied, if the option was enabled. |
+| `ROI center X` / `ROI center Y` | Centre of the detected Petri dish, in pixels. |
+| `ROI radius` | Radius of the detected Petri dish, in pixels. |
+| `Brightness Score` | Signed deviation from a neutral exposure; near `0` is well exposed. |
+| `High Saturation Rate` | Share of overexposed pixels. |
+| `Low Saturation Rate` | Share of underexposed pixels. |
+| `Sharpness score` | Higher is sharper. |
+| `Warnings` | `No Issue found`, or a comma-separated list of issues. |
+
+> **Note**
+>
+> The number of counting columns depends on the project: one per category defined in the
+> Detection Parameters dialog. A parser should not assume a fixed column count.
+
+### Row states
+
+| State | Looks like |
+|---|---|
+| Counted | `Processed` = `TRUE`, all fields populated. |
+| Pending | `Processed` = `FALSE`, every other field empty. Written when a run is interrupted, or when files were queued but not reached. |
+| Unreadable | `N/A` across the board, `Warnings` = *file not found or could not be opened*. |
+| ROI not found | `ROI center X` / `Y` / `radius` = `Not Found`, counts at `0`, `Warnings` listing the reasons. |
+
+<details>
+<summary>Example rows</summary>
+
+| File name | Processed | Total | ROI radius | Sharpness | Warnings |
+|---|---|---|---|---|---|
+| `Photo1.tiff` | TRUE | 78190 | 464 | 92 | No Issue found |
+| `Photo5.tiff` | TRUE | 0 | Not Found | 10 | Image too dark, Camera sensitivity too low, Image out of focus, Could not find ROI |
+| `Photo7.tiff` | TRUE | N/A | N/A | N/A | File was either not found or could not be opened |
+| `Photo8.tiff` | FALSE | | | | |
+
+</details>
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><b>"The filter and the target images must have the same dimensions"</b></summary>
+
+The dust filter was shot at a different resolution than the target images. Re-acquiring the
+filter with the exact camera settings of the batch resolves it, as does turning `Apply
+filter` off. `Check Files` confirms compatibility before a run.
+
+</details>
+
+<details>
+<summary><b>Warnings about <code>uint8</code> data type</b></summary>
+
+The target image and the dust filter have different bit depths, typically an 8-bit JPEG
+against a 16-bit TIFF filter. A single format across a project keeps the counts comparable;
+mixing them does not.
+
+</details>
+
+<details>
+<summary><b><code>Could not find ROI</code> / the crop misses the dish</b></summary>
+
+The circle detector failed. Common causes: the rim is too dim to contrast against the
+background, or the radius bounds exclude the true circle. Widening them and re-checking with
+`Test on selection` usually fixes it. The bounds are percentages of the largest inscribed
+circle: a dish that overflows the frame needs a maximum above `100%`, and a dish that sits
+small in a wide shot needs a lower minimum.
+
+</details>
+
+<details>
+<summary><b>Orange status in the file list</b></summary>
+
+The entry needs attention: the file could not be fully validated, or a directory node
+contains files in differing states. The message log below the list gives the specific
+reason.
+
+</details>
+
+<details>
+<summary><b>Counts are far off</b></summary>
+
+Almost always the palette rather than the detector. Re-opening the reference image with
+`Show Highlight` enabled shows whether the assigned entries actually cover the particles and
+nothing else. When distinct particle colours share one label, recomputing the palette with
+more labels separates them.
+
+</details>
+
+<details>
+<summary><b>Two categories are counted as one</b></summary>
+
+Their hues were given the same category index. Categories are counted independently, so
+anything reported separately needs its own index in the palette and its own entry in the
+Detection Parameters dialog.
+
+</details>
+
+<details>
+<summary><b>A project marked <code>[Invalid JSON]</code> or <code>[Not Found]</code></b></summary>
+
+`[Not Found]`: the file has been moved or deleted, and `Open an existing project` locates it
+again. `[Invalid JSON]`: the file is malformed. Project files are plain JSON, so the file
+can be inspected and repaired in a text editor.
+
+</details>
