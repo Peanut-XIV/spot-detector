@@ -18,7 +18,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from numpy.typing import NDArray
-from spot_detector.transformations import get_k_means
+from spot_detector.processing.transformations import get_k_means
 from spot_detector.model.reference_image import to_3_channel_mat, to_uint16_mat
 
 

@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 from pydantic import BaseModel, Field, PrivateAttr
 
 from spot_detector.model.models import Shade
-from spot_detector.transformations import (
+from spot_detector.processing.transformations import (
     get_k_means,
 )
 from spot_detector.errors import (

@@ -1,11 +1,11 @@
 # Python standard library
 from math import sqrt
-from typing import TypeAlias, TypeVar
+from typing import Any, Literal, TypeAlias, TypeVar
 
 # Third party imports
 import cv2 as cv
 import numpy as np
-from numpy import int8, int16, int32, int64, uint8, uint16, uint32, uint64
+from numpy import float32, float64, floating, int8, int16, int32, int64, uint8, uint16, uint32, uint64
 from numpy.typing import NDArray
 
 
@@ -325,7 +325,7 @@ def label_img_fastest(im: NDArray, color_table: NDArray) -> NDArray:
     return labeled
 
 
-def label_img_fastest_uint16(im: NDArray, color_table: NDArray) -> NDArray:
+def label_img_fastest_uint16(im: NDArray[uint16], color_table: NDArray[uint16]) -> NDArray[uint8]:
     """
     Broadcasting is necessary to iterate over each shade.
     ┌──────────┬───────────┬───────────┬───────────┬───────────┐
@@ -338,8 +338,8 @@ def label_img_fastest_uint16(im: NDArray, color_table: NDArray) -> NDArray:
     │->im      │     Y     │     X     │     1     │     3     │
     └──────────┴───────────┴───────────┴───────────┴───────────┘
     """
-    palette = color_table[None, None, :, 0:3].astype(np.float32)
-    im = im[:, :, None, :].astype(np.float32)
+    float_color_table = color_table[None, None, :, 0:3].astype(np.float32)
+    float_im = im[:, :, None, :].astype(np.float32)
     """
     Now Both palette and im have broadcastable shapes.
     ┌──────────┬───────────┬───────────┬───────────┬───────────┐
@@ -351,14 +351,14 @@ def label_img_fastest_uint16(im: NDArray, color_table: NDArray) -> NDArray:
     │ norm     │     Y     │     X     │  shades   │
     └──────────┴───────────┴───────────┴───────────┘
     """
-    norm = np.linalg.norm(im - palette, axis=3)
+    norm: NDArray[float32] = np.linalg.norm(float_im - float_color_table, axis=3)  # pyright: ignore[reportAny]
     """
     And get the index of the lowest along axis 2 as value
     ┌──────────┬───────────┬───────────┐
     │ labeled  │     Y     │     X     │
     └──────────┴───────────┴───────────┘
     """
-    labeled = norm.argmin(axis=2).astype(uint16)
+    labeled: NDArray[uint8] = norm.argmin(axis=2).astype(uint8)  # pyright: ignore[reportAny]
     return labeled
 
 
@@ -404,9 +404,9 @@ def get_k_means(
 
 
 def chg_domain(
-    img: NDArray,
+    img: NDArray[Any],
     new_domain: tuple[float, float],
-) -> NDArray:
+) -> NDArray[Any]:
     # noinspection PyArgumentList
     mini_p, maxi_p = img.min(), img.max()
     mini_n, maxi_n = new_domain
@@ -414,18 +414,19 @@ def chg_domain(
     new_img = (img - mini_p) * coef + mini_n
     return new_img
 
-
-def unique_values(values: list[T] | NDArray) -> list[T]:
-    acc = []
+U = TypeVar('U', bound=np.generic)
+def unique_values(values: list[U] | NDArray[U]) -> list[U]:
+    acc: list[U] = []
     for e in values:
         if e not in acc:
             acc.append(e)
     return acc
 
 
-def evenly_spaced_gray_palette(palette: NDArray) -> NDArray:
-    lum = np.array([0.0722, 0.7152, 0.2126])
-    new_palette = np.sum(palette * lum, axis=1)
+def evenly_spaced_gray_palette(palette: NDArray[uint16]) -> NDArray[uint8]:
+    lum: NDArray[np.floating] = np.array([0.0722, 0.7152, 0.2126])
+    new_palette: NDArray[np.floating] = np.sum(palette * lum, axis=1)  # pyright: ignore[reportAny]
+    #current_shades
     current_shades, new_shades = evenly_spaced_values(new_palette)
     output_palette = new_palette.copy()
     for i, shade in enumerate(new_palette):
@@ -436,7 +437,7 @@ def evenly_spaced_gray_palette(palette: NDArray) -> NDArray:
     return output_palette.astype(uint8)
 
 
-def evenly_spaced_values(gs_palette: NDArray) -> NDArray:
+def evenly_spaced_values(gs_palette: NDArray[Any]) -> np.ndarray[tuple[Literal[2]], Any]:
     u_vals = sorted(unique_values(gs_palette))
     u_vals = np.array(u_vals)
     index = np.arange(u_vals.size)

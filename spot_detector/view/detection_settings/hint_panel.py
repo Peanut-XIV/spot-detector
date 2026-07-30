@@ -1,8 +1,6 @@
-"""
-I hope this file is useful...
-"""
-
 import sys
+from enum import IntEnum
+
 from PySide6.QtWidgets import (
     QLabel,
     QScrollArea,
@@ -21,7 +19,43 @@ from PySide6.QtCore import (
 # //////// DO NOT REMOVE ////////
 from spot_detector import rc_resources, rc_documentation  # noqa: F401 WARN: Do not remove
 
-from spot_detector.types import Hint
+class Hint(IntEnum):
+    DEFAULT = 0
+    COLORS = 1
+    MIN_DIST = 2
+    THRESH = 3
+    AREA = 4
+    CIRC = 5
+    INERTIA = 6
+    CONV = 7
+    MISSING = 8
+
+    def as_file_name(self) -> str:
+        match self:
+            case Hint.DEFAULT:
+                return "hint_default.html"
+            # TODO : Add case Hint.COLORS
+            # TODO : Add case Hint.MIN_DIST
+            case Hint.AREA:
+                return "hint_area.html"
+            case Hint.CIRC:
+                return "hint_circularity.html"
+            case Hint.CONV:
+                return "hint_convexity.html"
+            case Hint.INERTIA:
+                return "hint_inertia.html"
+            case Hint.THRESH:
+                return "hint_threshold.html"
+            case Hint.MISSING:
+                return "not_found.html"
+
+            case other:
+                print(f"Hint {other.__str__} not recognised")
+                return "not_found.html"
+
+    @staticmethod
+    def hint_count() -> int:
+        return 9
 
 
 class HintPanel(QWidget):
@@ -29,25 +63,19 @@ class HintPanel(QWidget):
         self, parent: QWidget | None = None, scroll_area: QScrollArea | None = None
     ) -> None:
         super().__init__(parent)
-        self.scroll_area = scroll_area
+        self.scroll_area: QScrollArea | None = scroll_area
         layout = QHBoxLayout(self)
         doc_path = ":resources/docs/"
         # TODO: Add the remaining docs please
-        docs_n_ids = [
-            ["not_found.html", Hint.MISSING],
-            ["hint_default.html", Hint.DEFAULT],
-            ["hint_threshold.html", Hint.THRESH],
-            ["hint_area.html", Hint.AREA],
-            ["hint_circularity.html", Hint.CIRC],
-            ["hint_convexity.html", Hint.CONV],
-            ["hint_inertia.html", Hint.INERTIA],
-        ]
+
         self.pages: dict[Hint, HintPage] = {}
-        for doc, id in docs_n_ids:
-            page = HintPage(id, doc_path + doc, self)
+
+        for hint_idx in range(Hint.hint_count()):
+            hint = Hint(hint_idx)
+            page = HintPage(hint, doc_path + hint.as_file_name(), self)
             page.setVisible(False)
             layout.addWidget(page)
-            self.pages[id] = page
+            self.pages[hint] = page
         self.setLayout(layout)
         self.pages[Hint.DEFAULT].setVisible(True)
         self.current_page_id: Hint = Hint.DEFAULT

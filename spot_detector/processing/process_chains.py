@@ -1,7 +1,7 @@
 from multiprocessing import Process, Queue, parent_process
 from pathlib import Path
 from time import sleep
-from typing import Callable, Union
+from typing import Callable, TypeAlias
 
 import cv2 as cv
 import numpy as np
@@ -9,14 +9,17 @@ from numpy.typing import NDArray
 import random
 
 from spot_detector.model.models import ColorAndParams, DetParams
-from spot_detector.transformations import (
+from spot_detector.processing.transformations import (
     evenly_spaced_gray_palette,
     isolate_categories,
     # label_img_fastest,
     label_img_fastest_uint16,
 )
 
-from .types import DataElement, ImageElement
+from spot_detector.types import DataElement, ImageElement
+
+InQueueType: TypeAlias = Queue[ImageElement | str]
+OutQueueType: TypeAlias = Queue[DataElement]
 
 RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
@@ -34,7 +37,7 @@ def count_spots_fourth_method(
 
     # labeled = label_img_fastest(img, color_table)
     labeled = label_img_fastest_uint16(image, color_table)
-    values = []
+    values: list[int] = []
 
     # print()
     # print(f"image : {image.shape} px of type {image.dtype}")
@@ -87,8 +90,8 @@ def expand_debug(string: str) -> str:
 
 
 def img_processer(
-    in_queue: Queue,
-    out_queue: Queue,
+    in_queue: InQueueType,
+    out_queue: OutQueueType,
     config: ColorAndParams,
 ) -> None:
     """
@@ -111,7 +114,7 @@ def img_processer(
             sleep(1)
             continue
 
-        job: Union[str, ImageElement] = in_queue.get()
+        job: str | ImageElement = in_queue.get()
         if isinstance(job, str):
             if job == "STOP":
                 break
@@ -131,9 +134,9 @@ def img_processer(
 def init_workers(
     count: int,
     config: ColorAndParams,
-    in_queue: Queue,
-    out_queue: Queue,
-    proc_func: Callable[[Queue, Queue, ColorAndParams], None] = img_processer,
+    in_queue: InQueueType,
+    out_queue: OutQueueType,
+    proc_func: Callable[[InQueueType, OutQueueType, ColorAndParams], None] = img_processer,
 ) -> list[Process]:
     """
     Creates a list of multiprocessing process objects but does not call
@@ -144,7 +147,7 @@ def init_workers(
     :param out_queue: The queue to which the processed data is output
     :return: The list of process objects
     """
-    workers_list = []
+    workers_list: list[Process] = []
     for _ in range(count):
         worker = Process(target=proc_func, args=(in_queue, out_queue, config))
         workers_list.append(worker)

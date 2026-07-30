@@ -24,7 +24,7 @@ from PySide6.QtCore import (
 )
 
 from spot_detector.model.models import DetParams, SimpleParam, Threshold
-from spot_detector.types import Hint
+from spot_detector.view.detection_settings.hint_panel import Hint
 
 
 class SettingsFields(QWidget):

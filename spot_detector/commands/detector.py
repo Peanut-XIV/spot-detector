@@ -8,7 +8,7 @@ from click import argument, command, confirm, echo, option
 # Project files
 from spot_detector.core import detect
 from spot_detector.file_utils import check_img_count
-from spot_detector.misc import fit_elements
+from spot_detector.cli_user_queries import fit_elements
 
 
 @command()

@@ -8,7 +8,7 @@ from numpy.typing import DTypeLike, NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import CroppingSettings
-from spot_detector.transformations import convert_mat_uint8, crop_to_dish_roi
+from spot_detector.processing.transformations import convert_mat_uint8, crop_to_dish_roi
 from spot_detector.view.file_selection.file_selection_items import (
     FileStatus,
     QualityFlag,

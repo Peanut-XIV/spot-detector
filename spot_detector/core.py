@@ -21,8 +21,8 @@ from spot_detector.file_utils import (
     write_csv,
 )
 from spot_detector.palette_gui import run_gui
-from spot_detector.process_chains import init_workers
-from spot_detector.transformations import get_k_means, label_img_fastest
+from spot_detector.processing.process_chains import init_workers
+from spot_detector.processing.transformations import get_k_means, label_img_fastest
 from spot_detector.types import DataElement, DataRow, DataTable
 
 
