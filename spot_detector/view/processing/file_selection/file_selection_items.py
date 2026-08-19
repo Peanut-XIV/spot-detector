@@ -461,9 +461,11 @@ class FileEntryItem(BaseEntryItem):
 
 
     def apply_status(self, update: StatusUpdate):
-        if status := update.file_status:
+        # FileStatus.Ok vaut 0, donc un test de verite ecarte precisement le
+        # cas ou le controle a reussi : le fichier restait Unchecked.
+        if (status := update.file_status) is not None:
             self.file_status = status
 
-        if status := update.quality_status:
-            mask, value = status
+        if (quality := update.quality_status) is not None:
+            mask, value = quality
             self.apply_quality_status(mask, value)

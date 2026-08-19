@@ -457,11 +457,11 @@ class FileSelectionModel(QAbstractItemModel):
 
         self.new_error_messages.emit(result.error_messages)
 
-        if status := result.file_status:
+        if (status := result.file_status) is not None:
             item.file_status = status
 
-        if status := result.quality_status:
-            mask, value = status
+        if (quality := result.quality_status) is not None:
+            mask, value = quality
             item.apply_quality_status(mask, value)
 
         row = index.row()
@@ -490,11 +490,11 @@ class FileSelectionModel(QAbstractItemModel):
 
         self.new_error_messages.emit(result.error_messages)
 
-        if status := result.file_status:
+        if (status := result.file_status) is not None:
             item.file_status = status
 
-        if status := result.quality_status:
-            mask, value = status
+        if (quality := result.quality_status) is not None:
+            mask, value = quality
             item.apply_quality_status(mask, value)
 
         row = index.row()
