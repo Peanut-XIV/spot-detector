@@ -2,16 +2,23 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TypeVar, TypeAlias
 
-import cv2 as cv
 import numpy as np
 from numpy import uint8
 from numpy.typing import DTypeLike, NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_TYPES
-from spot_detector.model.processing_settings_models import CroppingSettings
+from spot_detector.model.processing_settings_models import (
+    CroppingSettings,
+    QualityReportingSettings,
+)
+from spot_detector.processing.image_validation.blur_detection import (
+    BlurState,
+    assess_blur_from_masks,
+)
 from spot_detector.processing.image_validation.image_context import ImageContext
 from spot_detector.processing.transformations import convert_mat_uint8, crop_to_dish_roi
 from spot_detector.view.processing.file_selection.file_selection_items import (
+    BLUR_CHECK_FLAGS,
     FileStatus,
     QualityFlag,
     StatusUpdate,
@@ -160,13 +167,79 @@ def weird_tee(func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],
         return ((t,u),v)
     return teed_func
 
-def check_blur(context: ImageContext, blur_threshold: float) -> StatusUpdate:
-    image_path = context.path
+def check_blur(
+    context: ImageContext,
+    settings: QualityReportingSettings,
+) -> StatusUpdate:
+    """Controle de nettete d'une image, rendu sous forme de drapeaux.
+
+    Les trois etats d'assess_blur sont distincts jusqu'au bout : SHARP ne leve
+    que Checked, BLURRY leve Blurry, et NOT_APPLICABLE leve BlurNotApplicable,
+    pour qu'un controle esquive faute d'un signal assez peuple ne se confonde
+    pas avec un controle passe.
+    """
+    update = StatusUpdate(context.path, None, None, [])
+
     image = context.image
     if image is None:
         return file_error_in_quality_check(context)
-    grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    laplacian = cv.Laplacian(grayscale, cv.CV_64F)
-    variance = np.var(laplacian)  # pyright: ignore[reportAny]
-    return StatusUpdate(image_path, FileStatus.Ok, (QualityFlag.Checked | QualityFlag.Blurry, QualityFlag.Checked), [])
 
+    roi_mask, signal_mask = context.roi, context.signal_mask
+    if context.shades is None or roi_mask is None or signal_mask is None:
+        update.quality_status = (
+            BLUR_CHECK_FLAGS,
+            QualityFlag.Checked | QualityFlag.BlurNotApplicable,
+        )
+        update.error_messages.append(
+            f"Blur check skipped for '{context.path}': no project palette is "
+            + "available, so the luminophore signal cannot be segmented."
+        )
+        return update
+
+    blur_settings = settings.blur
+
+    result = assess_blur_from_masks(
+        image,
+        context.shades,
+        roi_mask,
+        signal_mask,
+        blur_settings.reference_threshold,
+        expected_diameter_px=settings.expected_diameter_px,
+        collar_fraction=settings.collar_fraction,
+        min_particles=blur_settings.min_particles,
+        min_occupation=blur_settings.min_occupation,
+    )
+
+    match result.state:
+        case BlurState.SHARP:
+            flag_value = QualityFlag.Checked
+
+        case BlurState.BLURRY:
+            flag_value = QualityFlag.Checked | QualityFlag.Blurry
+            update.error_messages.append(
+                f"Warning: image '{context.path}' looks blurry. Sharpness "
+                + f"{result.score:.4f} is below the reference threshold "
+                + f"{blur_settings.reference_threshold:.4f}."
+            )
+
+        case BlurState.NOT_APPLICABLE:
+            flag_value = QualityFlag.Checked | QualityFlag.BlurNotApplicable
+            update.error_messages.append(
+                f"Note: blur was not measured on '{context.path}'. The signal "
+                + f"covers {result.occupation:.2e} of the region of interest "
+                + f"over {result.n_particles} particles, below the "
+                + f"{blur_settings.min_occupation:.2e} and "
+                + f"{blur_settings.min_particles} floors."
+            )
+
+    update.quality_status = (BLUR_CHECK_FLAGS, flag_value)
+
+    return update
+
+
+def make_blur_checker(settings: QualityReportingSettings) -> CheckFn:
+
+    def checker(context: ImageContext) -> StatusUpdate:
+        return check_blur(context, settings)
+
+    return checker

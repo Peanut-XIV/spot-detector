@@ -216,6 +216,37 @@ def sharpness_score(norm_channel: Double2D, eval_mask: Bool2D) -> float:
 
 # --- Orchestration ---------------------------------------------------------
 
+def assess_blur_from_masks(
+    img: ImageRGB[uint16],
+    hue_table: ShadeTable,
+    roi_mask: Bool2D,
+    signal_mask: Bool2D,
+    reference_threshold: float,
+    expected_diameter_px: int = 10,
+    collar_fraction: float = 0.5,
+    min_particles: int = 30,
+    min_occupation: float = 1e-3,
+) -> BlurResult:
+    """Coeur de la mesure, a partir de masques deja calcules. Separe
+    d'assess_blur pour qu'un appelant qui partage un contexte entre plusieurs
+    controles ne refasse pas la labellisation, de loin le calcul le plus cher.
+    """
+    channel = select_signal_channel(hue_table)
+
+    n_particles, occupation = estimate_density(signal_mask, roi_mask)
+    if not is_applicable(n_particles, occupation, min_particles, min_occupation):
+        return BlurResult(BlurState.NOT_APPLICABLE, None, channel, n_particles, occupation)
+
+    collar_px = max(int(round(expected_diameter_px * collar_fraction)), 1)
+    eval_mask = dilate_mask(signal_mask, collar_px) & roi_mask
+
+    norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
+    score = sharpness_score(norm, eval_mask)
+
+    state = BlurState.SHARP if score >= reference_threshold else BlurState.BLURRY
+    return BlurResult(state, score, channel, n_particles, occupation)
+
+
 def assess_blur(
     img: ImageRGB[uint16],
     hue_table: ShadeTable,
@@ -230,27 +261,26 @@ def assess_blur(
 
     reference_threshold : seuil sur la variance du Laplacien normalise, calibre
         sur la serie nette de reference avec ce meme code.
-    expected_diameter_px : diametre attendu de particule ; a deriver de la
-        convention en fraction du cercle inscrit, non code en dur.
+    expected_diameter_px : diametre attendu de particule, en pixels. Le seuil
+        etant lui-meme lie a l'echantillonnage, l'exprimer en fraction d'une
+        reference geometrique ne rendrait pas le reglage transferable.
     collar_fraction : rayon du collier de dilatation, en fraction du diametre.
     min_particles, min_occupation : seuils de bascule vers NOT_APPLICABLE.
     """
-    channel = select_signal_channel(hue_table)
     roi_mask = get_roi_mask(img, roi)
     signal_mask = compute_signal_mask(img, hue_table, roi_mask)
 
-    n_particles, occupation = estimate_density(signal_mask, roi_mask)
-    if not is_applicable(n_particles, occupation, min_particles, min_occupation):
-        return BlurResult(BlurState.NOT_APPLICABLE, None, channel, n_particles, occupation)
-
-    collar_px = max(int(round(expected_diameter_px * collar_fraction)), 1)
-    eval_mask = dilate_mask(signal_mask, collar_px) & roi_mask
-
-    norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
-    score = sharpness_score(norm, eval_mask)
-
-    state = BlurState.SHARP if score >= reference_threshold else BlurState.BLURRY
-    return BlurResult(state, score, channel, n_particles, occupation)
+    return assess_blur_from_masks(
+        img,
+        hue_table,
+        roi_mask,
+        signal_mask,
+        reference_threshold,
+        expected_diameter_px,
+        collar_fraction,
+        min_particles,
+        min_occupation,
+    )
 
 
 if __name__ == "__main__":
