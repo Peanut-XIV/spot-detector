@@ -293,8 +293,11 @@ class FileSelectionPanel(QWidget):
 
         for index in selection:
             if res := self._model.check_entry_2(index, check_function):
-                print(f"adding {str(res[0])}")
-                mat_list.append(res)
+                # weird_tee rend desormais (contexte, image), et l'apercu
+                # n'attend qu'un chemin.
+                context, cropped = res
+                print(f"adding {str(context.path)}")
+                mat_list.append((context.path, cropped))
 
         crop_preview_dialog = ImageListPreview(mat_list, self)
         crop_preview_dialog.show()

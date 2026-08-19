@@ -117,14 +117,25 @@ def get_roi_mask(img: ImageRGB[uint16], roi: Bool2D | None) -> Bool2D:
 
 # --- Etape 3 : masque du signal --------------------------------------------
 
+def signal_mask_from_labels(
+    labels: NDArray[np.uint8],
+    hue_table: ShadeTable,
+    roi_mask: Bool2D,
+) -> Bool2D:
+    """Deduit le masque de signal d'une labellisation deja calculee. Separe de
+    compute_signal_mask pour qu'un appelant disposant deja des etiquettes,
+    ImageContext par exemple, n'ait pas a refaire la labellisation."""
+    is_signal_hue = cast(NDArray[np.bool], hue_table[:, 3] != 0)  # N, bool
+    signal_mask = is_signal_hue[labels]                           # H x W, bool
+    return signal_mask & roi_mask
+
+
 def compute_signal_mask(img: ImageRGB[uint16], hue_table: ShadeTable, roi_mask: Bool2D) -> Bool2D:
     """Segmente les pixels de luminophores via la labellisation K-moyennes, puis
     restreint a la ROI. Une teinte est du signal si sa categorie est non nulle."""
     palette = np.ascontiguousarray(hue_table[:, :3])              # N x 3, uint16
     labels = label_img_fastest_uint16(img, palette)               # H x W, index de teinte
-    is_signal_hue = cast(NDArray[np.bool], hue_table[:, 3] != 0)  # N, bool
-    signal_mask = is_signal_hue[labels]                           # H x W, bool
-    return signal_mask & roi_mask
+    return signal_mask_from_labels(labels, hue_table, roi_mask)
 
 
 # --- Etape 4 : dilatation en collier ---------------------------------------
