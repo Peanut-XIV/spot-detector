@@ -1,8 +1,9 @@
-from typing import final
+from typing import final, override
 
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
 from spot_detector.model.processing_settings_models import QualityReportingSettings
+from spot_detector.types import ShadeTable
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
     as_checked,
@@ -68,6 +69,13 @@ class QualityReportingBox(BaseSettingsBox):
         self.test_reporting_button: QPushButton = QPushButton("Test Reporting on Selection", self)
         layout.addWidget(self.test_reporting_button)
 
+
+    @override
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        super().set_shades(shades)
+        self.blur_box.set_shades(shades)
+        self.overexposure_box.set_shades(shades)
 
     def get_model(self) -> QualityReportingSettings:
         model = QualityReportingSettings(

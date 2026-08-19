@@ -12,6 +12,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 
 from spot_detector.processing.image_validation.image_context import ImageContext
+from spot_detector.types import ShadeTable
 from spot_detector.view.processing.file_selection.file_selection_items import (
     BaseItem,
     BaseEntryItem,
@@ -36,6 +37,7 @@ class FileSelectionModel(QAbstractItemModel):
 
         self._rootItem: RootItem = RootItem()
         self._rootData: list[str] = self._rootItem.data
+        self._shades: ShadeTable | None = None
 
         _ = self.rowsInserted.connect(self._refresh_file_count)
         _ = self.rowsRemoved.connect(self._refresh_file_count)
@@ -439,11 +441,15 @@ class FileSelectionModel(QAbstractItemModel):
 
         self.dataChanged.emit(from_cell, to_cell, roles)
 
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        self._shades = shades
+
     def _context_for(self, item: FileEntryItem) -> ImageContext:
         """Contexte partage par les controles appliques a un meme fichier. Un
         seul point de construction, pour que ce qui l'alimente n'ait a etre
         branche qu'ici."""
-        return ImageContext(item.path)
+        return ImageContext(item.path, self._shades)
 
     def check_entry(self, index: QModelIndex, check_function: Callable[[ImageContext], StatusUpdate]):
         """

@@ -28,6 +28,7 @@ from spot_detector.view.processing.file_selection.file_selection_model import Fi
 from spot_detector.view.processing.file_selection.file_selection_items import DirFilesPair, StatusUpdate
 from spot_detector.processing.image_validation.checks import check_file_access, make_autocropping_checker, make_dust_filter_compat_checker, weird_tee
 from spot_detector.view.processing.settings.crop_preview import ImageListPreview
+from spot_detector.types import ShadeTable
 
 class FileSelectionWidget(QWidget):
     def __init__(
@@ -263,6 +264,10 @@ class FileSelectionPanel(QWidget):
 
         self._previous_directory = canonical_path(dialog.selectedFiles()[0]).parent
 
+
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        self._model.set_shades(shades)
 
     @Slot()
     def check_all_files_for_access(self) -> None:

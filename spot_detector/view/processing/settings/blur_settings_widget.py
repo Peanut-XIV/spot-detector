@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QCheckBox, QDialog, QDoubleSpinBox, QFileDialog, QGridLayout, QLabel, QMessageBox, QPushButton, QSpinBox, QVBoxLayout, QWidget
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import BlurDetectionSettings
+from spot_detector.types import ShadeTable
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
     as_checked,
@@ -98,7 +99,16 @@ class BlurReportingBox(BaseSettingsBox):
 
     @Slot()
     def run_calibration(self):
-        dialog = CalibrateBlurDialog(self._previous_directory, self)
+        if self._shades is None:
+            _ = QMessageBox.warning(
+                self,
+                "No palette available",
+                "The blur threshold is calibrated against the project palette, "
+                "which is not available here. Define the project shades first.",
+            )
+            return
+
+        dialog = CalibrateBlurDialog(self._shades, self._previous_directory, self)
         if dialog.exec():
             thresh = dialog.threshold_value
             if thresh is not None:
@@ -109,6 +119,7 @@ class BlurReportingBox(BaseSettingsBox):
 class CalibrateBlurDialog(QDialog):
     def __init__(
         self,
+        shades: ShadeTable,
         /,
         previous_directory: Path | None = None,
         parent: QWidget | None = None,
@@ -119,6 +130,7 @@ class CalibrateBlurDialog(QDialog):
     ) -> None:
         super().__init__(parent, f, sizeGripEnabled=sizeGripEnabled, modal=modal)
         self.setWindowTitle("Blur detection calibration")
+        self._shades: ShadeTable = shades
         self._previous_directory = previous_directory
         self.selected_files: list[Path] = []
         self.threshold_value: float | None = None

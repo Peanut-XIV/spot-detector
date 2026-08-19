@@ -4,10 +4,11 @@ from pathlib import Path
 from typing import Any, Self
 
 import cv2 as cv
+import numpy as np
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 
-from spot_detector.custom_types import PixTuple, ShadeTuple
+from spot_detector.custom_types import PixTuple, ShadeTable, ShadeTuple
 
 
 class ChannelOrder(Enum):
@@ -278,6 +279,12 @@ class ColorAndParams(BaseModel):
     def from_dict(cls, data: dict[str, Any]) -> Self:  # pyright: ignore[reportExplicitAny]
         return cls(**data)  # pyright: ignore[reportAny]
 
+    def shade_table(self) -> ShadeTable:
+        """Palette du projet en tableau N x 4 uint16, colonnes [b, g, r,
+        categorie], dans l'ordre de Shade.as_row et donc dans l'ordre des
+        canaux rendus par cv.imread."""
+        return np.array([shade.as_row() for shade in self.shades], dtype=np.uint16)
+
     def generate_detection_parameters(self):
         """
         Adds DetParams objects as well as color names to the det_params and
@@ -286,7 +293,6 @@ class ColorAndParams(BaseModel):
         parameters.
         """
         # TODO: complete function
-        ...
 
     def swap_params(self, index_1: int, index_2: int):
         """
@@ -347,6 +353,6 @@ class CLIDefaults(BaseModel):
         with open(file_path, "r", encoding="UTF-8") as cfg_file:
             content = json.load(cfg_file).__getitem__("CLI")  # pyright: ignore[reportAny]
         if content is None:
-            raise ValidationError(f"CLI not found in file {str(file_path)}")
+            raise ValidationError(f"CLI not found in file {file_path!s}")
         output = cls(**content)  # pyright: ignore[reportAny]
         return output

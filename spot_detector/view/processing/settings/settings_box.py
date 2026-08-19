@@ -1,7 +1,8 @@
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
 from spot_detector.model.processing_settings_models import BaseProcessingSettings
 from spot_detector.processing.image_validation.blur_calibration import PARAMETER_RANGES
+from spot_detector.types import ShadeTable
 
 from pathlib import Path
 
@@ -58,3 +59,11 @@ class BaseSettingsBox(QGroupBox):
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._previous_directory: Path = previous_directory or Path.home()
+        self._shades: ShadeTable | None = None
+
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        """Palette du projet. Les controles qui segmentent l'image en ont
+        besoin ; les boites qui n'en font rien l'ignorent. Les boites
+        composites redefinissent la methode pour la transmettre."""
+        self._shades = shades
