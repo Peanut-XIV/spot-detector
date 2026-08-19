@@ -5,7 +5,10 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QDoubleSpinBox, QFileDialog, Q
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import BlurDetectionSettings
 from spot_detector.controller.worker_thread import BlurCalibrationProcessor
-from spot_detector.processing.image_validation.blur_calibration import BlurCalibration
+from spot_detector.processing.image_validation.blur_calibration import (
+    PARAMETER_RANGES,
+    BlurCalibration,
+)
 from spot_detector.types import ShadeTable
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
@@ -24,6 +27,12 @@ class BlurReportingBox(BaseSettingsBox):
             parent: QWidget | None = None
     ):
         super().__init__("Blur reporting", previous_directory, parent)
+
+        # Geometrie de particule detenue par la boite parente, poussee ici a
+        # chaque changement. La calibration la respecte au lieu de la deduire.
+        self._expected_diameter_px: int = int(PARAMETER_RANGES["expected_diameter_px"][2])
+        self._collar_fraction: float = float(PARAMETER_RANGES["collar_fraction"][2])
+
         self._init_layout()
 
         _ = self.enable_checkbox.checkStateChanged.connect(self.on_enabled_changed)
@@ -99,6 +108,11 @@ class BlurReportingBox(BaseSettingsBox):
         self.min_particle_spinbox.setEnabled(enabled_state)
         self.min_occupation_spinbox.setEnabled(enabled_state)
 
+    @Slot(int, float)
+    def set_particle_geometry(self, expected_diameter_px: int, collar_fraction: float) -> None:
+        self._expected_diameter_px = expected_diameter_px
+        self._collar_fraction = collar_fraction
+
     @Slot()
     def run_calibration(self):
         if self._shades is None:
@@ -110,11 +124,25 @@ class BlurReportingBox(BaseSettingsBox):
             )
             return
 
-        dialog = CalibrateBlurDialog(self._shades, self._previous_directory, self)
-        if dialog.exec():
-            thresh = dialog.threshold_value
-            if thresh is not None:
-                self.reference_threshold_spinbox.setValue(thresh)
+        dialog = CalibrateBlurDialog(
+            self._shades,
+            self._expected_diameter_px,
+            self._collar_fraction,
+            self._previous_directory,
+            self,
+        )
+        if not dialog.exec():
+            return
+
+        calibration = dialog.calibration
+        if calibration is None:
+            return
+
+        # Le diametre n'est pas relu : il est partage avec la surexposition et
+        # reste la propriete de l'utilisatrice. Seul ce que la calibration
+        # derive vraiment est repris.
+        self.reference_threshold_spinbox.setValue(calibration.reference_threshold)
+        self.min_occupation_spinbox.setValue(calibration.min_occupation * 100)
 
 
 @final
@@ -122,6 +150,8 @@ class CalibrateBlurDialog(QDialog):
     def __init__(
         self,
         shades: ShadeTable,
+        expected_diameter_px: int,
+        collar_fraction: float,
         /,
         previous_directory: Path | None = None,
         parent: QWidget | None = None,
@@ -133,6 +163,8 @@ class CalibrateBlurDialog(QDialog):
         super().__init__(parent, f, sizeGripEnabled=sizeGripEnabled, modal=modal)
         self.setWindowTitle("Blur detection calibration")
         self._shades: ShadeTable = shades
+        self._expected_diameter_px: int = expected_diameter_px
+        self._collar_fraction: float = collar_fraction
         self._previous_directory = previous_directory
         self.selected_files: list[Path] = []
         self.threshold_value: float | None = None
@@ -192,10 +224,15 @@ class CalibrateBlurDialog(QDialog):
 
         self._set_busy(True)
 
+        # Un seul diametre candidat : celui saisi. Le balayage d'origine
+        # minimisait le rapport max/min des scores nets, un critere quasi plat
+        # dans le regime epars, dont l'argmin est donc choisi par le bruit.
         thread = BlurCalibrationProcessor(
             self.selected_files,
             self._shades,
             reject_sigma=self.maximum_blur_radius_spinbox.value(),
+            candidate_diameters_px=(self._expected_diameter_px,),
+            collar_fraction=self._collar_fraction,
             parent=self,
         )
         _ = thread.result_ready.connect(self._on_calibration_ready)

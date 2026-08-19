@@ -69,6 +69,20 @@ class QualityReportingBox(BaseSettingsBox):
         self.test_reporting_button: QPushButton = QPushButton("Test Reporting on Selection", self)
         layout.addWidget(self.test_reporting_button)
 
+        # La geometrie de particule appartient a cette boite, parce qu'elle est
+        # partagee entre le flou et la surexposition. Les sous-boites la
+        # recoivent au lieu de la deviner.
+        _ = self.diameter_spinbox.valueChanged.connect(self._push_particle_geometry)
+        _ = self.collar_spinbox.valueChanged.connect(self._push_particle_geometry)
+        self._push_particle_geometry()
+
+    @Slot()
+    def _push_particle_geometry(self) -> None:
+        self.blur_box.set_particle_geometry(
+            self.diameter_spinbox.value(),
+            self.collar_spinbox.value() / 100,
+        )
+
 
     @override
     @Slot(object)
@@ -91,6 +105,7 @@ class QualityReportingBox(BaseSettingsBox):
     def set_model(self, model: QualityReportingSettings) -> None:
         self.diameter_spinbox.setValue(model.expected_diameter_px)
         self.collar_spinbox.setValue(model.collar_fraction * 100)
+        self._push_particle_geometry()
         self.blur_box.set_model(model.blur)
         self.overexposure_box.set_model(model.overexposure)
         self.avg_brightness_checkbox.setCheckState(as_checked(model.average_brightness))
