@@ -28,7 +28,7 @@ def remove_hot_pixels(
     name: str | None,
 ):
     try:
-        ref_img = cv2.imread(reference, cv2.IMREAD_ANYDEPTH + cv2.IMREAD_COLOR)
+        ref_img = cv2.imread(reference, cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
     except RuntimeError:
         raise click.FileError("Could not open reference image")
     if ref_img is None:
@@ -43,7 +43,7 @@ def remove_hot_pixels(
         dest_dir = destination_path.joinpath(source_dir.name)
         image_paths = [img for img in source_dir.iterdir() if img.is_file()]
         for im_path in image_paths:
-            img = cv2.imread(str(im_path), cv2.IMREAD_ANYDEPTH + cv2.IMREAD_COLOR)
+            img = cv2.imread(str(im_path), cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
             if img is None:
                 print(f"{im_path} could not be opened")
                 continue

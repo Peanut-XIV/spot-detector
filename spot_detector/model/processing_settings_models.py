@@ -33,19 +33,31 @@ class CroppingSettings(BaseProcessingSettings):
         return max_radius_value
 
 
+class BlurDetectionSettings(BaseProcessingSettings):
+    enabled: bool
+    reference_threshold: float  # Computed or selected threshold beneath which an image is too blurry
+    min_particles: int = Field(ge=0)
+    min_occupation: float = Field(ge=0.0)
+
+
+class OverExposureDetectionSettings(BaseProcessingSettings):
+    enabled: bool
+    area_threshold: float  # between 0% overexposed area allowed to 100% overexposed area allowed
+    brightness_sensitivity: float  # proportion of most exposed values considered overexposed
+
 
 class QualityReportingSettings(BaseProcessingSettings):
-    report_underexposure: bool = Field(default=False)
-    report_overexposure: bool = Field(default=False)
-    report_brightness: bool = Field(default=False)
-    report_blurry: bool = Field(default=False)
+    expected_diameter_px: int = Field(ge=0)  # minimum radius of the bright spots within the image
+    collar_fraction: float = Field(ge=0.0)   # fraction of the expected diameter. increases the measured area to better detect blur and overexposure
 
+    blur: BlurDetectionSettings
+    overexposure: OverExposureDetectionSettings
+    average_brightness: bool
 
 
 class ProcessingOutputSettings(BaseProcessingSettings):
     path: str | None = Field(default=None)
     resume_after_crash_enabled: bool = Field(default=True)
-
 
 
 class PreprocessingSettings(BaseProcessingSettings):
@@ -54,11 +66,9 @@ class PreprocessingSettings(BaseProcessingSettings):
     reporting: QualityReportingSettings = Field()
 
 
-
 class UserSelectedDir(BaseProcessingSettings):
     path: str = Field()
     files: list[str] = Field(default_factory=lambda: list())
-
 
 
 class ProcessingSettingsModel(BaseProcessingSettings):

@@ -9,7 +9,7 @@ from numpy.typing import DTypeLike, NDArray
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import CroppingSettings
 from spot_detector.processing.transformations import convert_mat_uint8, crop_to_dish_roi
-from spot_detector.view.file_selection.file_selection_items import (
+from spot_detector.view.processing.file_selection.file_selection_items import (
     FileStatus,
     QualityFlag,
     StatusUpdate,
@@ -37,7 +37,7 @@ def check_file_access(file_path: Path) -> StatusUpdate:
         update.file_status = FileStatus.NoAuth
         return update
 
-    mat = cv.imread(str(file_path), cv.IMREAD_ANYCOLOR | cv.IMREAD_ANYDEPTH)
+    mat = cv.imread(str(file_path), cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH)
 
     if mat is None:
         update.file_status = FileStatus.BadFormat
@@ -74,27 +74,20 @@ def check_dust_filter_compat(
     file_path: Path
 ) -> StatusUpdate:
     update = StatusUpdate(file_path, None, None, [])
-    flag_mask  = QualityFlag.Checked | QualityFlag.BadFilterShape
+    flag_mask  = QualityFlag.Checked | QualityFlag.FilterFailsMatch
     flag_value = QualityFlag.Checked
 
-    mat = cv.imread(str(file_path), cv.IMREAD_ANYCOLOR | cv.IMREAD_ANYDEPTH)
+    mat = cv.imread(str(file_path), cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH)
 
     if mat is None:
         return file_error_in_quality_check(file_path)
 
-    if list(mat.shape) != list(shape):  # pyright: ignore[reportAny]
-        flag_value |= QualityFlag.BadFilterShape
+    if list(mat.shape) != list(shape) or mat.dtype != data_type:  # pyright: ignore[reportAny]
+        flag_value |= QualityFlag.FilterFailsMatch
         update.error_messages.append(
-            f"Warning: image located at '{ str(file_path) }' has shape "
-            + f"{ mat.shape } but the dust filter has shape { shape }, "  # pyright: ignore[reportAny]
-            +  "the filter cannot and will not be applied to this image"
-        )
-
-    if mat.dtype != data_type:
-        flag_value |= QualityFlag.BadFilterShape
-        update.error_messages.append(
-            "Warning: image located at '{str(file_path)}' has datatype "
-            + f"{mat.dtype} but the dust filter has shape {data_type}, "
+            f"Warning: image located at '{str(file_path)}' has shape "
+            + f"{mat.shape} and datatype {mat.dtype} but the dust "  # pyright: ignore[reportAny]
+            + f"filter has shape {shape} and datatype {data_type}, "
             + "the filter cannot and will not be applied to this image"
         )
 
@@ -120,7 +113,7 @@ def make_autocropping_checker(config: CroppingSettings) -> Callable[[Path], tupl
 
 
 def check_autocropping(image_path: Path, config: CroppingSettings) -> tuple[NDArray[uint8] | None, StatusUpdate]:
-    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR)
+    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH)
 
     if image is None:
         return (None, file_error_in_quality_check(Path(image_path)))
@@ -141,7 +134,7 @@ def check_autocropping(image_path: Path, config: CroppingSettings) -> tuple[NDAr
     else:
         maxi = longest_edge
 
-    print(f"before: {image_mat.shape}:{image_mat.dtype}")
+    print(f"before: {image_mat.shape}:{image_mat.dtype}")  # pyright: ignore[reportAny]
 
     cropped_image = crop_to_dish_roi(image_mat, (mini, maxi)).astype(np.uint8)
 
@@ -163,9 +156,11 @@ def weird_tee(func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],
     return teed_func
 
 def check_blur(image_path: Path, blur_threshold: float) -> StatusUpdate:
-    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR)
+    image = cv.imread(str(image_path), cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH)
+    if image is None:
+        raise ValueError("Could not open image file")
     grayscale = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     laplacian = cv.Laplacian(grayscale, cv.CV_64F)
-    variance = np.var(laplacian)
+    variance = np.var(laplacian)  # pyright: ignore[reportAny]
     return StatusUpdate(image_path, FileStatus.Ok, (QualityFlag.Checked | QualityFlag.Blurry, QualityFlag.Checked), [])
 

@@ -98,7 +98,7 @@ class QualityFlag(Flag):
     OverExposed = 0x04
     UnderExposed = 0x08
     RoiFail = 0x10
-    BadFilterShape = 0x20
+    FilterFailsMatch = 0x20
 
     def to_generic(self) -> GenericStatus:
         match self:
@@ -126,7 +126,7 @@ class QualityFlag(Flag):
             (self.OverExposed, "OverExp"),
             (self.UnderExposed, "UnderExp"),
             (self.RoiFail, "RoiFail"),
-            (self.BadFilterShape, "BadShape"),
+            (self.FilterFailsMatch, "BadShape"),
         ]
 
         for bit, name in state_bit_name:

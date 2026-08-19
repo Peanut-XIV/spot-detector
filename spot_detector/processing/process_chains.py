@@ -1,39 +1,39 @@
 from multiprocessing import Process, Queue, parent_process
 from pathlib import Path
 from time import sleep
-from typing import Callable, TypeAlias
+from typing import Callable, cast
 
 import cv2 as cv
 import numpy as np
-from numpy.typing import NDArray
+from numpy import uint16
 import random
 
 from spot_detector.model.models import ColorAndParams, DetParams
 from spot_detector.processing.transformations import (
+    convert_mat_uint16,
     evenly_spaced_gray_palette,
     isolate_categories,
     # label_img_fastest,
     label_img_fastest_uint16,
 )
 
-from spot_detector.types import DataElement, ImageElement
+from spot_detector.types import CommonInt_T, DataElement, ShadeTable, ImageElement, ImageRGB
+from spot_detector.processing.visualisation import visualize_detection
 
-InQueueType: TypeAlias = Queue[ImageElement | str]
-OutQueueType: TypeAlias = Queue[DataElement]
+type InQueueType = Queue[ImageElement | str]
+type OutQueueType = Queue[DataElement]
 
 RICH_KEYPOINTS = cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS
 
 
 def count_spots_fourth_method(
-    image: NDArray,
-    color_table: NDArray,
+    image: ImageRGB[uint16],
+    color_table: ShadeTable,
     det_params: list[DetParams],
     debug: int = 0,
 ) -> list[int]:
-    # crop_to_main_circle does not work
-    # img = crop_to_main_circle(img)
-
-    labels = list(set([int(x) for x in color_table[:, 3] if int(x) > 0]))
+    # Use set to create a collection with a single item per unique value
+    labels = list(set([int(x) for x in color_table[:, 3] if int(x) > 0]))  # pyright: ignore[reportAny]
 
     # labeled = label_img_fastest(img, color_table)
     labeled = label_img_fastest_uint16(image, color_table)
@@ -55,31 +55,41 @@ def count_spots_fourth_method(
         detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         isolated_color = isolate_categories(color_table, [j])
 
-        # print(isolated_color)
+        print(isolated_color)
 
         gs_palette = evenly_spaced_gray_palette(isolated_color)
 
+        print(gs_palette)
+
         gs_img = gs_palette[labeled.flatten()]
-        gs_img = gs_img.reshape(labeled.shape).astype(np.uint8)
+        gs_img = gs_img.reshape(image.shape[:2]).astype(np.uint8)
 
         key_points = detector.detect(gs_img)
         values.append(len(key_points))
+
+
+        if debug == -1:
+            mat = visualize_detection(image, gs_img, key_points)
+            cv.imshow("visualisation", mat)
+            cv.imshow("gs_img", gs_img)
+            _ = cv.waitKey(0)
+            print("debug_print:",cv.imwrite("/Users/louis/Desktop/debug_out.png", mat))
 
         if debug >= 1:
             kp = cv.drawKeypoints(
                 gs_img,
                 key_points,
-                None,  # type: ignore
+                np.array(None),
                 [0, 0, 255],
                 RICH_KEYPOINTS,
             )
-            cv.imwrite(expand_debug(f"col{j}_kp_km_{im_id}.jpg"), kp)
-            cv.imwrite(expand_debug(f"col{j}_gs_km_{im_id}.jpg"), gs_img)
+            _ = cv.imwrite(expand_debug(f"col{j}_kp_km_{im_id}.jpg"), kp)
+            _ = cv.imwrite(expand_debug(f"col{j}_gs_km_{im_id}.jpg"), gs_img)
 
     if debug >= 1:
-        cv.imwrite(expand_debug(f"crop_km_{im_id}.jpg"), image)
+        _ = cv.imwrite(expand_debug(f"crop_km_{im_id}.jpg"), image)
     if debug >= 3:
-        cv.imwrite(expand_debug(f"labled_km_{im_id}.png"), labeled)
+        _ = cv.imwrite(expand_debug(f"labled_km_{im_id}.png"), labeled)
 
     return values
 
@@ -122,12 +132,14 @@ def img_processer(
             continue
 
         folder_row, depth_col, path = job
-        image = cv.imread(path, cv.IMREAD_ANYDEPTH | cv.IMREAD_COLOR_BGR)
+        image = cast(ImageRGB[CommonInt_T] | None, cv.imread(path, cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH))
         if image is None:
             print(f"Failed reading image at path {path} and got None instead")
             continue
 
-        values = count_spots_fourth_method(image, color_table, config.det_params, debug=0)
+        image_16 = convert_mat_uint16(image)
+
+        values = count_spots_fourth_method(image_16, color_table, config.det_params, debug=0)
         result: DataElement = (folder_row, depth_col, values)
         out_queue.put(result)
 

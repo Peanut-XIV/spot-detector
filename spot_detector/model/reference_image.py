@@ -260,7 +260,7 @@ class ReferenceImageModel(BaseModel):
     def generate_cache_from_path(self):
         if Path(self.path).name.startswith("."):
             raise InvalidNameError(self.path)
-        img = cv2.imread(self.path, cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+        img = cv2.imread(self.path, cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
         if img is None:
             raise FailedOpeningError(self.path)
         self.generate_cache_from_mat(img)

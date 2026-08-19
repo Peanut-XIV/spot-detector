@@ -7,10 +7,12 @@ from PySide6.QtCore import Qt, Slot
 from spot_detector.model.models import ColorAndParams
 from spot_detector.model.processing_settings_models import ProcessingSettingsModel
 from spot_detector.model.project import Project
+
 from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog, DialogExitStatus
-from spot_detector.view.file_selection.file_selection_widget import FileSelectionPanel
+
+from spot_detector.view.processing.file_selection.file_selection_panel import FileSelectionPanel
 from spot_detector.view.processing.output_panel import OutputFilePanel
-from spot_detector.view.processing.processing_settings_widget import ProcessingSettingsPanel
+from spot_detector.view.processing.settings.processing_settings_panel import ProcessingSettingsPanel
 
 
 class ProcessingDialog(CustomModalDialog):
