@@ -4,7 +4,12 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QCheckBox, QDialog, QDoubleSpinBox, QFileDialog, QGridLayout, QLabel, QMessageBox, QPushButton, QSpinBox, QVBoxLayout, QWidget
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import BlurDetectionSettings
-from spot_detector.view.processing.settings.settings_box import BaseSettingsBox, as_checked, is_checked
+from spot_detector.view.processing.settings.settings_box import (
+    BaseSettingsBox,
+    as_checked,
+    is_checked,
+    recommended_range_tooltip,
+)
 
 from pathlib import Path
 
@@ -30,9 +35,28 @@ class BlurReportingBox(BaseSettingsBox):
 
         self.enable_checkbox = QCheckBox("Enable blur detection")
         self.calibrate_threshold_button = QPushButton("Calibrate", self)
-        self.reference_threshold_spinbox = QDoubleSpinBox(self, minimum=0.0)
-        self.min_particle_spinbox = QSpinBox(self, minimum=0)
-        self.min_occupation_spinbox = QDoubleSpinBox(self, minimum=0.0, maximum=100.0, suffix="%")
+
+        # QDoubleSpinBox vaut par defaut decimals=2 et maximum=99.99, ce qui
+        # tronque un seuil calibre de 0.112 a 0.11 et une occupation de
+        # 8.3e-4 a 8e-4. Les deux sont donc fixes explicitement, sur des bornes
+        # plus larges que la plage recommandee rappelee en infobulle.
+        self.reference_threshold_spinbox = QDoubleSpinBox(
+            self, minimum=0.0, maximum=100.0, decimals=4, singleStep=0.001
+        )
+        self.min_particle_spinbox = QSpinBox(self, minimum=0, maximum=10000)
+        self.min_occupation_spinbox = QDoubleSpinBox(
+            self, minimum=0.0, maximum=100.0, decimals=4, singleStep=0.01, suffix="%"
+        )
+
+        self.reference_threshold_spinbox.setToolTip(
+            recommended_range_tooltip("reference_threshold")
+        )
+        self.min_particle_spinbox.setToolTip(
+            recommended_range_tooltip("min_particles")
+        )
+        self.min_occupation_spinbox.setToolTip(
+            recommended_range_tooltip("min_occupation", as_percent=True)
+        )
 
         # Row 0
         layout.addWidget(self.enable_checkbox, 0, 0)
@@ -105,7 +129,9 @@ class CalibrateBlurDialog(QDialog):
         layout = QVBoxLayout(self)
         self.compute_button = QPushButton("Compute reference threshold", self)
         self.select_button = QPushButton("Select reference images (0 selected)", self)
-        self.maximum_blur_radius_spinbox = QDoubleSpinBox(self, suffix="px", minimum=0)
+        self.maximum_blur_radius_spinbox = QDoubleSpinBox(
+            self, suffix="px", minimum=0.0, maximum=100.0, decimals=2, singleStep=0.1
+        )
         self.cancel_button = QPushButton("Cancel", self)
 
         layout.addWidget(self.select_button)

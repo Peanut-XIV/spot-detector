@@ -3,7 +3,12 @@ from typing import final
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
 from spot_detector.model.processing_settings_models import QualityReportingSettings
-from spot_detector.view.processing.settings.settings_box import BaseSettingsBox, as_checked, is_checked
+from spot_detector.view.processing.settings.settings_box import (
+    BaseSettingsBox,
+    as_checked,
+    is_checked,
+    recommended_range_tooltip,
+)
 from spot_detector.view.processing.settings.blur_settings_widget import BlurReportingBox
 from spot_detector.view.processing.settings.overexposure_settings_widget import OverexposureBox
 
@@ -29,13 +34,19 @@ class QualityReportingBox(BaseSettingsBox):
 
         l1: QHBoxLayout = QHBoxLayout()
         l1.addWidget(QLabel("Expected particle Diameter", self))
-        self.diameter_spinbox: QSpinBox = QSpinBox(self, minimum=1, suffix="px")
+        self.diameter_spinbox: QSpinBox = QSpinBox(self, minimum=1, maximum=1000, suffix="px")
+        self.diameter_spinbox.setToolTip(recommended_range_tooltip("expected_diameter_px"))
         l1.addWidget(self.diameter_spinbox)
         layout.addLayout(l1)
 
         l2: QHBoxLayout = QHBoxLayout()
         l2.addWidget(QLabel("Collar Fraction", self))
-        self.collar_spinbox: QDoubleSpinBox = QDoubleSpinBox(self, minimum=0.0, suffix="%")
+        # Le maximum par defaut de 99.99 rendait une fraction de collier de 1.0
+        # inatteignable, alors qu'elle est le haut de la plage documentee.
+        self.collar_spinbox: QDoubleSpinBox = QDoubleSpinBox(
+            self, minimum=0.0, maximum=100.0, decimals=1, singleStep=5.0, suffix="%"
+        )
+        self.collar_spinbox.setToolTip(recommended_range_tooltip("collar_fraction", as_percent=True))
         l2.addWidget(self.collar_spinbox)
         layout.addLayout(l2)
 
