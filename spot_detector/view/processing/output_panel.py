@@ -6,7 +6,7 @@ from spot_detector.view.path_line_widget import PathEdit, PathType
 
 from pathlib import Path
 
-from spot_detector.view.processing.processing_settings_widget import as_checked, is_checked
+from spot_detector.view.processing.settings.settings_box import as_checked, is_checked
 
 
 class OutputFilePanel(QWidget):

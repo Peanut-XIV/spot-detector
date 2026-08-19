@@ -43,7 +43,7 @@ def filter_background(sigma_1: float,
         for img in images:
             print(f"{wheel_chars[wheel_count % 6]}", end="\r")
             wheel_count += 1
-            source_cv2_mat = cv2.imread(str(img), cv2.IMREAD_COLOR + cv2.IMREAD_ANYDEPTH)
+            source_cv2_mat = cv2.imread(str(img), cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
             if source_cv2_mat is None:
                 print(f"failed to open image {str(img)}")
             source_mat = np.array(source_cv2_mat)

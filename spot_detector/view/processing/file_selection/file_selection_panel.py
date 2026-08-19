@@ -23,10 +23,10 @@ from numpy.typing import NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 from spot_detector.model.processing_settings_models import CroppingSettings, UserSelectedDir
-from spot_detector.view.file_selection.file_selection_model import FileSelectionModel
-from spot_detector.view.file_selection.file_selection_items import DirFilesPair, FileEntryItem, StatusUpdate
-from spot_detector.view.processing.checks import check_file_access, make_autocropping_checker, make_dust_filter_compat_checker, weird_tee
-from spot_detector.view.processing.crop_preview import ImageListPreview
+from spot_detector.view.processing.file_selection.file_selection_model import FileSelectionModel
+from spot_detector.view.processing.file_selection.file_selection_items import DirFilesPair, StatusUpdate
+from spot_detector.processing.image_validation.checks import check_file_access, make_autocropping_checker, make_dust_filter_compat_checker, weird_tee
+from spot_detector.view.processing.settings.crop_preview import ImageListPreview
 
 class FileSelectionWidget(QWidget):
     def __init__(
@@ -272,7 +272,7 @@ class FileSelectionPanel(QWidget):
     @Slot(str)
     def check_all_files_for_filter_compat(self, filter_path: str) -> None:
         print("checking filter compat")
-        mat = cv.imread(filter_path, cv.IMREAD_ANYCOLOR | cv.IMREAD_ANYDEPTH)
+        mat = cv.imread(filter_path, cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH)
         if mat is None:
             text = "the provided path failed to parse to a valid image"
             message = QMessageBox(self, text=text)

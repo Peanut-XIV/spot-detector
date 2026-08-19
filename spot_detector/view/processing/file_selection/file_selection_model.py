@@ -1,10 +1,7 @@
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Callable, TypeVar
 
-T = TypeVar("T")
 
-from numpy import uint8
-from numpy.typing import NDArray
 from typing_extensions import override
 
 if TYPE_CHECKING:
@@ -14,7 +11,7 @@ from pathlib import Path
 from PySide6.QtGui import QColor
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 
-from spot_detector.view.file_selection.file_selection_items import (
+from spot_detector.view.processing.file_selection.file_selection_items import (
     BaseItem,
     BaseEntryItem,
     DirFilesPair,
@@ -24,6 +21,8 @@ from spot_detector.view.file_selection.file_selection_items import (
     GenericStatus,
     StatusUpdate,
 )
+
+T = TypeVar("T")
 
 class FileSelectionModel(QAbstractItemModel):
     file_count_changed: Signal = Signal(int)

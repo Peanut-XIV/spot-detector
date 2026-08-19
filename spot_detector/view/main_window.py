@@ -1,10 +1,11 @@
 from pathlib import Path
 import sys
+from typing import final
 
 from numpy.typing import NDArray
 
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox
+from PySide6.QtCore import QObject, Qt, Slot
+from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox, QWidget
 from PySide6.QtGui import QAction, QIcon
 
 from spot_detector import rc_resources, rc_icons # noqa: F401  WARN: Do not remove  # pyright: ignore[reportUnusedImport]
@@ -36,7 +37,7 @@ from spot_detector.view.dialogs.settings_dialog import SettingsWindow
 from spot_detector.view.dialogs.kmeans_dialog import KMeansDialog, KmeansProcessor
 
 
-
+@final
 class MainWindow(QMainWindow):
     def __init__(self, project: Project):
         super().__init__()
@@ -83,12 +84,12 @@ class MainWindow(QMainWindow):
 
 
 
-    def _create_palette(self, parent):
+    def _create_palette(self, parent: QWidget):
         """
         A method for populating a palette widget with the projects shades.
         """
         self.palette_list = Palette_List(self.project.configuration.shades, parent)
-        self.palette_list.palette_changed.connect(self.on_palette_list_update)
+        _ = self.palette_list.palette_changed.connect(self.on_palette_list_update)
 
     def _create_menu(self):
         """
@@ -165,10 +166,10 @@ class MainWindow(QMainWindow):
         action.triggered.connect(self.dialog_save_project_as)
         self.save_as_action = action
 
-    def _create_viewer(self, parent):
+    def _create_viewer(self, parent: QObject) -> None:
         self.viewer = ViewerWidget(self.project, parent)
-        self.viewer.request_palettized.connect(self.show_palettized_ref)
-        self.viewer.request_highlight.connect(self.make_highlight)
+        _ = self.viewer.request_palettized.connect(self.show_palettized_ref)
+        _ = self.viewer.request_highlight.connect(self.make_highlight)
 
     @Slot()
     def start_detection_settings_window(self):

@@ -22,7 +22,7 @@ from spot_detector.file_utils import (
 )
 from spot_detector.palette_gui import run_gui
 from spot_detector.processing.process_chains import init_workers
-from spot_detector.processing.transformations import get_k_means, label_img_fastest
+from spot_detector.processing.transformations import get_k_means, label_img_fastest_uint8
 from spot_detector.types import DataElement, DataRow, DataTable
 
 
@@ -139,7 +139,7 @@ def edit_project_file(k: int, project_path: Path, from_image: Path | None):
         palette = color_table[:, 0:3]
         img = cv.imread(project.reference_image_model.path)
 
-        labeled_img = label_img_fastest(img, color_table)
+        labeled_img = label_img_fastest_uint8(img, color_table)
     else:
         if k == 1:
             k = len(config_table)

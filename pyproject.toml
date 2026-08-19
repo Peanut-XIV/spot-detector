@@ -1,7 +1,7 @@
 [project]
 name = "spot-detector"
 version = "2024.1.0"
-requires-python = ">= 3.11"
+requires-python = ">= 3.12"
 dependencies = [
   "opencv-python>=4.9.0.80",
   "numpy>=1.26.3",
@@ -55,5 +55,8 @@ disable = ["E1136"]
 [tool.mypy]
 python_executable = "./venv/bin/python"
 
-[tool.pyright]
-disableTaggedHints = true
+# [tool.pyright]
+# disableTaggedHints = true
+
+[tool.basedpyright]
+
