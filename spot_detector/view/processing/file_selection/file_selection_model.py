@@ -1,26 +1,32 @@
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, TypeVar
-
-
-from typing_extensions import override
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, TypeVar, override
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 from pathlib import Path
-from PySide6.QtGui import QColor
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 
+from PySide6.QtCore import (
+    QAbstractItemModel,
+    QModelIndex,
+    QObject,
+    QPersistentModelIndex,
+    Qt,
+    Signal,
+    Slot,
+)
+from PySide6.QtGui import QColor
+
+from spot_detector.custom_types import ShadeTable
 from spot_detector.processing.image_validation.image_context import ImageContext
-from spot_detector.types import ShadeTable
 from spot_detector.view.processing.file_selection.file_selection_items import (
-    BaseItem,
     BaseEntryItem,
-    DirFilesPair,
+    BaseItem,
     DirectoryEntryItem,
-    RootItem,
+    DirFilesPair,
     FileEntryItem,
     GenericStatus,
+    RootItem,
     StatusUpdate,
 )
 
@@ -522,8 +528,17 @@ class FileSelectionModel(QAbstractItemModel):
         Applies a check function on a set of items designated by their QModelIndexes,
         then reports the check status to them.
         """
-        items = [self._item_from_index(idx) for idx in entries]
-        file_items = [it for it in items if isinstance(it, FileEntryItem)]
+        # selectedIndexes rend un index par cellule, donc autant d'index que de
+        # colonnes pour une meme ligne. Sans dedoublonnage, le fichier serait
+        # relu et relabellise une fois par colonne.
+        seen: set[int] = set()
+        file_items: list[FileEntryItem] = []
+        for index in entries:
+            item = self._item_from_index(index)
+            if isinstance(item, FileEntryItem) and id(item) not in seen:
+                seen.add(id(item))
+                file_items.append(item)
+
         parent_items = [it.parent for it in file_items]
         dir_items = [ it for it in parent_items if isinstance(it, DirectoryEntryItem)]
 

@@ -82,6 +82,7 @@ class ProcessingDialog(CustomModalDialog):
 
         _ = self._settings_panel.filter_box.dust_filter_test_requested.connect(self._selection_panel.check_all_files_for_filter_compat)
         _ = self._settings_panel.cropping_box.cropping_test_requested.connect(self._selection_panel.check_selection_for_cropping)
+        _ = self._settings_panel.reporting_box.quality_test_requested.connect(self._selection_panel.check_selection_for_quality)
 
         # Le dialogue est le seul point qui connaisse le projet : c'est de lui
         # que part la palette, vers les controles comme vers la calibration.

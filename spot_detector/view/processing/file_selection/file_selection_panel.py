@@ -1,7 +1,11 @@
-from collections.abc import Sequence, Callable
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
+import cv2 as cv
+from numpy import uint8
+from numpy.typing import NDArray
+from PySide6.QtCore import QModelIndex, Qt, Slot
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -15,20 +19,33 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import QModelIndex, Qt, Slot
 
-import cv2 as cv
-from numpy import uint8
-from numpy.typing import NDArray
-
+from spot_detector.custom_types import ShadeTable
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 from spot_detector.misc import canonical_path
-from spot_detector.model.processing_settings_models import CroppingSettings, UserSelectedDir
-from spot_detector.view.processing.file_selection.file_selection_model import FileSelectionModel
-from spot_detector.view.processing.file_selection.file_selection_items import DirFilesPair, StatusUpdate
-from spot_detector.processing.image_validation.checks import check_file_access, make_autocropping_checker, make_dust_filter_compat_checker, weird_tee
+from spot_detector.model.processing_settings_models import (
+    CroppingSettings,
+    QualityReportingSettings,
+    UserSelectedDir,
+)
+from spot_detector.processing.image_validation.checks import (
+    CheckFn,
+    check_file_access,
+    combine_checks,
+    make_autocropping_checker,
+    make_blur_checker,
+    make_dust_filter_compat_checker,
+    weird_tee,
+)
+from spot_detector.view.processing.file_selection.file_selection_items import (
+    DirFilesPair,
+    StatusUpdate,
+)
+from spot_detector.view.processing.file_selection.file_selection_model import (
+    FileSelectionModel,
+)
 from spot_detector.view.processing.settings.crop_preview import ImageListPreview
-from spot_detector.types import ShadeTable
+
 
 class FileSelectionWidget(QWidget):
     def __init__(
@@ -289,6 +306,30 @@ class FileSelectionPanel(QWidget):
 
         self._model.check_all(compat_checker)
 
+
+    @Slot(QualityReportingSettings)
+    def check_selection_for_quality(self, settings: QualityReportingSettings) -> None:
+        checks: list[CheckFn] = []
+
+        if settings.blur.enabled:
+            checks.append(make_blur_checker(settings))
+
+        if not checks:
+            self._feedback_box.append_messages(
+                ["No quality check is enabled, nothing to test."]
+            )
+            return
+
+        selection = self._list_widget.get_selection()
+        if not selection:
+            self._feedback_box.append_messages(
+                ["Select at least one file to test the quality checks on."]
+            )
+            return
+
+        # Un seul controle compose, donc un seul contexte par fichier et une
+        # seule labellisation, quel que soit le nombre de controles actifs.
+        self._model.check_entries(selection, combine_checks(checks))
 
     @Slot(CroppingSettings)
     def check_selection_for_cropping(self, parameters: CroppingSettings) -> None:

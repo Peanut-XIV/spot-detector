@@ -1,6 +1,6 @@
 from typing import final, override
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
 from spot_detector.model.processing_settings_models import QualityReportingSettings
 from spot_detector.types import ShadeTable
@@ -22,6 +22,8 @@ from pathlib import Path
 
 @final
 class QualityReportingBox(BaseSettingsBox):
+    quality_test_requested: Signal = Signal(QualityReportingSettings)
+
     def __init__(
             self,
             previous_directory: Path | None = None,
@@ -75,6 +77,14 @@ class QualityReportingBox(BaseSettingsBox):
         _ = self.diameter_spinbox.valueChanged.connect(self._push_particle_geometry)
         _ = self.collar_spinbox.valueChanged.connect(self._push_particle_geometry)
         self._push_particle_geometry()
+
+        _ = self.test_reporting_button.clicked.connect(self._request_quality_test)
+
+    @Slot()
+    def _request_quality_test(self) -> None:
+        # Les reglages partent tels qu'ils sont affiches, pour que l'essai
+        # emprunte exactement le chemin du traitement reel.
+        self.quality_test_requested.emit(self.get_model())
 
     @Slot()
     def _push_particle_geometry(self) -> None:

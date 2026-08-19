@@ -1,6 +1,6 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TypeVar, TypeAlias
+from typing import TypeVar
 
 import numpy as np
 from numpy import uint8
@@ -27,7 +27,7 @@ from spot_detector.view.processing.file_selection.file_selection_items import (
 # Un controle qualite lit un contexte deja constitue et rend un compte rendu.
 # Le contexte porte la lecture du fichier et les derives couteux, de sorte que
 # n controles sur un fichier ne coutent qu'une lecture et une labellisation.
-CheckFn: TypeAlias = Callable[[ImageContext], StatusUpdate]
+type CheckFn  = Callable[[ImageContext], StatusUpdate]
 
 
 def check_file_access(context: ImageContext) -> StatusUpdate:
@@ -243,3 +243,42 @@ def make_blur_checker(settings: QualityReportingSettings) -> CheckFn:
         return check_blur(context, settings)
 
     return checker
+
+
+def combine_checks(checks: Sequence[CheckFn]) -> CheckFn:
+    """Applique plusieurs controles au meme contexte et fusionne les comptes
+    rendus. C'est ce qui rend la passe unique effective : sans cela, chaque
+    controle recevrait son propre contexte et refereait la labellisation.
+
+    Les drapeaux se combinent par ou binaire, chaque controle possedant des
+    bits disjoints ; le statut de fichier retenu est le plus grave.
+    """
+
+    def combined(context: ImageContext) -> StatusUpdate:
+        merged = StatusUpdate(context.path, None, None, [])
+        merged_mask = QualityFlag.Unchecked
+        merged_value = QualityFlag.Unchecked
+        statuses: list[FileStatus] = []
+
+        for check in checks:
+            update = check(context)
+
+            if update.file_status is not None:
+                statuses.append(update.file_status)
+
+            if update.quality_status is not None:
+                mask, value = update.quality_status
+                merged_mask |= mask
+                merged_value |= value
+
+            merged.error_messages.extend(update.error_messages)
+
+        if statuses:
+            merged.file_status = max(statuses)
+
+        if merged_mask is not QualityFlag.Unchecked:
+            merged.quality_status = (merged_mask, merged_value)
+
+        return merged
+
+    return combined
