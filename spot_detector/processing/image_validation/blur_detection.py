@@ -198,6 +198,13 @@ def contrast_normalized_channel(
     background = float(np.percentile(roi_values, bg_percentile))
     peak = float(np.percentile(signal_values, peak_percentile))
     dynamic = max(peak - background, 1.0)
+
+    print("== Debug: ==")
+    print("background:", background)
+    print("peak:", peak)
+    print("dynamic (peak - background):", dynamic)
+    print("Laplacien:", dynamic * dynamic / peak)
+
     return (ch - background) / dynamic
 
 
@@ -242,6 +249,7 @@ def assess_blur_from_masks(
 
     norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
     score = sharpness_score(norm, eval_mask)
+    print("sharpness score:", score)
 
     state = BlurState.SHARP if score >= reference_threshold else BlurState.BLURRY
     return BlurResult(state, score, channel, n_particles, occupation)

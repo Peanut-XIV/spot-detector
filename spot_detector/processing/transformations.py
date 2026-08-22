@@ -110,9 +110,8 @@ def compute_dish_ROI_mask(
     gray: Array2D[CommonInt_T]
     if dims == 3:
         gray = cv.cvtColor(sub, cv.COLOR_BGR2GRAY)  # pyright: ignore[reportAssignmentType]
-    elif dims == 2:
-        gray = sub
     else:
+        # unreachable
         raise ValueError("Unsupported image array shape")
 
     try:
@@ -121,10 +120,10 @@ def compute_dish_ROI_mask(
         raise TypeError("Unsupported floating point tiff image datatype")
 
 
-    h, w = int(gray.shape[0]), int(gray.shape[1])
-    small_edge = min(h,w)
+    subsampled_height, subsampled_width = [int(x) for x in gray.shape]
+    subsampled_small_edge = min(subsampled_height,subsampled_width)
 
-    ideal_radius = small_edge/2
+    ideal_radius = subsampled_small_edge/2
 
     small_radius = ideal_radius * (0.7 if radius_range[0] < 0 else (radius_range[0] / 100))
     big_radius   = ideal_radius * (1.1 if radius_range[1] < 0 else (radius_range[1] / 100))
@@ -180,7 +179,7 @@ def compute_dish_ROI_mask(
         np.zeros((full_h, full_w), dtype=np.uint8),
         (int(x), int(y)),
         int(r),
-        255,
+        1,
         -1,
         cv.FILLED,
     ).astype(np.bool)
