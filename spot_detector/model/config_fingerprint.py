@@ -57,6 +57,9 @@ from spot_detector.model.processing_settings_models import (
     QualityReportingSettings,
 )
 
+from logging import INFO, Formatter, Logger, FileHandler, getLogger
+
+
 # Fingerprint schema version. Bump it whenever the contents of the canonical
 # view change, otherwise a change of the rules would read as a change of the
 # configuration.
@@ -154,12 +157,7 @@ def _det_params_view(params: DetParams) -> JSONValue:
 
 
 def configuration_view(configuration: ColorAndParams) -> JSONValue:
-    """Canonical view of the palette and of the detectors.
-
-    `reference_image` is excluded: it is a path to the image used to build the
-    palette, it takes no part in counting, and it changes as soon as a file is
-    moved.
-    """
+    """Canonical view of the palette and of the detectors."""
     return {
         "shades": [[s.b, s.g, s.r, s.label_id] for s in configuration.shades],
         "detectors": [_det_params_view(params) for params in configuration.det_params],
@@ -331,17 +329,29 @@ class ProcessingSession:
     """
     directory: Path
     results_path: Path
-    snapshot_path: Path
+    project_snapshot_path: Path
     log_path: Path
+    logger: Logger
+    project: Project
     config_digest: str
 
 
-def _session_paths(directory: Path, digest: str) -> ProcessingSession:
+def _session_paths(directory: Path, digest: str, project: Project) -> ProcessingSession:
+
+    logger = getLogger(f"spot_detector.session.{directory.name}")
+    logger.setLevel(INFO)
+    if not logger.handlers:
+        log_file = FileHandler(directory / LOG_NAME, encoding="UTF-8")
+        log_file.setFormatter(Formatter("%(asctime)s  %(levelname)-8s %(message)s"))
+        logger.addHandler(log_file)
+
     return ProcessingSession(
         directory=directory,
         results_path=directory / RESULTS_NAME,
-        snapshot_path=directory / SNAPSHOT_NAME,
-        log_path=directory / LOG_NAME,
+        project_snapshot_path=directory / SNAPSHOT_NAME,
+        log_path = directory / LOG_NAME,
+        logger=logger,
+        project=project,
         config_digest=digest,
     )
 
@@ -363,21 +373,7 @@ def write_snapshot(path: str | Path, project: Project) -> None:
     _ = Path(path).write_text(snapshot.model_dump_json(indent=2), encoding="UTF-8")
 
 
-def append_log(session: ProcessingSession, message: str) -> None:
-    """Append a timestamped line to the log.
-
-    The file is opened and closed on every line: a log that would not survive
-    the program being interrupted would miss exactly the case it serves. The
-    timestamp carries the UTC offset, unlike the directory name, which stays
-    readable at the cost of that ambiguity.
-    """
-    stamp = datetime.now().astimezone().isoformat(timespec="seconds")
-    with open(session.log_path, "a", encoding="UTF-8") as handle:
-        _ = handle.write(f"{stamp}  {message}\n")
-
-
 def create_session(
-    parent_directory: str | Path,
     project: Project,
     dust_filter_path: str | Path | None = None,
     started_at: datetime | None = None,
@@ -390,6 +386,10 @@ def create_session(
     row of the table, which allows a heterogeneous file without making it
     misleading.
     """
+    if project.processing_settings is None or project.processing_settings.output.path is None:
+        raise ValueError("Processing cannot begin if attribute `processing_settings.output.path` is not defined")
+
+    parent_directory = project.processing_settings.output.path
     started = started_at or datetime.now()
     digest = project_fingerprint(project, dust_filter_path)
 
@@ -407,9 +407,9 @@ def create_session(
             attempt += 1
             directory = parent / f"{name}_{attempt}"
 
-    session = _session_paths(directory, digest)
-    write_snapshot(session.snapshot_path, project)
-    append_log(session, f"session opened, configuration fingerprint {digest}")
+    session = _session_paths(directory, digest, project)
+    write_snapshot(session.project_snapshot_path, project)
+    session.logger.info(f"session opened, configuration fingerprint {digest}")
     return session
 
 
@@ -426,7 +426,7 @@ def open_session(directory: str | Path) -> ProcessingSession:
         raise FileNotFoundError(f"no settings snapshot in {path}")
 
     snapshot = Project.from_path(snapshot_path)
-    return _session_paths(path, project_fingerprint(snapshot))
+    return _session_paths(path, project_fingerprint(snapshot), snapshot)
 
 
 def verify_session(session: ProcessingSession) -> bool:
@@ -436,7 +436,12 @@ def verify_session(session: ProcessingSession) -> bool:
     filter has been moved or modified since the run, its digest has changed and
     the fingerprint with it.
     """
-    snapshot = Project.from_path(session.snapshot_path)
+    snapshot = Project.from_path(session.project_snapshot_path)
     return normalized_fingerprint(project_fingerprint(snapshot)) == normalized_fingerprint(
         session.config_digest
     )
+
+def end_session(session: ProcessingSession):
+    for handler in list(session.logger.handlers):
+        session.logger.removeHandler(handler)
+        handler.close()

@@ -255,14 +255,12 @@ class DetParams(BaseModel):
 
 
 class ColorAndParams(BaseModel):
-    reference_image: str  # path string to the reference image (may be obsolete)
     shades: list[Shade]
     det_params: list[DetParams]
 
     @classmethod
     def from_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
-            reference_image="",
             shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_defaults(color_name)],
         )
@@ -270,7 +268,6 @@ class ColorAndParams(BaseModel):
     @classmethod
     def from_prepopulated_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
-            reference_image="",
             shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_prepopulated_defaults(color_name)],
         )
