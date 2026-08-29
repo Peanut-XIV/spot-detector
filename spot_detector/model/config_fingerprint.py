@@ -329,10 +329,10 @@ class ProcessingSession:
     """
     directory: Path
     results_path: Path
-    project_snapshot_path: Path
+    snapshot_save_path: Path
     log_path: Path
     logger: Logger
-    project: Project
+    project_snapshot: Project
     config_digest: str
 
 
@@ -348,10 +348,10 @@ def _session_paths(directory: Path, digest: str, project: Project) -> Processing
     return ProcessingSession(
         directory=directory,
         results_path=directory / RESULTS_NAME,
-        project_snapshot_path=directory / SNAPSHOT_NAME,
+        snapshot_save_path=directory / SNAPSHOT_NAME,
         log_path = directory / LOG_NAME,
         logger=logger,
-        project=project,
+        project_snapshot=project,
         config_digest=digest,
     )
 
@@ -408,7 +408,7 @@ def create_session(
             directory = parent / f"{name}_{attempt}"
 
     session = _session_paths(directory, digest, project)
-    write_snapshot(session.project_snapshot_path, project)
+    write_snapshot(session.snapshot_save_path, project)
     session.logger.info(f"session opened, configuration fingerprint {digest}")
     return session
 
@@ -436,7 +436,7 @@ def verify_session(session: ProcessingSession) -> bool:
     filter has been moved or modified since the run, its digest has changed and
     the fingerprint with it.
     """
-    snapshot = Project.from_path(session.project_snapshot_path)
+    snapshot = Project.from_path(session.snapshot_save_path)
     return normalized_fingerprint(project_fingerprint(snapshot)) == normalized_fingerprint(
         session.config_digest
     )

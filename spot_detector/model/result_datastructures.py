@@ -1,12 +1,31 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, field, dataclass
 from datetime import datetime
 from enum import IntEnum, Enum
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Any
 
 from spot_detector.model.config_fingerprint import ProcessingSession
+from spot_detector.misc import NFC
 
 type CellContent = Path | int | float | str | datetime | None
+
+@dataclass
+class ImageTask:
+    rank: int
+    image_path: Path
+    extra_info: dict[str, Any] = field(default_factory=lambda : {})  # pyright: ignore[reportExplicitAny]
+
+    @property
+    def full_path_string(self):
+        return NFC(self.image_path)
+
+    @property
+    def image_dir(self):
+        return NFC(self.image_path.parent)
+
+    @property
+    def image_name(self):
+        return NFC(self.image_path.name)
 
 class CheckStatus(Enum):
     Fail = 0
@@ -61,9 +80,7 @@ class ImageMetaData:
 
 @dataclass
 class ImageResult:
-    rank: int
-    directory: str
-    file_name: str
+    image_task: ImageTask
     counts: list[int] | None
     roi_data: ROIData
     checks: dict[CheckID, CheckReport]
@@ -71,8 +88,27 @@ class ImageResult:
     metadata: ImageMetaData | None
     error: str | None
 
+    @property
+    def rank(self):
+        return self.image_task.rank
+
+    @property
+    def image_dir(self):
+        return self.image_task.image_dir
+
+    @property
+    def image_name(self):
+        return self.image_task.image_name
+
 
 @dataclass(frozen=True)
 class Column:
     name: str
+    data_types: tuple[type, ...] = field(init=False)
+    types: InitVar[type | tuple[type, ...]]
     extract: Callable[[ImageResult, ProcessingSession], CellContent]
+
+    def __post_init__(self, types: type | tuple[type, ...]):
+        _data_types = types if isinstance(types, tuple) else (types,)
+        object.__setattr__(self, "data_types", _data_types)
+
