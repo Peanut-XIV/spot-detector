@@ -7,7 +7,7 @@ title = Spot Detector
 project_dir = /Users/louis/Github/spot-detector/
 
 # source file entry point path. default = main.py
-input_file = spot_detector/controller/Spot Detector
+input_file = spot_detector/app.py
 
 # directory where the executable output is generated
 exec_directory = build/
@@ -21,7 +21,7 @@ icon = spot_detector/resources/icons/app_icon/spot_detector_logo_small.icns
 [python]
 
 # python path
-python_path = /Users/louis/Github/spot-detector/venv/bin/python3.11
+python_path = /Users/louis/Github/spot-detector/venv/bin/python3.14
 
 # python packages to install
 packages = Nuitka==4.0
@@ -68,7 +68,7 @@ macos.permissions =
 mode = onefile
 
 # specify any extra nuitka arguments
-extra_args = --quiet --noinclude-qt-translations
+extra_args = --quiet --noinclude-qt-translations --output-filename="Spot Detector" --macos-app-name="Spot Detector" --macos-signed-app-name=fr.univ-lille.log.spot-detector
 
 [buildozer]
 

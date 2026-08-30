@@ -6,7 +6,7 @@ import json
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 import cv2 as cv
-from spot_detector.types import PixTuple, ShadeTuple
+from spot_detector.custom_types import PixTuple, ShadeTuple
 
 
 class ChannelOrder(Enum):

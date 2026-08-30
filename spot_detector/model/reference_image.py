@@ -16,7 +16,7 @@ from spot_detector.errors import (
     InvalidNameError,
     FailedOpeningError,
 )
-from spot_detector.types import PixTuple, ShadeTuple
+from spot_detector.custom_types import PixTuple, ShadeTuple
 
 
 def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:

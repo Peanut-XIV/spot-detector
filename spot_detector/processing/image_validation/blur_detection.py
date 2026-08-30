@@ -24,7 +24,7 @@ from numpy.typing import NDArray
 #                              palette: NDArray[np.uint16]) -> NDArray[np.uint8]
 
 from spot_detector.processing.transformations import convert_mat_uint16, label_img_fastest_uint16
-from spot_detector.types import CommonInt_T, ImageRGB, ShadeTable, Bool2D, Double2D, NVec
+from spot_detector.custom_types import CommonInt_T, ImageRGB, ShadeTable, Bool2D, Double2D, NVec
 
 
 # --- Alias de types --------------------------------------------------------

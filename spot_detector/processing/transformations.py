@@ -9,7 +9,7 @@ import numpy as np
 from numpy import dtype, float32, float64, ndarray, uint8, uint16, uint32, uint64
 from numpy.typing import NDArray
 
-from spot_detector.types import Array2D, Bool2D, ShadeTable, ImageRGB, CommonInt_T, NVec, ShapeType, LabelTable
+from spot_detector.custom_types import Array2D, Bool2D, ShadeTable, ImageRGB, CommonInt_T, NVec, ShapeType, LabelTable
 
 
 def convert_mat_uint16[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> ndarray[S, dtype[uint16]]:

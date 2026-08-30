@@ -17,7 +17,7 @@ from spot_detector.processing.transformations import (
     label_img_fastest_uint16,
 )
 
-from spot_detector.types import CommonInt_T, DataElement, ShadeTable, ImageElement, ImageRGB
+from spot_detector.custom_types import CommonInt_T, DataElement, ShadeTable, ImageElement, ImageRGB
 from spot_detector.processing.visualisation import visualize_detection
 
 type InQueueType = Queue[ImageElement | str]
