@@ -13,7 +13,8 @@ import numpy as np
 from click import FileError, confirm
 
 # Project Files
-from spot_detector.types import DataRow, DataTable, ImageElement
+from spot_detector.custom_types import DataRow, DataTable, ImageElement
+from spot_detector.misc import canonical_path
 
 img_file_name_pattern = re.compile(r".+\.(jpe?g|JPE?G|png|PNG|tiff|TIFF)")
 
@@ -388,11 +389,11 @@ def add_to_recent_projects(file_path: Path) -> bool:
     try:
         with open(projects_file, "r") as f:
             for file in f.readlines():
-                recent_projects.append(Path(file.strip("\n\r ")).expanduser())
+                recent_projects.append(canonical_path(file.strip("\n\r ")))
     except IOError:
         return False
 
-    file_path = file_path.expanduser()
+    file_path = canonical_path(file_path)
 
     for project in recent_projects:
         try:

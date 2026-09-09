@@ -23,7 +23,7 @@ from spot_detector.file_utils import (
 from spot_detector.palette_gui import run_gui
 from spot_detector.processing.process_chains import init_workers
 from spot_detector.processing.transformations import get_k_means, label_img_fastest_uint8
-from spot_detector.types import DataElement, DataRow, DataTable
+from spot_detector.custom_types import DataElement, DataRow, DataTable
 
 
 def count_categories(categories: list[int]) -> int:

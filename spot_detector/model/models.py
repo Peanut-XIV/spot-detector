@@ -6,7 +6,7 @@ import json
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
 import cv2 as cv
-from spot_detector.types import PixTuple, ShadeTuple
+from spot_detector.custom_types import PixTuple, ShadeTuple
 
 
 class ChannelOrder(Enum):
@@ -141,23 +141,6 @@ def homogenous_color_table(levels: int) -> list[ShadeTuple]:
     return table
 
 
-class Threshold(BaseModel):
-    automatic: bool
-    mini: int = Field(ge=0, le=255, default=0)
-    maxi: int = Field(ge=0, le=255, default=255)
-    step: int = Field(ge=0, le=255, default=16)
-
-    @field_validator("maxi")
-    def maxi_greater_than_mini(cls, maxi: int, info: FieldValidationInfo) -> int:
-        if maxi <= info.data["mini"]:
-            raise ValueError("maxi must be greater than mini")
-        return maxi
-
-    @classmethod
-    def from_defaults(cls) -> Self:
-        return cls(automatic=True)
-
-
 class SimpleParam(BaseModel):
     enabled: bool
     mini: float = Field(ge=0, default=0)
@@ -190,20 +173,17 @@ class DetParams(BaseModel):
     """
 
     color_name: str
-    thresh: Threshold
     min_dist: float | None = Field(gt=0, default=None)
-    filter_by_color: int | None = Field(ge=0, le=255, default=255)
     area:    SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 4000))
     circ:    SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
     convex:  SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
-    inertia: SimpleParam = Field(default_factory=lambda: SimpleParam.from_defaults(False, 0, 1))
 
     def __init__(self, /, **data: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
         super().__init__(**data)
 
     @classmethod
     def from_defaults(cls, color_name: str) -> Self:
-        return cls(color_name=color_name, thresh=Threshold.from_defaults())
+        return cls(color_name=color_name)
 
     @classmethod
     def from_prepopulated_defaults(cls, name: str | int | None) -> Self:
@@ -217,20 +197,15 @@ class DetParams(BaseModel):
             name_str = f"color_{name}"
         elif isinstance(name, str):
             name_str = name
-        thresh = Threshold(automatic=True, mini=0, maxi=255, step=32)
         area = SimpleParam(enabled=True, mini=1.0, maxi=800.0)
         circ = SimpleParam(enabled=True, mini=0.5, maxi=1.0)
         convex = SimpleParam(enabled=True, mini=0.5, maxi=1.0)
-        inertia = SimpleParam(enabled=False, mini=0.0, maxi=1.0)
         params = cls(
             color_name=name_str,
             min_dist=1.0,
-            filter_by_color=255,
-            thresh=thresh,
             area=area,
             circ=circ,
             convex=convex,
-            inertia=inertia,
         )
         return params
 
@@ -246,20 +221,15 @@ class DetParams(BaseModel):
             if minimum_distance > 0.0:
                 params.minDistBetweenBlobs = self.min_dist
 
-        thresh = self.thresh
-        if thresh.automatic:
-            params.minThreshold = thresh_step // 4
-            params.maxThreshold = 255 - thresh_step // 4
-            params.thresholdStep = thresh_step
-        else:
-            params.minThreshold = thresh.mini
-            params.maxThreshold = thresh.maxi
-            params.thresholdStep = thresh.step
+        params.minThreshold = thresh_step // 4
+        params.maxThreshold = 255 - thresh_step // 4
+        params.thresholdStep = thresh_step
 
         area = self.area
         if area.enabled:
             params.filterByArea = True
-            params.minArea = area.mini
+            if area.mini > 0:
+                params.minArea = area.mini
             if area.maxi is not None:
                 params.maxArea = area.maxi
         else:
@@ -286,14 +256,12 @@ class DetParams(BaseModel):
 
 
 class ColorAndParams(BaseModel):
-    reference_image: str  # path string to the reference image (may be obsolete)
     shades: list[Shade]
     det_params: list[DetParams]
 
     @classmethod
     def from_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
-            reference_image="",
             shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_defaults(color_name)],
         )
@@ -301,7 +269,6 @@ class ColorAndParams(BaseModel):
     @classmethod
     def from_prepopulated_defaults(cls, color_name: str = "color_1") -> Self:
         return cls(
-            reference_image="",
             shades=[Shade.from_row(row) for row in homogenous_color_table(2)],
             det_params=[DetParams.from_prepopulated_defaults(color_name)],
         )

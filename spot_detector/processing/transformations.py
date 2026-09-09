@@ -4,12 +4,21 @@ from typing import cast
 
 # Third party imports
 import cv2 as cv
-from cv2.typing import MatLike
 import numpy as np
+from cv2.typing import MatLike
 from numpy import dtype, float32, float64, ndarray, uint8, uint16, uint32, uint64
 from numpy.typing import NDArray
 
-from spot_detector.types import Array2D, Bool2D, ShadeTable, ImageRGB, CommonInt_T, NVec, ShapeType, LabelTable
+from spot_detector.custom_types import (
+    Array2D,
+    Bool2D,
+    CommonInt_T,
+    ImageRGB,
+    LabelTable,
+    NVec,
+    ShadeTable,
+    ShapeType,
+)
 
 
 def convert_mat_uint16[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> ndarray[S, dtype[uint16]]:
@@ -152,8 +161,14 @@ def compute_dish_ROI_mask(
     coords: tuple[float, float, float] = candidates[0, 0, :] * ss_rate  # pyright: ignore[reportAssignmentType]
     x, y, r = coords
 
+    # `h` and `w` describe the subsampled image the circle was detected on,
+    # while `coords` has already been scaled back up: the mask has to be drawn
+    # at full resolution, otherwise it does not line up with the image its
+    # callers apply it to.
+    full_h, full_w = int(img.shape[0]), int(img.shape[1])
+
     mask: Bool2D = cv.circle(
-        np.zeros((h, w), dtype=np.uint8),
+        np.zeros((full_h, full_w), dtype=np.uint8),
         (int(x), int(y)),
         int(r),
         255,
@@ -217,12 +232,12 @@ def crop_to_dish_roi(
     min_y, max_y = max(0, int(y - r) + 1), min(int(y + r), img.shape[0])
     min_x, max_x = max(0, int(x - r) + 1), min(int(x + r), img.shape[1])
 
-    crop = img[min_y:max_y, min_x:max_x, :]
+    crop = img[min_y:max_y, min_x:max_x, :].copy()
     new_mask = mask[min_y:max_y, min_x:max_x]
 
-    with_circle = crop & new_mask
+    crop[~new_mask] = 0
 
-    return with_circle
+    return crop
 
 
 def isolate_categories(

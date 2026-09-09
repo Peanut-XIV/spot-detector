@@ -1,0 +1,110 @@
+from dataclasses import InitVar, field, dataclass
+from datetime import datetime
+from enum import IntEnum, Enum
+from pathlib import Path
+from typing import Callable, Any
+
+from spot_detector.misc import NFC
+from spot_detector.model.config_fingerprint import ProcessingSession
+
+type CellContent = Path | int | float | str | datetime | None
+
+@dataclass
+class ImageTask:
+    rank: int
+    image_path: Path
+    extra_info: dict[str, Any] = field(default_factory=lambda : {})  # pyright: ignore[reportExplicitAny]
+
+    @property
+    def full_path_string(self):
+        return NFC(self.image_path)
+
+    @property
+    def image_dir(self):
+        return NFC(self.image_path.parent)
+
+    @property
+    def image_name(self):
+        return NFC(self.image_path.name)
+
+class CheckStatus(Enum):
+    Fail = 0
+    Success = 1
+    Disabled = 2
+    NotApplicable = 3
+
+class CheckID(IntEnum):
+    Dust_Filter = 0
+    ROI = 1
+    Sharpness = 2
+    Overexposure = 3
+    Average_Brightness = 4
+    Data_Loss = 5
+
+@dataclass
+class CheckReport:
+    check_id: CheckID
+    check_status: CheckStatus
+    check_value: float | int | bool | None
+    check_message: str
+
+@dataclass
+class ROIData:
+    status: CheckStatus
+    center_x: float | None
+    center_y: float | None
+    radius: float | None
+
+@dataclass
+class ImageMetaData:
+    creation_date: datetime
+
+    image_format: str
+    image_codec: str
+    has_lossy_compression: bool
+    color_space: str
+    subsampling: str
+
+    image_height: int
+    image_width: int
+    channel_depth: int
+
+    camera_model: str
+    exposure_seconds: float
+
+
+@dataclass
+class ImageResult:
+    image_task: ImageTask
+    counts: list[int] | None
+    roi_data: ROIData
+    checks: dict[CheckID, CheckReport]
+    processing_date: datetime
+    metadata: ImageMetaData | None
+    error: str | None
+    error_detail: str
+
+    @property
+    def rank(self):
+        return self.image_task.rank
+
+    @property
+    def image_dir(self):
+        return self.image_task.image_dir
+
+    @property
+    def image_name(self):
+        return self.image_task.image_name
+
+
+@dataclass(frozen=True)
+class Column:
+    name: str
+    data_types: tuple[type, ...] = field(init=False)
+    types: InitVar[type | tuple[type, ...]]
+    extract: Callable[[ImageResult, ProcessingSession], CellContent]
+
+    def __post_init__(self, types: type | tuple[type, ...]):
+        _data_types = types if isinstance(types, tuple) else (types,)
+        object.__setattr__(self, "data_types", _data_types)
+

@@ -16,7 +16,7 @@ from spot_detector.errors import (
     InvalidNameError,
     FailedOpeningError,
 )
-from spot_detector.types import PixTuple, ShadeTuple
+from spot_detector.custom_types import PixTuple, ShadeTuple
 
 
 def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:
@@ -172,8 +172,6 @@ class ReferenceImageMatrices:
         do_update_highlight: bool = True,
     ) -> None:
         """
-        UNUSED - NEEDS CORRESPONDING ACTION
-
         Creates a palettized ref image from an existing color table.
         Could be used to generate the image cache from an existing project
         file.
@@ -264,6 +262,16 @@ class ReferenceImageModel(BaseModel):
         if img is None:
             raise FailedOpeningError(self.path)
         self.generate_cache_from_mat(img)
+
+    def without_cache(self) -> "ReferenceImageModel":
+        """Return the same model with no image cache attached.
+
+        The cache holds `QImage` objects, which can neither be deep copied nor
+        pickled, so any copy of a project meant to be serialised or sent to
+        another process has to leave it behind. The result carries the path,
+        which is all a snapshot needs; reading `mats` on it raises, by design.
+        """
+        return ReferenceImageModel(path=self.path, init_cache=False)
 
     def set_path(self, path: str | Path):
         path = Path(path)

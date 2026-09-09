@@ -15,7 +15,7 @@ import numpy as np
 from numpy import uint16
 
 import spot_detector.processing.image_validation.blur_detection as bd
-from spot_detector.types import Double2D, ImageRGB, ShadeTable, Bool2D
+from spot_detector.custom_types import Double2D, ImageRGB, ShadeTable, Bool2D
 from typing import cast
 
 

@@ -3,6 +3,7 @@ import sys
 from typing import final
 
 from numpy.typing import NDArray
+from numpy import uint8
 
 from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox, QWidget
@@ -35,6 +36,7 @@ from spot_detector.view.dialogs.custom_dialog_base import DialogExitStatus
 
 from spot_detector.view.dialogs.settings_dialog import SettingsWindow
 from spot_detector.view.dialogs.kmeans_dialog import KMeansDialog, KmeansProcessor
+from spot_detector.view.dialogs.processing_dialog import ProcessingDialog
 
 
 @final
@@ -62,6 +64,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(splitter)
 
         self.settings_dialog = None
+        self.processing_dialog: ProcessingDialog | None = None
 
         # could belong in an "AppState" object of some kind
         self.previous_rows = None  # The rows previously selected for highlight
@@ -109,6 +112,9 @@ class MainWindow(QMainWindow):
 
         self._create_open_detection_settings_action()
         self.file_menu.addAction(self.open_detection_settings_action)
+
+        self._create_open_processing_action()
+        self.file_menu.addAction(self.open_processing_action)
 
         self.file_menu.addAction("Quit", self.close, "Ctrl+Q")
 
@@ -160,6 +166,12 @@ class MainWindow(QMainWindow):
         action.triggered.connect(self.start_detection_settings_window)
         self.open_detection_settings_action = action
 
+    def _create_open_processing_action(self):
+        action = QAction("Open Processing Dialog", self)
+        action.setShortcut("Ctrl+R")
+        action.triggered.connect(self.start_processing_dialog)
+        self.open_processing_action = action
+
     def _create_save_as_action(self):
         # TODO: icon = QIcon(":path/to/icon")
         action = QAction("Save As", self)
@@ -170,6 +182,28 @@ class MainWindow(QMainWindow):
         self.viewer = ViewerWidget(self.project, parent)
         _ = self.viewer.request_palettized.connect(self.show_palettized_ref)
         _ = self.viewer.request_highlight.connect(self.make_highlight)
+
+    @Slot()
+    def start_processing_dialog(self):
+        """Open the processing dialog, or bring it back to the front.
+
+        The dialog is built once and kept: reopening it preserves the file
+        selection and the settings the user has already entered, and a second
+        instance could start a second run writing to the same table.
+        """
+        if self.processing_dialog is None:
+            starting_directory = Path.home()
+            if self.project.latest_save_path is not None:
+                starting_directory = Path(self.project.latest_save_path).parent
+
+            dialog = ProcessingDialog(self.project, starting_directory, self)
+            if self.project.processing_settings is not None:
+                dialog.set_model(self.project.processing_settings)
+            self.processing_dialog = dialog
+
+        self.processing_dialog.show()
+        self.processing_dialog.raise_()
+        self.processing_dialog.activateWindow()
 
     @Slot()
     def start_detection_settings_window(self):
@@ -264,17 +298,13 @@ class MainWindow(QMainWindow):
             box = QMessageBox(self)
             box.setWindowTitle("File Error")
             box.setText(
-                f"An error occured while trying to save the project to the "
+                f"An error occurred while trying to save the project to the "
                 f"following path: {str(path)}. Please ensure the path is valid"
                 f" and that you have the permissions required to save a file "
                 f"at the given path. Error type: {e}."
             )
 
             return
-
-
-
-
 
     @Slot()
     def reload_current_palette(self):
@@ -294,7 +324,7 @@ class MainWindow(QMainWindow):
         thread.start()
 
     @Slot(object)
-    def handle_load_palette(self, labeled_image: NDArray):
+    def handle_load_palette(self, labeled_image: NDArray[uint8]):
         # update project.reference_model...
         # TODO : handle no model case
         # print("palettizing thread ended")
@@ -302,10 +332,7 @@ class MainWindow(QMainWindow):
         # print("result image :", labeled_image.shape, labeled_image.dtype)
 
         assert self.project.reference_image_model is not None
-        self.project\
-            .reference_image_model\
-            .mats\
-            .update_labels(labeled_image, self.project.configuration.shades)
+        self.project.reference_image_model.mats.update_labels(labeled_image, self.project.configuration.shades)
 
         # print("changing view")
         # update view object correctly

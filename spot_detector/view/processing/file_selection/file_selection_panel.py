@@ -22,6 +22,7 @@ from numpy import uint8
 from numpy.typing import NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
+from spot_detector.misc import canonical_path
 from spot_detector.model.processing_settings_models import CroppingSettings, UserSelectedDir
 from spot_detector.view.processing.file_selection.file_selection_model import FileSelectionModel
 from spot_detector.view.processing.file_selection.file_selection_items import DirFilesPair, StatusUpdate
@@ -233,13 +234,12 @@ class FileSelectionPanel(QWidget):
 
         add_list: list[Path] = []
         for file in dialog.selectedFiles():
-            fp = Path(file).resolve()
-            if not (fp.exists() and not fp.is_dir() and fp.is_file()):
-                pass
-            add_list.append(fp)
+            fp = canonical_path(file)
+            if fp.exists() and fp.is_file():
+                add_list.append(fp)
         _ = self._model.add_file_entries(add_list, QModelIndex())
 
-        self._previous_directory = Path(dialog.selectedFiles()[0]).resolve().parent
+        self._previous_directory = canonical_path(dialog.selectedFiles()[0]).parent
 
     @Slot()
     def query_user_for_directory(self) -> None:
@@ -256,13 +256,12 @@ class FileSelectionPanel(QWidget):
             return
 
         for directory in dialog.selectedFiles():
-            dp = Path(directory).resolve()
-            if not (dp.exists() and dp.is_dir()):
-                pass
-            files = [e for e in dp.iterdir() if e.is_file()]
-            _ = self._model.add_directory_and_content(dp, files)
+            dp = canonical_path(directory)
+            if dp.exists() and dp.is_dir():
+                files = [e for e in dp.iterdir() if e.is_file()]
+                _ = self._model.add_directory_and_content(dp, files)
 
-        self._previous_directory = Path(dialog.selectedFiles()[0]).resolve().parent
+        self._previous_directory = canonical_path(dialog.selectedFiles()[0]).parent
 
 
     @Slot()

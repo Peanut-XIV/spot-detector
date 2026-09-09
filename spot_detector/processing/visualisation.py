@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 
-from spot_detector.types import Array2D, ImageRGB, Bool2D
+from spot_detector.custom_types import Array2D, ImageRGB, Bool2D
 
 Color = tuple[int, int, int]
 

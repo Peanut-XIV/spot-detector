@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+
 import cv2 as cv
 from numpy.typing import NDArray
 
@@ -16,15 +17,15 @@ class ImageView:
         self.height: int = img_shape[0]
         self.is_alt_img: bool = is_alt_image
 
-        x = 0 if x < 0 else x
-        x = self.width if x > self.width else x
+        x = max(x, 0)
+        x = min(x, self.width)
         self.x: int = x
 
-        y = 0 if y < 0 else y
-        y = self.height if y > self.height else y
+        y = max(y, 0)
+        y = min(y, self.height)
         self.y: int = y
 
-        scale = 1 if scale < 1 else scale
+        scale = max(scale, 1)
         scale = 32 if self.width // scale < 64 else scale
         self.scale: float = scale
 

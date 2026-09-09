@@ -61,6 +61,7 @@ type Float2D  = Array2D[float32]
 type Double2D = Array2D[float64]
 
 # Specific Numpy based types
-type ImageRGB[ScalarT: generic] = ndarray[ShapeMxNx3, dtype[ScalarT]]
-type ShadeTable = ndarray[ShapeNx4, dtype[uint16]]    # [r, g, b, category]
+type ImageBGR[ScalarT: generic] = ndarray[ShapeMxNx3, dtype[ScalarT]]
+type ImageRGB[ScalarT: generic] = ImageBGR[ScalarT]
+type ShadeTable = ndarray[ShapeNx4, dtype[uint16]]    # [b, g, r, category]
 type LabelTable[DT: generic] = ndarray[ShapeNx3, dtype[DT]]
