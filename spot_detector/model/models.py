@@ -228,7 +228,8 @@ class DetParams(BaseModel):
         area = self.area
         if area.enabled:
             params.filterByArea = True
-            params.minArea = area.mini
+            if area.mini > 0:
+                params.minArea = area.mini
             if area.maxi is not None:
                 params.maxArea = area.maxi
         else:

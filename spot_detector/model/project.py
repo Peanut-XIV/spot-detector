@@ -84,6 +84,28 @@ class Project(BaseModel):
         copy = processing_settings.model_copy(deep=True)
         self.processing_settings = copy
 
+    def get_snapshot(self) -> "Project":
+        """Return a deep copy of the project, without the reference image cache.
+
+        `model_copy(deep=True)` cannot be used on a project whose reference
+        image has been loaded: the cache holds `QImage` objects and `deepcopy`
+        fails on them. The cache says nothing about the settings a processing
+        run uses, and the fingerprint does not read it, so a snapshot has no
+        reason to carry it.
+        """
+        reference = self.reference_image_model
+        return Project(
+            name=self.name,
+            latest_save_path=self.latest_save_path,
+            reference_image_model=reference.without_cache() if reference is not None else None,
+            configuration=self.configuration.model_copy(deep=True),
+            processing_settings=(
+                self.processing_settings.model_copy(deep=True)
+                if self.processing_settings is not None
+                else None
+            ),
+        )
+
     def save_as(self, path: str | Path):
         old_path = self.latest_save_path
         self.latest_save_path = str(path)

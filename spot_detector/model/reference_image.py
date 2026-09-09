@@ -265,6 +265,16 @@ class ReferenceImageModel(BaseModel):
             raise FailedOpeningError(self.path)
         self.generate_cache_from_mat(img)
 
+    def without_cache(self) -> "ReferenceImageModel":
+        """Return the same model with no image cache attached.
+
+        The cache holds `QImage` objects, which can neither be deep copied nor
+        pickled, so any copy of a project meant to be serialised or sent to
+        another process has to leave it behind. The result carries the path,
+        which is all a snapshot needs; reading `mats` on it raises, by design.
+        """
+        return ReferenceImageModel(path=self.path, init_cache=False)
+
     def set_path(self, path: str | Path):
         path = Path(path)
         self.path = str(path)

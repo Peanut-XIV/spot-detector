@@ -39,25 +39,27 @@ separate column of the result file.
 
 from __future__ import annotations
 
+from datetime import datetime
+from dataclasses import dataclass
 import hashlib
 import json
-import unicodedata
-from dataclasses import dataclass
-from datetime import datetime
+from logging import INFO, Formatter, FileHandler, getLogger, Logger
 from math import isfinite
 from pathlib import Path
 from typing import Annotated
+import unicodedata
 
 from pydantic import BeforeValidator
 
+from spot_detector.errors import UnsetCriticalSettingsError
 from spot_detector.model.models import ColorAndParams, DetParams, SimpleParam
 from spot_detector.model.project import Project
 from spot_detector.model.processing_settings_models import (
     PreprocessingSettings,
+    ProcessingSettingsModel,
     QualityReportingSettings,
 )
 
-from logging import INFO, Formatter, Logger, FileHandler, getLogger
 
 
 # Fingerprint schema version. Bump it whenever the contents of the canonical
@@ -318,7 +320,6 @@ LOG_NAME = "log.txt"
 # lexicographic order of directory names.
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H-%M-%S"
 
-
 @dataclass(frozen=True)
 class ProcessingSession:
     """Directory of one processing session.
@@ -333,10 +334,11 @@ class ProcessingSession:
     log_path: Path
     logger: Logger
     project_snapshot: Project
+    processing_settings: ProcessingSettingsModel
     config_digest: str
 
 
-def _session_paths(directory: Path, digest: str, project: Project) -> ProcessingSession:
+def _session_paths(directory: Path, digest: str, project: Project, processing_settings: ProcessingSettingsModel) -> ProcessingSession:
 
     logger = getLogger(f"spot_detector.session.{directory.name}")
     logger.setLevel(INFO)
@@ -352,6 +354,7 @@ def _session_paths(directory: Path, digest: str, project: Project) -> Processing
         log_path = directory / LOG_NAME,
         logger=logger,
         project_snapshot=project,
+        processing_settings=processing_settings,
         config_digest=digest,
     )
 
@@ -387,7 +390,7 @@ def create_session(
     misleading.
     """
     if project.processing_settings is None or project.processing_settings.output.path is None:
-        raise ValueError("Processing cannot begin if attribute `processing_settings.output.path` is not defined")
+        raise UnsetCriticalSettingsError("Processing cannot begin if attribute `processing_settings.output.path` is not defined")
 
     parent_directory = project.processing_settings.output.path
     started = started_at or datetime.now()
@@ -407,7 +410,7 @@ def create_session(
             attempt += 1
             directory = parent / f"{name}_{attempt}"
 
-    session = _session_paths(directory, digest, project)
+    session = _session_paths(directory, digest, project, project.processing_settings)
     write_snapshot(session.snapshot_save_path, project)
     session.logger.info(f"session opened, configuration fingerprint {digest}")
     return session
@@ -426,7 +429,12 @@ def open_session(directory: str | Path) -> ProcessingSession:
         raise FileNotFoundError(f"no settings snapshot in {path}")
 
     snapshot = Project.from_path(snapshot_path)
-    return _session_paths(path, project_fingerprint(snapshot), snapshot)
+
+    if snapshot.processing_settings is None or snapshot.processing_settings.output.path is None:
+        # unlikely but must be checked
+        raise UnsetCriticalSettingsError("`processing_settings` or `output.path` is None")
+
+    return _session_paths(path, project_fingerprint(snapshot), snapshot, snapshot.processing_settings)
 
 
 def verify_session(session: ProcessingSession) -> bool:

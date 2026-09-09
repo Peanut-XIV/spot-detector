@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Callable, Self, TypeAlias
 
 from typing_extensions import override
 
+from spot_detector.misc import canonical_path
+
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
@@ -315,7 +317,7 @@ class BaseEntryItem(BaseItem):
     def __init__(self, parent: "RootItem | DirectoryEntryItem", entry_path: Path) -> None:
         BaseItem.__init__(self, parent)
         self._generic_status: GenericStatus = GenericStatus.Unchecked
-        self._path: Path = entry_path.expanduser()
+        self._path: Path = canonical_path(entry_path)
 
     @property
     def name(self) -> str:

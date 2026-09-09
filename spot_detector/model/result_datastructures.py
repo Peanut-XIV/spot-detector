@@ -4,8 +4,8 @@ from enum import IntEnum, Enum
 from pathlib import Path
 from typing import Callable, Any
 
-from spot_detector.model.config_fingerprint import ProcessingSession
 from spot_detector.misc import NFC
+from spot_detector.model.config_fingerprint import ProcessingSession
 
 type CellContent = Path | int | float | str | datetime | None
 
@@ -48,14 +48,9 @@ class CheckReport:
     check_value: float | int | bool | None
     check_message: str
 
-class ROIStatus(Enum):
-    Fail = 0
-    Success = 1
-    Disabled = 2
-
 @dataclass
 class ROIData:
-    status: ROIStatus
+    status: CheckStatus
     center_x: float | None
     center_y: float | None
     radius: float | None
@@ -87,6 +82,7 @@ class ImageResult:
     processing_date: datetime
     metadata: ImageMetaData | None
     error: str | None
+    error_detail: str
 
     @property
     def rank(self):

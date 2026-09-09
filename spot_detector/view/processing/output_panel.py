@@ -33,10 +33,10 @@ class OutputFilePanel(QWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(label)
 
-        path_caption = "Choose a file to save the output to"
+        path_caption = "Choose the folder the results will be written to"
 
-        output_path_label: QLabel = QLabel("Output file location:", self)
-        self.output_path_line: PathEdit = PathEdit(PathType.AnyCSV, path_caption, self._previous_path, self)
+        output_path_label: QLabel = QLabel("Output folder:", self)
+        self.output_path_line: PathEdit = PathEdit(PathType.Directory, path_caption, self._previous_path, self)
         self.output_path_button:  QPushButton = self.output_path_line.explore_button
 
         path_layout = QHBoxLayout()
@@ -48,9 +48,9 @@ class OutputFilePanel(QWidget):
         self.crash_recovery_checkbox: QCheckBox = QCheckBox("Resume interrupted processing on this file", self)
         layout.addWidget(self.crash_recovery_checkbox, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        note_text = "Note: If the given output file already exists, the images reported "\
-                   +"as processed will be considered as such and skipped. The output from"\
-                   +" processing the remaining files will be added."
+        note_text = "Note: each run creates a folder in this location holding the result "\
+                   +"table, a copy of the settings used and a log. Images already reported "\
+                   +"as processed in that table are skipped when a run is resumed."
 
         note_label = QLabel(note_text, self, wordWrap=True, alignment=Qt.AlignmentFlag.AlignCenter)
         note_label.setMinimumHeight(100)

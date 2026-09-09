@@ -1,5 +1,4 @@
 from logging import Logger
-import os
 from types import NoneType
 from typing import Any, Callable
 
@@ -13,7 +12,7 @@ from spot_detector.model.result_datastructures import (
     ImageTask,
 )
 from spot_detector.errors import AccessBeforeValidationError, ResultsCellValueError, ResultsFileContentError, ResultsShapeError
-from spot_detector.misc import NFC
+from spot_detector.misc import NFC, canonical_path
 
 import csv
 from datetime import datetime
@@ -23,7 +22,7 @@ from pathlib import Path
 def check_status(check_id: CheckID, result: ImageResult, session: ProcessingSession) -> str | None:
     check = result.checks.get(check_id)
     if check is None:
-        session.logger.warning(f"Check report with id {check_id} was not provided in the results")
+        session.logger.warning(f"Check report with id {check_id.name} was not provided in the results")
         return None
     else:
         return check.check_status.name
@@ -38,7 +37,7 @@ def check_value(check_id: CheckID, result: ImageResult, _session: ProcessingSess
 def get_dust_filter_path(result: ImageResult, session: ProcessingSession) -> str | None:
     check = result.checks.get(CheckID.Dust_Filter)
     if check is None:
-        session.logger.warning(f"Check report with id {CheckID.Dust_Filter} was not provided in the results")
+        session.logger.warning(f"Check report with id {CheckID.Dust_Filter.name} was not provided in the results")
         return None
 
     if check.check_status != CheckStatus.Success:
@@ -150,6 +149,8 @@ class TSVWriter:
         self.session: ProcessingSession = session
         self.columns: list[Column] = build_columns(self.session)
         self._result_file_valid: bool = False
+        self.rows_written: int = 0
+        self.rows_failed: int = 0
 
     def format_cell(self, content: CellContent) -> str:
         match content:
@@ -187,16 +188,27 @@ class TSVWriter:
         self.session.logger.info(f"Writing row {result.rank} for image {result}")
         if result.metadata is None:
             self.session.logger.warning(f"Metadata for entry {result.rank} was not provided")
+        if result.error_detail:
+            self.session.logger.error(
+              f"The following errors occurred while processing task {result.image_task.rank} "
+            + f"for image `{NFC(result.image_task.image_path)}`: {result.error_detail}"
+            )
 
         row = [self.format_cell(col.extract(result, self.session)) for col in self.columns]
+
         with open(self.session.results_path, "a", newline="", encoding="utf-8") as result_file:
             writer = csv.writer(result_file, dialect="excel-tab")
             writer.writerow(row)
 
+        self.rows_written += 1
+        if result.error:
+            self.rows_failed += 1
 
-    def get_processed_rows(self) -> tuple[list[ImageTask], list[ImageTask]]:
+
+    def get_processed_paths(self) -> tuple[list[Path], list[Path]]:
         """
         Only call if prepare_results_file has been called without error beforehand.
+        Returns the list of processed paths in the results file.
         """
         if not self._result_file_valid:
             raise AccessBeforeValidationError(
@@ -210,15 +222,15 @@ class TSVWriter:
 
         self.session.logger.info(f"Found {len(rows) - 1} data rows in file `{NFC(self.session.results_path)}`")
 
-        processed_rows: list[ImageTask] = []
-        failed_rows: list[ImageTask] = []
+        processed_rows: list[Path] = []
+        failed_rows: list[Path] = []
         for row in rows[1:]:
-            rank = int(row[0])
-            image_path = Path(NFC((Path(row[1]) / row[2]).expanduser().resolve()))
+            temp_path = Path(row[1], row[2])
+            image_path = canonical_path(temp_path)
             if row[4] == "OK":
-                processed_rows.append(ImageTask(rank, image_path))
+                processed_rows.append(image_path)
             else:
-                failed_rows.append(ImageTask(rank, image_path))
+                failed_rows.append(image_path)
 
         return processed_rows, failed_rows
 
