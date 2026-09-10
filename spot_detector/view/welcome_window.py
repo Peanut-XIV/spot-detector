@@ -99,6 +99,12 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
         projects_cache = get_local_data_dir() / "spot-detector" / "recent_projects.txt"
         entries = []
 
+        if not projects_cache.exists():
+            parent = projects_cache.parent
+            if not parent.exists():
+                parent.mkdir(parents=True)
+            projects_cache.touch()
+
         with open(projects_cache, "r") as f:
             for line in f.readlines():
                 entries.append(Path(line.strip("\n\r ")))

@@ -12,7 +12,7 @@ dependencies = [
   "Pyside6>=6.11.1",
   "Pyside6_Addons>=6.11.1",
   "Pyside6_Essentials>=6.11.1",
-  "Shiboken>=6.11.1",
+  "Shiboken6>=6.11.1",
 
 ]
 authors = [{ name = "Louis Lanoy", email = "louis.lanoy@icloud.com" }]
