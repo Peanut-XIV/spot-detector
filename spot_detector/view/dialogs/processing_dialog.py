@@ -378,10 +378,18 @@ class ProcessingDialog(CustomModalDialog):
 
 
 if __name__ == "__main__":
-    from PySide6.QtWidgets import QMainWindow, QApplication
+    import sys
 
-    # project: Project = Project(name="default", configuration=ColorAndParams.from_defaults("blaune"))
-    project = Project.from_path(canonical_path("~/Desktop/test_run.json"))
+    from PySide6.QtWidgets import QApplication, QMainWindow
+
+    project_path = canonical_path(sys.argv[1] if len(sys.argv) > 1 else "~/Desktop/test_run.json")
+
+    if project_path.exists():
+        project = Project.from_path(project_path)
+    else:
+        print(f"{project_path!s} does not exist, creating a default project")
+        project = Project(name="default")
+
 
     class TestWindow(QMainWindow):
         def __init__(
@@ -394,6 +402,7 @@ if __name__ == "__main__":
             self.setCentralWidget(self.button)
             _ = self.button.clicked.connect(self.start_dialog)
             self.dialog: ProcessingDialog = ProcessingDialog(project, Path.home() / "Desktop", self)
+
 
         @Slot()
         def start_dialog(self):
