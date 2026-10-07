@@ -133,6 +133,18 @@ class ProcessingDialog(CustomModalDialog):
         )
         return model
 
+    def log_info(self, message: str):
+        if self._session is None:
+            return
+        logger = self._session.logger
+        logger.info(message)
+
+    def log_warning(self, message: str):
+        if self._session is None:
+            return
+        logger = self._session.logger
+        logger.warning(message)
+
     @Slot(ProcessingSettingsModel)
     def set_model(self, model: ProcessingSettingsModel) -> None:
         self._selection_panel.set_model(model.entries)
@@ -141,7 +153,7 @@ class ProcessingDialog(CustomModalDialog):
 
     @Slot()
     def on_save_requested(self) -> None:
-        print("save_requested")
+        self.log_info("save requested")
         proc_model = self.get_model()
         model_copy = self.project.get_snapshot()
         model_copy.set_processing_settings(proc_model)
@@ -151,19 +163,17 @@ class ProcessingDialog(CustomModalDialog):
         save_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
 
         res = save_dialog.exec()
-        print("exited save dialog")
+        self.log_info("exited save dialog")
         if res:
-            print("user selected an item")
             selection = save_dialog.selectedFiles()
             if len(selection) != 1:
-                print(f"expected 1 item, got {len(selection)}")
+                self.log_warning(f"expected 1 item, got {len(selection)}")
                 return
             model_copy.save_as(selection[0])
-            print("commiting changes to the project object")
+            self.log_info("commiting changes to the project object")
             self.project.processing_settings = proc_model
         else:
-            print("user selected nothing")
-            print("not commiting changes to the project object")
+            self.log_info("user selected nothing, not commiting changes to the project object")
 
 
     # ------------------------------------------------------------------
@@ -171,7 +181,7 @@ class ProcessingDialog(CustomModalDialog):
     # ------------------------------------------------------------------
 
     def _blocking_problems(self, model: ProcessingSettingsModel) -> list[str]:
-        """List the reasons the run cannot start."""
+        """Lists the reasons the run cannot start."""
         problems: list[str] = []
 
         if not model.entries:

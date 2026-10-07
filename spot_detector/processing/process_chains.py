@@ -54,26 +54,22 @@ def count_spots_fourth_method(
     image: ImageRGB[uint16],
     color_table: ShadeTable,
     det_params: list[DetParams],
-    _debug: int = 0,
 ) -> list[int]:
     # Use set to create a collection with a single item per unique value
-    labels = list(set([int(x) for x in color_table[:, 3] if int(x) > 0]))  # pyright: ignore[reportAny]
+    labels = {int(x) for x in color_table[:, 3] if int(x) > 0}  # pyright: ignore[reportAny]
 
     labeled = label_img_fastest_uint16(image, color_table)
     values: list[int] = []
 
     for i, settings in enumerate(det_params):
-        j = i + 1  # 0 is the bg
+        j = i + 1  # start from 1, 0 is the background
         if j not in labels:
-            # skip unused labels
             values.append(0)
             continue
         detector = cv.SimpleBlobDetector.create(settings.load_params(len(color_table)))
         isolated_color = isolate_categories(color_table, [j])
 
         gs_palette = evenly_spaced_gray_palette(isolated_color)
-
-        print(gs_palette)
 
         gs_img = gs_palette[labeled.flatten()]
         gs_img = gs_img.reshape(image.shape[:2]).astype(np.uint8)
@@ -82,12 +78,6 @@ def count_spots_fourth_method(
         values.append(len(key_points))
 
     return values
-
-
-
-def expand_debug(string: str) -> str:
-    debug_path = Path("/Users/louis/Desktop/etalonnage/debug/")
-    return str(debug_path.joinpath(string))
 
 
 
@@ -120,18 +110,16 @@ def img_processer(
         if isinstance(job, str):
             if job == "STOP":
                 break
-            print(f"Unexpected message recieved: {job}")
             continue
 
         folder_row, depth_col, path = job
         image = cast(ImageRGB[CommonInt_T] | None, cv.imread(path, cv.IMREAD_COLOR_BGR | cv.IMREAD_ANYDEPTH))
         if image is None:
-            print(f"Failed reading image at path {path} and got None instead")
             continue
 
         image_16 = convert_mat_uint16(image)
 
-        values = count_spots_fourth_method(image_16, color_table, config.det_params, _debug=0)
+        values = count_spots_fourth_method(image_16, color_table, config.det_params)
         result: DataElement = (folder_row, depth_col, values)
         out_queue.put(result)
 
@@ -269,6 +257,9 @@ def save_cropped_image(image: ImageBGR[uint16], roi_settings: CroppingSettings, 
         report.check_message += "The image was not cropped but will be saved anyway"
 
     save_dir = canonical_path(roi_settings.save_path) / image_task.image_path.parent.name
+    if not save_dir.exists():
+        save_dir.mkdir(parents=True)
+
     stem = image_task.image_path.stem
     extra = f"_{image_task.rank}"
     suffix = ".tiff"
@@ -277,7 +268,6 @@ def save_cropped_image(image: ImageBGR[uint16], roi_settings: CroppingSettings, 
 
     saved = False
     i = 2
-
     while not saved and i < 10:
         if not path.exists():
             saved = cv.imwrite(str(path), image)
@@ -298,7 +288,7 @@ def process_image(
     detection_settings: ColorAndParams,
     preproc_settings: PreprocessingSettings,
 ) -> ImageResult:
-    proc_date = datetime.now()
+    proc_date = datetime.now(tz=UTC)
 
     error_cause: str | None = None
     error_detail: str = ""
@@ -323,6 +313,7 @@ def process_image(
     res = compute_roi(filtered, preproc_settings.cropping)
     # V V V checks requiring ROI and an uncropped image go here V V V
 
+    # Λ Λ Λ ================== END OF CHECKS ================== Λ Λ Λ
     cropped, roi_data, report = apply_roi(image, res, preproc_settings.cropping)
     report = save_cropped_image(cropped, preproc_settings.cropping, report, task)
 
