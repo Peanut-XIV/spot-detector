@@ -1,8 +1,10 @@
+import sys
 from pathlib import Path
 from time import monotonic
-import sys
 from typing import override
 
+from PySide6.QtCore import Qt, QTimer, Slot
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -13,23 +15,28 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import QTimer, Qt, Slot
-from PySide6.QtGui import QCloseEvent
 
 from spot_detector.misc import canonical_path
-from spot_detector.model.config_fingerprint import ProcessingSession, create_session, end_session
-from spot_detector.model.models import ColorAndParams
+from spot_detector.model.config_fingerprint import (
+    ProcessingSession,
+    create_session,
+    end_session,
+)
 from spot_detector.model.processing_settings_models import ProcessingSettingsModel
 from spot_detector.model.project import Project
 from spot_detector.processing.processing_task_manager import ProcessingTaskManager
 from spot_detector.processing.tsv_writer import TSVWriter
-
-from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog, DialogExitStatus
-
-from spot_detector.view.processing.file_selection.file_selection_panel import FileSelectionPanel
+from spot_detector.view.dialogs.custom_dialog_base import (
+    CustomModalDialog,
+    DialogExitStatus,
+)
+from spot_detector.view.processing.file_selection.file_selection_panel import (
+    FileSelectionPanel,
+)
 from spot_detector.view.processing.output_panel import OutputFilePanel
-from spot_detector.view.processing.settings.processing_settings_panel import ProcessingSettingsPanel
-
+from spot_detector.view.processing.settings.processing_settings_panel import (
+    ProcessingSettingsPanel,
+)
 
 TICK_INTERVAL_MS = 200
 CANCEL_GRACE_SECONDS = 10.0
@@ -163,7 +170,7 @@ class ProcessingDialog(CustomModalDialog):
     # ------------------------------------------------------------------
 
     def _blocking_problems(self, model: ProcessingSettingsModel) -> list[str]:
-        """List the reasons the run cannot start, in the user's own terms."""
+        """List the reasons the run cannot start."""
         problems: list[str] = []
 
         if not model.entries:
@@ -215,6 +222,7 @@ class ProcessingDialog(CustomModalDialog):
             writer.prepare_results_file()
             manager = ProcessingTaskManager(session, writer)
             manager.create_task_list()
+
         except Exception as error:
             session.logger.error(f"setup failed: {error}")
             end_session(session)
@@ -275,8 +283,11 @@ class ProcessingDialog(CustomModalDialog):
         finished = manager.poll()
         self._show_progress(manager.received, manager.expected)
 
-        if not finished and self._cancel_deadline is not None:
-            if monotonic() > self._cancel_deadline:
+        if (
+            (not finished)
+            and (self._cancel_deadline is not None)
+            and (monotonic() > self._cancel_deadline)
+        ):
                 finished = True
 
         if finished:
