@@ -1,22 +1,22 @@
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtGui import QImage
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import BaseModel, Field, PrivateAttr
+from PySide6.QtGui import QImage
 
+from spot_detector.custom_types import PixTuple, ShadeTuple
+from spot_detector.errors import (
+    FailedOpeningError,
+    InvalidFormatError,
+    InvalidNameError,
+)
 from spot_detector.model.models import Shade
 from spot_detector.processing.transformations import (
     get_k_means,
 )
-from spot_detector.errors import (
-    InvalidFormatError,
-    InvalidNameError,
-    FailedOpeningError,
-)
-from spot_detector.custom_types import PixTuple, ShadeTuple
 
 
 def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:

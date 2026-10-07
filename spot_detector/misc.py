@@ -1,6 +1,7 @@
 import unicodedata
 from pathlib import Path
 
+
 def NFC(item: object) -> str:
     return unicodedata.normalize("NFC", str(item))
 

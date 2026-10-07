@@ -1,20 +1,39 @@
+from collections.abc import Callable
+from datetime import UTC, datetime
 from multiprocessing import Process, Queue, parent_process
-from pathlib import Path
 from time import sleep
-from typing import Callable, cast
-from datetime import datetime
 from traceback import format_exc
+from typing import cast
 
 import cv2 as cv
 import numpy as np
 from numpy import uint16
 
-from spot_detector.custom_types import Bool2D, CommonInt_T, DataElement, ImageBGR, ShadeTable, ImageElement, ImageRGB
+from spot_detector.custom_types import (
+    Bool2D,
+    CommonInt_T,
+    DataElement,
+    ImageBGR,
+    ImageElement,
+    ImageRGB,
+    ShadeTable,
+)
 from spot_detector.errors import ImageError
 from spot_detector.misc import canonical_path
 from spot_detector.model.models import ColorAndParams, DetParams
-from spot_detector.model.processing_settings_models import CroppingSettings, DustFilterSettings, PreprocessingSettings
-from spot_detector.model.result_datastructures import CheckID, CheckReport, CheckStatus, ImageResult, ImageTask, ROIData
+from spot_detector.model.processing_settings_models import (
+    CroppingSettings,
+    DustFilterSettings,
+    PreprocessingSettings,
+)
+from spot_detector.model.result_datastructures import (
+    CheckID,
+    CheckReport,
+    CheckStatus,
+    ImageResult,
+    ImageTask,
+    ROIData,
+)
 from spot_detector.processing.image_info import load_image_for_processing
 from spot_detector.processing.transformations import (
     compute_dish_ROI_mask,

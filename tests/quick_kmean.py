@@ -1,7 +1,9 @@
-import cv2
 import sys
 from pathlib import Path
-from spot_detector.transformations import get_k_means
+
+import cv2
+
+from spot_detector.processing.transformations import get_k_means
 
 if __name__ == "__main__":
     arguments = sys.argv

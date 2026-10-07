@@ -1,18 +1,17 @@
 # Python standard library
+import json
 import time
 from multiprocessing import Process, Queue
 from pathlib import Path
-import json
 
 # Other
 import cv2 as cv
 import numpy as np
-from numpy.typing import NDArray
 from click import FileError, echo
+from numpy.typing import NDArray
 
 # Project files
-from spot_detector.model.models import DetParams, Shade
-from spot_detector.model.project import Project
+from spot_detector.custom_types import DataElement, DataRow, DataTable
 from spot_detector.file_utils import (
     fetch_csv,
     read_csv,
@@ -20,10 +19,14 @@ from spot_detector.file_utils import (
     unprocessed_images,
     write_csv,
 )
+from spot_detector.model.models import DetParams, Shade
+from spot_detector.model.project import Project
 from spot_detector.palette_gui import run_gui
 from spot_detector.processing.process_chains import init_workers
-from spot_detector.processing.transformations import get_k_means, label_img_fastest_uint8
-from spot_detector.custom_types import DataElement, DataRow, DataTable
+from spot_detector.processing.transformations import (
+    get_k_means,
+    label_img_fastest_uint8,
+)
 
 
 def count_categories(categories: list[int]) -> int:

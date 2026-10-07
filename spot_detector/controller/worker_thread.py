@@ -1,13 +1,16 @@
+import numpy as np
+from numpy.typing import NDArray
 from PySide6.QtCore import (
     QObject,
     QThread,
     Signal,
 )
-import numpy as np
-from numpy.typing import NDArray
 
 from spot_detector.model.models import Shade
-from spot_detector.processing.transformations import convert_mat_uint16, label_img_fastest_uint16
+from spot_detector.processing.transformations import (
+    convert_mat_uint16,
+    label_img_fastest_uint16,
+)
 
 
 class ReloadPaletteProcessor(QThread):

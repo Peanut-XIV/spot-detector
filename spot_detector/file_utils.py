@@ -1,12 +1,11 @@
 # Python standard library
 import csv
-import re
-import string
 import os
 import platform
+import re
+import string
 from os import mkdir
 from pathlib import Path
-
 
 # Other dependancies
 import numpy as np

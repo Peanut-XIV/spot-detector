@@ -11,7 +11,11 @@ from PIL import Image, UnidentifiedImageError
 from PIL.JpegImagePlugin import get_sampling
 
 from spot_detector.custom_types import ImageBGR
-from spot_detector.errors import FailedOpeningError, InvalidFormatError, InvalidNameError
+from spot_detector.errors import (
+    FailedOpeningError,
+    InvalidFormatError,
+    InvalidNameError,
+)
 from spot_detector.model.result_datastructures import ImageMetaData
 from spot_detector.processing.transformations import convert_mat_uint16
 

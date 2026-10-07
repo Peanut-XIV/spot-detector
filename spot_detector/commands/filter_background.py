@@ -1,7 +1,9 @@
+from pathlib import Path
+
 import click
 import cv2
 import numpy as np
-from pathlib import Path
+
 
 @click.command()
 @click.argument("sigma_1", type=click.FLOAT)

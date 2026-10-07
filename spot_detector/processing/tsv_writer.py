@@ -1,22 +1,26 @@
+import csv
+from collections.abc import Callable
+from datetime import datetime
 from logging import Logger
+from pathlib import Path
 from types import NoneType
-from typing import Any, Callable
+from typing import Any
 
+from spot_detector.errors import (
+    AccessBeforeValidationError,
+    ResultsCellValueError,
+    ResultsFileContentError,
+    ResultsShapeError,
+)
+from spot_detector.misc import NFC, canonical_path
 from spot_detector.model.config_fingerprint import ProcessingSession
 from spot_detector.model.result_datastructures import (
     CellContent,
-    CheckStatus,
-    ImageResult,
     CheckID,
+    CheckStatus,
     Column,
-    ImageTask,
+    ImageResult,
 )
-from spot_detector.errors import AccessBeforeValidationError, ResultsCellValueError, ResultsFileContentError, ResultsShapeError
-from spot_detector.misc import NFC, canonical_path
-
-import csv
-from datetime import datetime
-from pathlib import Path
 
 
 def check_status(check_id: CheckID, result: ImageResult, session: ProcessingSession) -> str | None:

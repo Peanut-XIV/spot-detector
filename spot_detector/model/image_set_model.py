@@ -1,14 +1,15 @@
+import sys
 from typing import Any
+
+from pydantic import BaseModel, Field
 from PySide6.QtCore import (
-    QObject,
-    Qt,
     QAbstractTableModel,
     QModelIndex,
+    QObject,
     QPersistentModelIndex,
+    Qt,
 )
 from PySide6.QtWidgets import QApplication, QMainWindow, QTableView
-from pydantic import BaseModel, Field
-import sys
 
 
 class ImageEntry(BaseModel):

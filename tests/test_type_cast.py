@@ -1,10 +1,10 @@
-from typing import Any
 from dataclasses import dataclass
 from pprint import pprint
+from typing import Any
 
-from numpy.typing import NDArray
 import numpy as np
 import numpy.random as npr
+from numpy.typing import NDArray
 
 
 def make_float_intervals(bits):

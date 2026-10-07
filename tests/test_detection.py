@@ -1,15 +1,13 @@
-from spot_detector.model.project import Project
-from spot_detector.types import ImageRGB, CommonInt_T
+import sys
+from typing import cast
 
 import cv2 as cv
 import numpy as np
-import sys
 
-from typing import cast
-
-from spot_detector.processing.transformations import convert_mat_uint16
+from spot_detector.custom_types import CommonInt_T, ImageRGB
+from spot_detector.model.project import Project
 from spot_detector.processing.process_chains import count_spots_fourth_method
-
+from spot_detector.processing.transformations import convert_mat_uint16
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:

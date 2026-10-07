@@ -1,16 +1,16 @@
-from pathlib import Path
 import json
-from typing import Self, Any
+from pathlib import Path
+from typing import Any, Self
 
 from numpy import uint8, uint16
 from numpy.typing import NDArray
-from pydantic import BaseModel, field_validator, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from spot_detector.file_utils import add_to_recent_projects
-from spot_detector.model.defaults import PROJECTS_LIST, get_recent_project_paths
 from spot_detector.model.models import ColorAndParams, Shade
 from spot_detector.model.processing_settings_models import ProcessingSettingsModel
 from spot_detector.model.reference_image import ReferenceImageModel
+
 # from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 # import mimetypes
 

@@ -6,18 +6,17 @@ le seuil est place entre le signal net et un flou tout juste inacceptable.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from collections.abc import Sequence
+from dataclasses import dataclass, field
 from math import sqrt
+from typing import cast
 
 import cv2
 import numpy as np
 from numpy import uint16
 
 import spot_detector.processing.image_validation.blur_detection as bd
-from spot_detector.custom_types import Double2D, ImageRGB, ShadeTable, Bool2D
-from typing import cast
-
+from spot_detector.custom_types import Bool2D, Double2D, ImageRGB, ShadeTable
 
 # Champs de valeur plausibles : (min, max, defaut, unite, description).
 PARAMETER_RANGES: dict[str, tuple[int | float, int | float, int | float, str, str]] = {

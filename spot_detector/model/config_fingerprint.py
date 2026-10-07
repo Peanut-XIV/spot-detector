@@ -39,28 +39,26 @@ separate column of the result file.
 
 from __future__ import annotations
 
-from datetime import datetime
-from dataclasses import dataclass
 import hashlib
 import json
-from logging import INFO, Formatter, FileHandler, getLogger, Logger
+import unicodedata
+from dataclasses import dataclass
+from datetime import datetime
+from logging import INFO, FileHandler, Formatter, Logger, getLogger
 from math import isfinite
 from pathlib import Path
 from typing import Annotated
-import unicodedata
 
 from pydantic import BeforeValidator
 
 from spot_detector.errors import UnsetCriticalSettingsError
 from spot_detector.model.models import ColorAndParams, DetParams, SimpleParam
-from spot_detector.model.project import Project
 from spot_detector.model.processing_settings_models import (
     PreprocessingSettings,
     ProcessingSettingsModel,
     QualityReportingSettings,
 )
-
-
+from spot_detector.model.project import Project
 
 # Fingerprint schema version. Bump it whenever the contents of the canonical
 # view change, otherwise a change of the rules would read as a change of the

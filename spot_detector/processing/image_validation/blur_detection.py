@@ -18,14 +18,23 @@ import numpy as np
 from numpy import float64, integer, uint16
 from numpy.typing import NDArray
 
+from spot_detector.custom_types import (
+    Bool2D,
+    CommonInt_T,
+    Double2D,
+    ImageRGB,
+    NVec,
+    ShadeTable,
+)
+
 # Fonction de labellisation deja disponible dans le projet. Adapter le chemin
 # d'import a l'arborescence reelle.
 #   label_image_fastest_uint16(img: NDArray[np.uint16],
 #                              palette: NDArray[np.uint16]) -> NDArray[np.uint8]
-
-from spot_detector.processing.transformations import convert_mat_uint16, label_img_fastest_uint16
-from spot_detector.custom_types import CommonInt_T, ImageRGB, ShadeTable, Bool2D, Double2D, NVec
-
+from spot_detector.processing.transformations import (
+    convert_mat_uint16,
+    label_img_fastest_uint16,
+)
 
 # --- Alias de types --------------------------------------------------------
 

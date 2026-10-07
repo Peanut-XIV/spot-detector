@@ -1,7 +1,7 @@
 # Python standard library
 import datetime
-from pathlib import Path
 import json
+from pathlib import Path
 
 # Other dependancies
 import click

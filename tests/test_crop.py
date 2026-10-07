@@ -1,14 +1,13 @@
-import sys
 import os
-from typing import Any, Literal
+import sys
 from pathlib import Path
+from typing import Any, Literal
 
+import cv2
 import numpy as np
 from numpy.typing import NDArray
-import cv2
 
-
-from spot_detector.transformations import crop_to_dish_roi
+from spot_detector.processing.transformations import crop_to_dish_roi
 
 KERNEL = np.array(
     [

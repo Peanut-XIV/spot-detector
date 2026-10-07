@@ -1,11 +1,12 @@
+import json
 from enum import Enum
 from pathlib import Path
-from typing import Any
-from typing_extensions import Self
-import json
+from typing import Any, Self
+
+import cv2 as cv
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from pydantic_core.core_schema import FieldValidationInfo
-import cv2 as cv
+
 from spot_detector.custom_types import PixTuple, ShadeTuple
 
 

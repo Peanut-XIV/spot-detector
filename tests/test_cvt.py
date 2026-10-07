@@ -1,6 +1,7 @@
-from spot_detector.model.project import Project
 import sys
 from pathlib import Path
+
+from spot_detector.model.project import Project
 
 
 def main(conf: Path):

@@ -1,8 +1,9 @@
-from dataclasses import InitVar, field, dataclass
+from collections.abc import Callable
+from dataclasses import InitVar, dataclass, field
 from datetime import datetime
-from enum import IntEnum, Enum
+from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Callable, Any
+from typing import Any
 
 from spot_detector.misc import NFC
 from spot_detector.model.config_fingerprint import ProcessingSession

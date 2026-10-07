@@ -1,22 +1,29 @@
 from datetime import datetime
-from time import monotonic
 from multiprocessing import get_context, parent_process
-from multiprocessing.synchronize import Event as EventType
 from multiprocessing.context import SpawnContext, SpawnProcess
 from multiprocessing.queues import Queue as QueueType
-from queue import Empty
+from multiprocessing.synchronize import Event as EventType
 from pathlib import Path
+from queue import Empty
+from time import monotonic
 from traceback import format_exc
+
 from natsort import natsorted
 
+from spot_detector.errors import ProcessingSetupError
+from spot_detector.misc import canonical_path
 from spot_detector.model.config_fingerprint import ProcessingSession
 from spot_detector.model.models import ColorAndParams
 from spot_detector.model.processing_settings_models import PreprocessingSettings
-from spot_detector.model.result_datastructures import CheckStatus, ImageResult, ImageTask, ROIData
+from spot_detector.model.result_datastructures import (
+    CheckStatus,
+    ImageResult,
+    ImageTask,
+    ROIData,
+)
 from spot_detector.processing.process_chains import process_image
 from spot_detector.processing.tsv_writer import TSVWriter
-from spot_detector.errors import ProcessingSetupError
-from spot_detector.misc import canonical_path
+
 
 class ProcessingTaskManager:
     """
