@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import cv2
 import numpy as np
@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from pydantic import BaseModel, Field, PrivateAttr
 from PySide6.QtGui import QImage
 
-from spot_detector.custom_types import PixTuple, ShadeTuple
+from spot_detector.custom_types import Array2D, ImageBGR, NVec, PixTuple, ShadeTuple
 from spot_detector.errors import (
     FailedOpeningError,
     InvalidFormatError,
@@ -19,84 +19,93 @@ from spot_detector.processing.transformations import (
 )
 
 
-def to_displayable_mat(mat: NDArray) -> NDArray[np.uint8]:
-    return to_3_channel_mat(to_uint8_mat(mat))
+def to_displayable_mat(mat: NDArray[np.generic]) -> ImageBGR[np.uint8]:
+    return np.ascontiguousarray(to_3_channel_mat(to_uint8_mat(mat)))
 
 
-def to_3_channel_mat(mat: NDArray) -> NDArray:
-    match mat.shape:
-        case [x, y] | [x, y, 1] if x > 1 and y > 1:
+def to_3_channel_mat[T: np.generic](mat: NDArray[T]) -> ImageBGR[T]:
+    match mat.ndim:
+        case 2:
             return mat.repeat(3, 2)
+        case 3:
+            shape = mat.shape
+            match cast(tuple[int, int, int], shape):
+                case x, y, _ if x == 1 or y == 1:
+                    pass
+                case _, _, 1:
+                    return mat.repeat(3, 2)
+                case x, y, 2:
+                    zeros = np.zeros([x, y], mat.dtype)
+                    return np.stack([mat, zeros], 2)
+                case _, _, 3:
+                    return mat
+                case _, _, 4:
+                    return mat[:, :, 0:3]
+                case _:
+                    pass
+        case _:
+            pass
+    raise ValueError(
+        f"Unexpected ndarray shape {mat.shape}. Expected one of the "
+        + "following: [x, y], [x, y, 1], [x, y, 2], [x, y, 3], [x, y, 4]"
+        + " where x and y are both greater than 1"
+    )
 
-        case [x, y, 2] if x > 1 and y > 1:
-            zeros = np.zeros([x, y])
-            return np.stack([mat, zeros], 2)
 
-        case [x, y, 3] if x > 1 and y > 1:
-            return mat
-
-        case [x, y, 4] if x > 1 and y > 1:
-            return mat[:, :, 0:3]
-
-        case other_shape:
-            raise ValueError(
-                f"Unexpected ndarray shape {other_shape}. Expected one of the "
-                "following: [x, y], [x, y, 1], [x, y, 2], [x, y, 3], [x, y, 4]"
-                " where x and y are both greater than 1"
-            )
-
-
-def to_uint8_mat(mat: NDArray) -> NDArray[np.uint8]:
-    match mat.dtype:
-        case np.uint8:
+def to_uint8_mat(mat: NDArray[np.generic]) -> NDArray[np.uint8]:
+    dtype = mat.dtype
+    if np.isdtype(dtype, np.uint8):
+            mat = cast(NDArray[np.uint8], mat)
             return mat.copy()
-        case np.uint16:
+    if np.isdtype(dtype, np.uint16):
+            mat = cast(NDArray[np.uint16], mat)
             return (mat >> 8).astype(np.uint8)
-        case np.uint32:
+    if np.isdtype(dtype, np.uint32):
+            mat = cast(NDArray[np.uint32], mat)
             return (mat >> 24).astype(np.uint8)
-        case np.uint64:
+    if np.isdtype(dtype, np.uint64):
+            mat = cast(NDArray[np.uint64], mat)
             return (mat >> 56).astype(np.uint8)
-        case np.float32 | np.float64:
+    if np.isdtype(dtype, (np.float32, np.float64)):
+            mat = cast(NDArray[np.float32], mat)
             new_mat = np.clip(mat * 256, 0.0, 255.0).astype(np.uint8)
             return new_mat
-        case other_type:
-            raise TypeError(
-                f"Got image matrix with datatype {other_type} but expected"
-                " one of the following : uint8, uint16, uint32, float32, "
-                "float64"
-            )
+    raise TypeError(
+        f"Got image matrix with datatype {dtype} but expected one of the "
+        + "following : uint8, uint16, uint32, uint64, float32, float64"
+    )
 
 
-def to_uint16_mat(mat: NDArray) -> NDArray[np.uint16]:
-    match mat.dtype:
-        case np.uint8:
+def to_uint16_mat(mat: NDArray[np.generic]) -> NDArray[np.uint16]:
+    dtype = mat.dtype
+    if np.isdtype(dtype, np.uint8):
+            mat = cast(NDArray[np.uint8], mat)
             return np.left_shift(mat, 8, dtype=np.uint16)
-        case np.uint16:
-            return mat
-        case np.uint32:
+    if np.isdtype(dtype, np.uint16):
+            mat = cast(NDArray[np.uint16], mat)
+            return mat.copy()
+    if np.isdtype(dtype, np.uint32):
+            mat = cast(NDArray[np.uint32], mat)
             return (mat >> 16).astype(np.uint16)
-        case np.uint64:
+    if np.isdtype(dtype, np.uint64):
+            mat = cast(NDArray[np.uint64], mat)
             return (mat >> 48).astype(np.uint16)
-        case np.float32 | np.float64:
+    if np.isdtype(dtype, (np.float32, np.float64)):
+            mat = cast(NDArray[np.float32], mat)
             new_mat = np.clip(mat * 65536, 0.0, 65535.0).astype(np.uint16)
             return new_mat
-        case other_type:
-            raise TypeError(
-                f"Got image matrix with datatype {other_type} but expected"
-                " one of the following : uint8, uint16, uint32, float32, "
-                "float64"
-            )
+    raise TypeError(
+        f"Got image matrix with datatype {dtype} but expected one of the "
+        + "following : uint8, uint16, uint32, uint64, float32, float64"
+    )
 
 
-def validate_mat(mat: NDArray) -> None:
-    match mat.shape:
-        case [_, _, (3 | 4)]:
-            pass
-        case other_shape:
-            raise ValueError(
-                f"Got image matrix of shape {other_shape} "
-                "but expected shape [x, y, 3] or [x, y, 4]"
-            )
+def validate_mat(mat: NDArray[np.generic]) -> None:
+    if not mat.ndim == 3 and mat.shape[2] == 3:
+        raise ValueError(
+            f"Got image matrix of shape {mat.shape} but expected shape "
+            + "[x, y, 3]"
+        )
 
     match mat.dtype:
         case np.uint8 | np.uint16 | np.uint32 | np.float32 | np.float64:
@@ -104,29 +113,27 @@ def validate_mat(mat: NDArray) -> None:
         case other_type:
             raise TypeError(
                 f"Got image matrix with datatype {other_type} but expected"
-                " one of the following : uint8, uint16, uint32, float32, "
-                "float64"
+                + " one of the following : uint8, uint16, uint32, float32, "
+                + "float64"
             )
 
 
 class ImageCache:
-    def __init__(self, mat: NDArray) -> None:
-        self.raw_mat: NDArray = mat
-        self.displayable_mat: NDArray[np.uint8] = to_displayable_mat(mat)
-        self.image: QImage = QImage(
-            self.displayable_mat.data,
-            self.displayable_mat.shape[1],
-            self.displayable_mat.shape[0],
-            QImage.Format.Format_BGR888,
-        )
+    def __init__(self, mat: ImageBGR[np.generic]) -> None:
+        self.raw_mat: ImageBGR[np.generic]
+        self.displayable_mat: ImageBGR[np.uint8]
+        self.image: QImage
 
-    def set_mat(self, mat: NDArray) -> None:
-        self.raw_mat: NDArray = mat
-        self.displayable_mat: NDArray[np.uint8] = to_displayable_mat(mat)
-        self.image: QImage = QImage(
+        self.set_mat(mat)
+
+    def set_mat(self, mat: ImageBGR[np.generic]) -> None:
+        self.raw_mat = mat
+        self.displayable_mat = np.ascontiguousarray(to_displayable_mat(mat))
+        self.image = QImage(
             self.displayable_mat.data,
             self.displayable_mat.shape[1],
             self.displayable_mat.shape[0],
+            self.displayable_mat.strides[0],
             QImage.Format.Format_BGR888,
         )
 
@@ -137,7 +144,7 @@ class ReferenceImageMatrices:
     A class for caching computations made on the reference image
     """
 
-    def __init__(self, mat: NDArray) -> None:
+    def __init__(self, mat: NDArray[np.generic]) -> None:
         validate_mat(mat)
         self.reference: ImageCache = ImageCache(mat)
 
@@ -150,7 +157,7 @@ class ReferenceImageMatrices:
         self.palettized: ImageCache | None = None
         self.highlight: ImageCache | None = None
 
-        self.labels: NDArray | None = None
+        self.labels: Array2D[np.integer] | None = None
 
     def palettize_reference_from_kmeans(self, shade_count: int):
         """
@@ -167,7 +174,7 @@ class ReferenceImageMatrices:
 
     def update_labels(
         self,
-        labels: NDArray,
+        labels: Array2D[np.integer],
         label_shades: list[Shade],
         do_update_highlight: bool = True,
     ) -> None:
@@ -185,7 +192,7 @@ class ReferenceImageMatrices:
         if do_update_highlight:
             self.update_highlight(palettized)
 
-    def update_palettized_and_labels(self, palettized: NDArray, labels: NDArray):
+    def update_palettized_and_labels(self, palettized: ImageBGR[np.generic], labels: NVec[np.integer]):
         im_shape = (palettized.shape[0], palettized.shape[1])
         self.update_palettized(palettized)
         self.update_highlight(palettized)
@@ -203,7 +210,7 @@ class ReferenceImageMatrices:
         else:
             raise ValueError(
                 "'labeled_mat' must be non null. Palettize the reference image"
-                " first to be able to apply a palette."
+                + " first to be able to apply a palette."
             )
 
     def highlight_selection(self, selection: list[bool], shades: list[Shade]) -> None:
@@ -218,13 +225,13 @@ class ReferenceImageMatrices:
         highlight = self.apply_color_list(color_list)
         self.update_highlight(highlight)
 
-    def update_highlight(self, mat: NDArray):
+    def update_highlight(self, mat: NDArray[np.generic]):
         if self.highlight is None:
             self.highlight = ImageCache(mat)
         else:
             self.highlight.set_mat(mat)
 
-    def update_palettized(self, mat: NDArray):
+    def update_palettized(self, mat: NDArray[np.generic]):
         if self.palettized is None:
             self.palettized = ImageCache(mat)
         else:
@@ -235,7 +242,7 @@ class ReferenceImageModel(BaseModel):
     path: str = Field()
     _cache: ReferenceImageMatrices = PrivateAttr()
 
-    def __init__(self, /, init_cache: bool = True, **data: Any) -> None:
+    def __init__(self, /, init_cache: bool = True, **data: Any) -> None:  # pyright: ignore[reportExplicitAny, reportAny]
         super().__init__(**data)
         if init_cache:
             self.generate_cache_from_path()
@@ -244,7 +251,7 @@ class ReferenceImageModel(BaseModel):
     def mats(self):
         return self._cache
 
-    def generate_cache_from_mat(self, mat):
+    def generate_cache_from_mat(self, mat: NDArray[np.generic]):
         try:
             self._cache = ReferenceImageMatrices(mat)
         except (ValueError, TypeError) as e:

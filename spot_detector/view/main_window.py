@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from typing import final
 
-from numpy import uint8
+from numpy import generic, uint8, uint16
 from numpy.typing import NDArray
 from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QAction, QIcon
@@ -13,6 +13,7 @@ from spot_detector import (
     rc_resources,  # noqa: F401 # pyright: ignore[reportUnusedImport]
 )
 from spot_detector.controller.worker_thread import ReloadPaletteProcessor
+from spot_detector.custom_types import ImageRGB, LabelTable, NVec
 from spot_detector.errors import (
     FailedOpeningError,
     InvalidFormatError,
@@ -46,6 +47,13 @@ class MainWindow(QMainWindow):
 
         app_icon = QIcon(":resources/icons/app_icon/spot_detector_full.png")
         self.setWindowIcon(app_icon)
+
+        self.kmeans_action: QAction
+        self.set_ref_image_action: QAction
+        self.open_detection_settings_action: QAction
+        self.open_processing_action: QAction
+        self.load_current_palette_action: QAction
+        self.save_as_action: QAction
 
         self.project = project
 
@@ -302,20 +310,20 @@ class MainWindow(QMainWindow):
         if len(save_pathes) == 0:
             msg = QMessageBox(self)
             msg.setText(" selected")
-            msg.exec()
+            _ = msg.exec()
             return
         path = Path(save_pathes[0])
 
         try:
             self.project.save_as(str(path))
-        except OSError as e:
+        except OSError:
             box = QMessageBox(self)
             box.setWindowTitle("File Error")
             box.setText(
-                f"An error occurred while trying to save the project to the "
-                f"following path: {str(path)}. Please ensure the path is valid"
-                f" and that you have the permissions required to save a file "
-                f"at the given path. Error type: {e}."
+                "An error occurred while trying to save the project to the "
+                + f"following path: {path!s}. Please ensure the path is valid"
+                + " and that you have the permissions required to save a file"
+                + " at the given path. Error type: {e}."
             )
 
             return
@@ -334,8 +342,8 @@ class MainWindow(QMainWindow):
         # for i, shade in enumerate(shades):
         #     print(i, shade)
         thread = ReloadPaletteProcessor(image, shades, self)
-        thread.result_ready.connect(self.handle_load_palette)
-        thread.finished.connect(thread.deleteLater)
+        _ = thread.result_ready.connect(self.handle_load_palette)
+        _ = thread.finished.connect(thread.deleteLater)
         thread.start()
 
 
@@ -390,13 +398,13 @@ class MainWindow(QMainWindow):
             self,
         )
 
-        thread.result_ready.connect(self.handle_kmeans_output)
-        thread.finished.connect(thread.deleteLater)
+        _ = thread.result_ready.connect(self.handle_kmeans_output)
+        _ = thread.finished.connect(thread.deleteLater)
         thread.start()
 
 
     @Slot(object)
-    def handle_kmeans_output(self, output: tuple[NDArray, NDArray, NDArray]):
+    def handle_kmeans_output(self, output: tuple[LabelTable[uint8 | uint16], ImageRGB[generic], NVec[uint8]]):
         """
         called after computing the k-means
 
