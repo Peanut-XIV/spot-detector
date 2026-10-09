@@ -1,42 +1,41 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import final
 
-from numpy.typing import NDArray
 from numpy import uint8
-
+from numpy.typing import NDArray
 from PySide6.QtCore import QObject, Qt, Slot
-from PySide6.QtWidgets import QApplication, QMainWindow, QSplitter, QMessageBox, QWidget
 from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QSplitter, QWidget
 
-from spot_detector import rc_resources, rc_icons # noqa: F401  WARN: Do not remove  # pyright: ignore[reportUnusedImport]
-from spot_detector.controller.worker_thread import ReloadPaletteProcessor
-from spot_detector.model.models import Shade
-from spot_detector.model.project import Project
-from spot_detector.model.reference_image import ReferenceImageModel
-from spot_detector.view.palette_widget import Palette_List
-from spot_detector.view.image_viewer import (
-    ViewerWidget,
-    need_labels_msg,
-    need_ref_image_msg,
+from spot_detector import (
+    rc_icons,  # noqa: F401 # pyright: ignore[reportUnusedImport]
+    rc_resources,  # noqa: F401 # pyright: ignore[reportUnusedImport]
 )
+from spot_detector.controller.worker_thread import ReloadPaletteProcessor
 from spot_detector.errors import (
     FailedOpeningError,
     InvalidFormatError,
     InvalidNameError,
 )
-
+from spot_detector.model.models import Shade
+from spot_detector.model.project import Project
+from spot_detector.model.reference_image import ReferenceImageModel
+from spot_detector.view.dialogs.custom_dialog_base import DialogExitStatus
 from spot_detector.view.dialogs.dialogs import (
+    LoadPaletteDialog,
     ReadOnlyImageFileDialog,
     SaveProjectAsDialog,
-    LoadPaletteDialog,
 )
-
-from spot_detector.view.dialogs.custom_dialog_base import DialogExitStatus
-
-from spot_detector.view.dialogs.settings_dialog import SettingsWindow
 from spot_detector.view.dialogs.kmeans_dialog import KMeansDialog, KmeansProcessor
 from spot_detector.view.dialogs.processing_dialog import ProcessingDialog
+from spot_detector.view.dialogs.settings_dialog import SettingsWindow
+from spot_detector.view.image_viewer import (
+    ViewerWidget,
+    need_labels_msg,
+    need_ref_image_msg,
+)
+from spot_detector.view.palette_widget import Palette_List
 
 
 @final
@@ -67,7 +66,7 @@ class MainWindow(QMainWindow):
         self.processing_dialog: ProcessingDialog | None = None
 
         # could belong in an "AppState" object of some kind
-        self.previous_rows = None  # The rows previously selected for highlight
+        self.previous_rows: list[bool] | None = None  # The rows previously selected for highlight
 
         # post startup : load project contents
         if self.project.reference_image_model is not None:
@@ -86,13 +85,13 @@ class MainWindow(QMainWindow):
                     self.kmeans_action.trigger()
 
 
-
     def _create_palette(self, parent: QWidget):
         """
         A method for populating a palette widget with the projects shades.
         """
         self.palette_list = Palette_List(self.project.configuration.shades, parent)
         _ = self.palette_list.palette_changed.connect(self.on_palette_list_update)
+
 
     def _create_menu(self):
         """
@@ -139,49 +138,57 @@ class MainWindow(QMainWindow):
             ]
         )
 
+
     def _create_set_ref_image_action(self):
         # TODO: make it idempotent
         icon = QIcon(":resources/images/ref_image_icon.png")
         action = QAction(icon, "Set Reference Image", self)
-        action.triggered.connect(self.select_reference_image)
+        _ = action.triggered.connect(self.select_reference_image)
         self.set_ref_image_action = action
+
 
     def _create_kmeans_action(self):
         # TODO: make it idempotent
         # TODO: ADD ICON
         # icon = QIcon(":resources/images/...")
         action = QAction("Compute k-means", self)
-        action.triggered.connect(self.start_kmeans_dialog)
+        _ = action.triggered.connect(self.start_kmeans_dialog)
         self.kmeans_action = action
+
 
     def _create_load_current_palette_action(self):
         action = QAction("Apply Current Palette", self)
-        action.triggered.connect(self.reload_current_palette)
+        _ = action.triggered.connect(self.reload_current_palette)
         self.load_current_palette_action = action
+
 
     def _create_open_detection_settings_action(self):
         # TODO: make it idempotent
         icon = QIcon(":resources/images/detection_settings_icon.png")
         action = QAction(icon, "Open Detection Settings", self)
-        action.triggered.connect(self.start_detection_settings_window)
+        _ = action.triggered.connect(self.start_detection_settings_window)
         self.open_detection_settings_action = action
+
 
     def _create_open_processing_action(self):
         action = QAction("Open Processing Dialog", self)
         action.setShortcut("Ctrl+R")
-        action.triggered.connect(self.start_processing_dialog)
+        _ = action.triggered.connect(self.start_processing_dialog)
         self.open_processing_action = action
+
 
     def _create_save_as_action(self):
         # TODO: icon = QIcon(":path/to/icon")
         action = QAction("Save As", self)
-        action.triggered.connect(self.dialog_save_project_as)
+        _ = action.triggered.connect(self.dialog_save_project_as)
         self.save_as_action = action
+
 
     def _create_viewer(self, parent: QObject) -> None:
         self.viewer = ViewerWidget(self.project, parent)
         _ = self.viewer.request_palettized.connect(self.show_palettized_ref)
         _ = self.viewer.request_highlight.connect(self.make_highlight)
+
 
     @Slot()
     def start_processing_dialog(self):
@@ -205,14 +212,16 @@ class MainWindow(QMainWindow):
         self.processing_dialog.raise_()
         self.processing_dialog.activateWindow()
 
+
     @Slot()
     def start_detection_settings_window(self):
         # get current detection settings object
         current_det_settings = self.project.configuration
         # create the dialog box (with the settings passed as arguments)
         self.settings_dialog = SettingsWindow(current_det_settings, self)
-        self.settings_dialog.exited.connect(self.handle_detection_settings_exit)
+        _ = self.settings_dialog.exited.connect(self.handle_detection_settings_exit)
         self.settings_dialog.show()
+
 
     @Slot()
     def handle_detection_settings_exit(self, status: DialogExitStatus):
@@ -222,12 +231,14 @@ class MainWindow(QMainWindow):
             return
         new_det_settings = self.settings_dialog.model
         self.project.set_configuration(new_det_settings)
-        self.settings_dialog.exited.disconnect(self.handle_detection_settings_exit)
+        _ = self.settings_dialog.exited.disconnect(self.handle_detection_settings_exit)
         self.settings_dialog = None
+
 
     @Slot()
     def make_highlight(self):
         rows = self.palette_list.selected_rows()
+
         if rows == self.previous_rows:
             self.viewer.show_highlight()
             return
@@ -247,6 +258,7 @@ class MainWindow(QMainWindow):
         self.viewer.update_highlight()
         self.viewer.show_highlight()
 
+
     @Slot()
     def show_palettized_ref(self):
         if self.project.reference_image_model is None:
@@ -259,6 +271,7 @@ class MainWindow(QMainWindow):
         self.viewer.update_palettized(msg_on_fail=False)
         self.viewer.update_highlight(msg_on_fail=False)
         self.viewer.show_palettized_reference()
+
 
     @Slot()
     def make_palettized_ref(self):
@@ -278,6 +291,7 @@ class MainWindow(QMainWindow):
         self.viewer.update_palettized(msg_on_fail=False)
         self.viewer.update_highlight(msg_on_fail=False)
         self.viewer.show_palettized_reference()
+
 
     @Slot()
     def dialog_save_project_as(self):
@@ -306,6 +320,7 @@ class MainWindow(QMainWindow):
 
             return
 
+
     @Slot()
     def reload_current_palette(self):
         # print("Reloading current palette on current reference image and generating labels")
@@ -322,6 +337,7 @@ class MainWindow(QMainWindow):
         thread.result_ready.connect(self.handle_load_palette)
         thread.finished.connect(thread.deleteLater)
         thread.start()
+
 
     @Slot(object)
     def handle_load_palette(self, labeled_image: NDArray[uint8]):
@@ -341,6 +357,7 @@ class MainWindow(QMainWindow):
         # switch update view object to show palettized
         self.viewer.show_palettized_reference()
 
+
     def dialog_for_reference_image(self) -> str | int:
         dialog = ReadOnlyImageFileDialog(
             self, "Select a reference image", str(Path.home())
@@ -356,6 +373,7 @@ class MainWindow(QMainWindow):
             return len(files)
         file = files[0]
         return file
+
 
     def start_kmeans_dialog(self):
         if self.project.reference_image_model is None:
@@ -375,6 +393,7 @@ class MainWindow(QMainWindow):
         thread.result_ready.connect(self.handle_kmeans_output)
         thread.finished.connect(thread.deleteLater)
         thread.start()
+
 
     @Slot(object)
     def handle_kmeans_output(self, output: tuple[NDArray, NDArray, NDArray]):
@@ -399,85 +418,65 @@ class MainWindow(QMainWindow):
         self.project.set_shades(lut)
         self.palette_list.set_palette(shades)
 
+
     @Slot(list)
     def on_palette_list_update(self, shades: list[Shade]):
         self.project.configuration.shades = shades
 
-    # TODO: create the function
-    # 1 - Validate source path
-    #   a - source path is not None
-    #   b - source path is a directory
-    #   c - correct internal structure
-    #   d - correct file types
-    #   e - (bonus) naming scheme?
-    # 2 - Validate dest path
-    #   a - dest path not None
-    #   b - parent dir exists
-    #   c - overwrite / no-overwrite
-    #   d - resume previous compute?
-    # 3 - Validate counting parameters
-    #   a - labels count vs nbr of diff settings
-    # 4 - Compute
-    #   a - create loading screen
-    #        - count processed images
-    #        - give/update ETA
-    #        - pause/resume Calculation controls
-    #   b - prepare computation
-    #        - create pipes
-    #        - create threads
-    #        - create writer thread
-    #   d - start
-    def compute_count(self): ...
 
     def select_reference_image(self):
         img_path: str | int = self.dialog_for_reference_image()
         if isinstance(img_path, int):
             if img_path == 0:
-                # print("no image selected")
                 pass
             else:
                 box = QMessageBox(self)
                 box.setWindowTitle("Error: too many files selected")
                 box.setText(
-                    "Spot-detector can only handle one reference image at a "
-                    "time.\nPlease try again and select only one image."
+                    "Spot-detector can only handle one reference image at a"
+                    + " time.\nPlease try again and select only one image."
                 )
             return
+
         try:
             if self.project.reference_image_model is None:
                 self.project.reference_image_model = ReferenceImageModel(path=img_path)
             else:
                 self.project.reference_image_model.set_path(img_path)
+
         except InvalidFormatError as e:
             box = QMessageBox(self)
             box.setWindowTitle("Error: Invalid Format")
             box.setText(f"The format of the provided image is not supported. {e}")
-            box.exec()
+            _ = box.exec()
             return
+
         except InvalidNameError:
             box = QMessageBox(self)
             box.setWindowTitle("Error: Invalid Name")
             box.setText(
-                "The selected Image is invalid as the filename starts with"
-                "a '.'. Files and directories with such a name are hidden and "
-                "should be treated with special care."
+                "The selected Image is invalid as the filename starts with a "
+                + "'.'. Files and directories with such a name are hidden and"
+                + " should be treated with special care."
             )
-            box.exec()
+            _ = box.exec()
             return
+
         except FailedOpeningError:
             box = QMessageBox(self)
             box.setWindowTitle("Error: Invalid File Type")
             box.setText(
                 "The selected image could not be opened. Maybe you lack the"
-                "necessary codecs to read it, the file extension is incorrect,"
-                " or the file is corrupted. Please try again with a different "
-                "file."
+                + "necessary codecs to read it, the file extension is "
+                + "incorrect, or the file is corrupted. Please try again with "
+                + "a different file."
             )
-            box.exec()
+            _ = box.exec()
             return
 
-        self.viewer.update_reference(False)
+        self.viewer.update_reference(msg_on_fail=False)
         self.viewer.show_reference_image()
+
 
     def show_palettized(self):
         img_model = self.project.reference_image_model
