@@ -13,6 +13,7 @@ from spot_detector.errors import (
     InvalidFormatError,
     InvalidNameError,
 )
+from spot_detector.misc import canonical_path
 from spot_detector.model.models import Shade
 from spot_detector.processing.transformations import (
     get_k_means,
@@ -263,11 +264,12 @@ class ReferenceImageModel(BaseModel):
 
     # TODO: Merge with Main_window.validate_reference_image()
     def generate_cache_from_path(self):
-        if Path(self.path).name.startswith("."):
-            raise InvalidNameError(self.path)
-        img = cv2.imread(self.path, cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
+        true_path = canonical_path(self.path)
+        if Path(true_path).name.startswith("."):
+            raise InvalidNameError(true_path)
+        img = cv2.imread(true_path, cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)
         if img is None:
-            raise FailedOpeningError(self.path)
+            raise FailedOpeningError(true_path)
         self.generate_cache_from_mat(img)
 
     def without_cache(self) -> "ReferenceImageModel":

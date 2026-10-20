@@ -18,7 +18,9 @@ from PySide6.QtWidgets import (
 )
 
 from spot_detector.controller.start_manager_interface import StartManagerInterface
+from spot_detector.errors import FailedOpeningError
 from spot_detector.file_utils import get_local_data_dir
+from spot_detector.misc import canonical_path
 from spot_detector.model.project import Project
 from spot_detector.view.dialogs.dialogs import OpenProjectDialog
 from spot_detector.view.new_project_dialog import NewProjectDialog
@@ -148,14 +150,25 @@ class WelcomeWindow(QWidget, WelcomeWindowInterface):
 
 
     def open_project(self, file_path: str | Path):
+        true_path = canonical_path(file_path)
+
         try:
-            project = Project.from_path(file_path)
+            project = Project.from_path(true_path)
+
         except ValidationError:
             message = QMessageBox(parent=self)
             message.setText("The project file could not be opened.")
             message.setWindowTitle("Error")
             _ = message.exec()
             project = None
+
+        except FailedOpeningError:
+            message = QMessageBox(parent=self)
+            message.setText("The reference image linked in the project could not be opened.")
+            message.setWindowTitle("Error")
+            _ = message.exec()
+            project = None
+
         if project is not None:
             self.start_main_window_and_hide(project)
 
