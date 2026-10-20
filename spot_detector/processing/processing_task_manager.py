@@ -93,6 +93,7 @@ class ProcessingTaskManager:
         worker_count = 2
         return worker_count
 
+
     def init_workers(self, worker_count: int):
         if worker_count < 1:
             worker_count = self.get_ideal_process_count()
@@ -176,9 +177,9 @@ class ProcessingTaskManager:
     def shutdown(self, grace_seconds: float = 10.0) -> None:
         """Join every worker, killing the ones that do not come back.
 
-        Only call once `poll` has returned True, or after `request_cancel`: a
-        worker terminated while writing on the output queue can leave a partial
-        object in the pipe and poison it for every later read.
+        Only call once `poll` has returned True, or after `request_cancel`,
+        otherwise, a work stopped while writing on the output queue could
+        leave a partial object in the pipe.
         """
         deadline = monotonic() + grace_seconds
         for worker in self.workers:

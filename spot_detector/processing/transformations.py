@@ -52,10 +52,8 @@ def convert_mat_uint16[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> nda
     return copy
 
 def convert_mat_uint8[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> ndarray[S, dtype[uint8]]:
-
-    # cast to U8 :
     match mat.dtype:
-
+        # unsigned
         case np.uint8:
             copy = mat.copy().astype(uint8)
         case np.uint16:
@@ -65,6 +63,7 @@ def convert_mat_uint8[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> ndar
         case np.uint64:
             copy = np.bitwise_right_shift(mat, 56).astype(uint8)
 
+        # signed
         case np.int8:
             copy = np.bitwise_xor(mat, uint8(0x80)).astype(uint8)
         case np.int16:

@@ -148,7 +148,6 @@ class MainWindow(QMainWindow):
 
 
     def _create_set_ref_image_action(self):
-        # TODO: make it idempotent
         icon = QIcon(":resources/images/ref_image_icon.png")
         action = QAction(icon, "Set Reference Image", self)
         _ = action.triggered.connect(self.select_reference_image)
@@ -156,7 +155,6 @@ class MainWindow(QMainWindow):
 
 
     def _create_kmeans_action(self):
-        # TODO: make it idempotent
         # TODO: ADD ICON
         # icon = QIcon(":resources/images/...")
         action = QAction("Compute k-means", self)
@@ -171,7 +169,6 @@ class MainWindow(QMainWindow):
 
 
     def _create_open_detection_settings_action(self):
-        # TODO: make it idempotent
         icon = QIcon(":resources/images/detection_settings_icon.png")
         action = QAction(icon, "Open Detection Settings", self)
         _ = action.triggered.connect(self.start_detection_settings_window)
@@ -186,7 +183,8 @@ class MainWindow(QMainWindow):
 
 
     def _create_save_as_action(self):
-        # TODO: icon = QIcon(":path/to/icon")
+        # TODO: ADD ICON
+        # icon = QIcon(":path/to/icon")
         action = QAction("Save As", self)
         _ = action.triggered.connect(self.dialog_save_project_as)
         self.save_as_action = action
@@ -358,11 +356,7 @@ class MainWindow(QMainWindow):
         assert self.project.reference_image_model is not None
         self.project.reference_image_model.mats.update_labels(labeled_image, self.project.configuration.shades)
 
-        # print("changing view")
-        # update view object correctly
         self.viewer.update_palettized(msg_on_fail=False)
-        # print("updating view")
-        # switch update view object to show palettized
         self.viewer.show_palettized_reference()
 
 
