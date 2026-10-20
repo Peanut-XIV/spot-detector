@@ -87,17 +87,27 @@ def convert_mat_uint8[S: ShapeType](mat: ndarray[S, dtype[CommonInt_T]]) -> ndar
 
 
 def compute_dish_ROI_mask(
-    img: ImageRGB[CommonInt_T],
+    image: ImageRGB[CommonInt_T],
     radius_range: tuple[int, int] = (-1, -1),
     subsample_rate: int = 16,
     initial_threshold: int = 16,
     threshold_step: int = 16,
     minDist: int = 100,
 ) -> tuple[Bool2D, tuple[float, float, float]] | None:
-    ss_rate = max(int(sqrt(subsample_rate)), 1)
-    sub = img[::ss_rate, ::ss_rate, :3]
+    """
+    Detects the edge of a petri dish within the image and creates a circular
+    binary mask for it's content.
 
-    dims = img.ndim
+    `radius_range` puts a constraint on the radius of the mask. It is a tuple
+    of the minimum and maximum acceptable radius, expressed as a percentage of
+    the radius of the largest circle that fits within the image ; the ideal
+    radius.
+    """
+
+    ss_rate_1d = max(int(sqrt(subsample_rate)), 1)
+    sub = image[::ss_rate_1d, ::ss_rate_1d, :3]
+
+    dims = image.ndim
     gray: Array2D[CommonInt_T]
     if dims == 3:
         gray = cv.cvtColor(sub, cv.COLOR_BGR2GRAY)  # pyright: ignore[reportAssignmentType]
@@ -117,8 +127,8 @@ def compute_dish_ROI_mask(
 
     ideal_radius = small_edge/2
 
-    small_radius = ideal_radius * 0.7 if radius_range[0] < 0 else radius_range[0] / ss_rate
-    big_radius   = ideal_radius * 1.1 if radius_range[1] < 0 else radius_range[1] / ss_rate
+    small_radius = ideal_radius * (0.7 if radius_range[0] < 0 else (radius_range[0] / 100))
+    big_radius   = ideal_radius * (1.1 if radius_range[1] < 0 else (radius_range[1] / 100))
 
     kernel = np.array(
         [
@@ -142,7 +152,7 @@ def compute_dish_ROI_mask(
             image=grad,
             method=cv.HOUGH_GRADIENT,  # simplest of the two
             dp=2,
-            minDist=minDist/ss_rate,
+            minDist=minDist/ss_rate_1d,
             param1=128,  # our image is binary... no need to fine tune?
             param2=0.8,  # our processing causes jagged edges
             minRadius=int(small_radius),  # we expect the Petri dish to
@@ -158,14 +168,14 @@ def compute_dish_ROI_mask(
         print("failed to crop image")
         return None
 
-    coords: tuple[float, float, float] = candidates[0, 0, :] * ss_rate  # pyright: ignore[reportAssignmentType]
+    coords: tuple[float, float, float] = candidates[0, 0, :] * ss_rate_1d  # pyright: ignore[reportAssignmentType]
     x, y, r = coords
 
     # `h` and `w` describe the subsampled image the circle was detected on,
     # while `coords` has already been scaled back up: the mask has to be drawn
     # at full resolution, otherwise it does not line up with the image its
     # callers apply it to.
-    full_h, full_w = int(img.shape[0]), int(img.shape[1])
+    full_h, full_w = int(image.shape[0]), int(image.shape[1])
 
     mask: Bool2D = cv.circle(
         np.zeros((full_h, full_w), dtype=np.uint8),
@@ -192,33 +202,37 @@ def crop_to_dish_roi(
     """
     Detects the visible circle of a petri dish within an image, based on some
     assumptions on its content, position, environment and lighting conditions.
-    This algorithm simplifies the image with a given binary threshold value
-    and applies morphological operations on it. The result is then fed to
-    openCV's `HoughCirles` and evaluates the first candidate.
+    This algorithm simplifies the image with a given binary threshold value and
+    applies morphological operations on it. The result is then fed to openCV's
+    `HoughCircles` and evaluates the first candidate.
 
     Params
     ----
     img:
-        an image, rgb or grayscale, any depth.
+        An image, rgb or grayscale, coded with integer values.
 
     radius_range:
-        range of possible values in pixel for the radius of the circle to find.
-        The smaller the faster. If left as (-1, -1), the range will be between
-        70% to 110% of the radius of the largest circle that can fit in the image.
+        The range of acceptable values for the radius of the petri dish in the
+        image, expressed as a percentage of the ideal radius. The ideal radius
+        is the radius of the largest circle that fits inside of the image. It
+        can be expressed as 1/2 of the smaller side of the image. The greater
+        the interval of acceptable values, the longer the processing. If left
+        as (-1, -1), the range will be set between 70% to 110% of the ideal
+        radius.
 
     subsample_rate:
-        number by which the pixel count of the image is reduced.
-        For example, 16 samples 1 in 4 pixels both verticaly and horizontaly.
-        Making the image to process 16x smaller. Should be a square number.
-        If not, will be rounded down. Set it to 1 or less to detect the ROI
-        from the unmodified picture.
+        Number by which the pixel count of the image is reduced. For example,
+        16 samples 1 in 4 pixels both verticaly and horizontaly. Making the
+        image to process 16x smaller. Should be a square number. If not, will
+        be rounded down. Set it to 1 or less to detect the ROI from the
+        unmodified picture.
 
     minimum_threshold:
         Sets the first value to use for the threshold filter.
 
     threshold_step:
-        Sets the incrementation step of the threshold value, should the previous
-        one fail to detect a satisfying circle.
+        Sets the incrementation step of the threshold value, should the
+        previous one fail to detect a satisfying circle.
     """
 
     out = compute_dish_ROI_mask(img, radius_range, subsample_rate, initial_threshold, threshold_step, minDist)

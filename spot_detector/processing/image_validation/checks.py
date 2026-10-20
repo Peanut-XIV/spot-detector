@@ -121,19 +121,8 @@ def check_autocropping(image_path: Path, config: CroppingSettings) -> tuple[NDAr
 
     image_mat = convert_mat_uint8(image)  # pyright: ignore[reportArgumentType]
 
-    shortest_edge = min(int(image_mat.shape[0]), int(image_mat.shape[1]))  # pyright: ignore[reportAny]
-    longest_edge  = max(int(image_mat.shape[0]), int(image_mat.shape[1]))  # pyright: ignore[reportAny]
-    ideal_radius = shortest_edge / 2
-
-    if config.min_radius_enabled:
-        mini = int(ideal_radius * config.min_radius_value / 100)
-    else:
-        mini = 0
-
-    if config.max_radius_enabled:
-        maxi = int(ideal_radius * config.max_radius_value / 100)
-    else:
-        maxi = longest_edge
+    mini = config.min_radius_value if config.min_radius_enabled else -1
+    maxi = config.max_radius_value if config.max_radius_enabled else -1
 
     print(f"before: {image_mat.shape}:{image_mat.dtype}")  # pyright: ignore[reportAny]
 
