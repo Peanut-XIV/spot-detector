@@ -314,7 +314,7 @@ def process_image(
     # V V V checks requiring ROI and an uncropped image go here V V V
 
     # Λ Λ Λ ================== END OF CHECKS ================== Λ Λ Λ
-    cropped, roi_data, report = apply_roi(image, res, preproc_settings.cropping)
+    cropped, roi_data, report = apply_roi(filtered, res, preproc_settings.cropping)
     report = save_cropped_image(cropped, preproc_settings.cropping, report, task)
 
     color_table = np.array([shade.as_row() for shade in detection_settings.shades])
@@ -332,4 +332,3 @@ def process_image(
     )
 
     return result
-
