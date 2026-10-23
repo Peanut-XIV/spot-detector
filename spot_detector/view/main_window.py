@@ -304,10 +304,12 @@ class MainWindow(QMainWindow):
         dialog = SaveProjectAsDialog()
         if not dialog.exec():
             return
+
         save_pathes = dialog.selectedFiles()
         if len(save_pathes) == 0:
             msg = QMessageBox(self)
-            msg.setText(" selected")
+            msg.setWindowTitle("Error: No Save Location")
+            msg.setText("No save path wath given to save the current project.")
             _ = msg.exec()
             return
         path = Path(save_pathes[0])
@@ -316,14 +318,14 @@ class MainWindow(QMainWindow):
             self.project.save_as(str(path))
         except OSError:
             box = QMessageBox(self)
-            box.setWindowTitle("File Error")
+            box.setWindowTitle("Error: Failed Saving")
             box.setText(
                 "An error occurred while trying to save the project to the "
                 + f"following path: {path!s}. Please ensure the path is valid"
                 + " and that you have the permissions required to save a file"
                 + " at the given path. Error type: {e}."
             )
-
+            _ = box.exec()
             return
 
 
@@ -331,7 +333,13 @@ class MainWindow(QMainWindow):
     def reload_current_palette(self):
         # print("Reloading current palette on current reference image and generating labels")
         if self.project.reference_image_model is None :
-            # TODO : dialog box -> impossible action
+            box = QMessageBox(self)
+            box.setWindowTitle("Error: Missing Reference Image")
+            box.setText(
+                "This action requires a reference image. You can choose"
+                + "a reference image in File > Select Reference Image."
+            )
+            _ = box.exec()
             return
 
         image = self.project.reference_image_model.mats.reference.raw_mat
@@ -347,13 +355,17 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def handle_load_palette(self, labeled_image: NDArray[uint8]):
-        # update project.reference_model...
-        # TODO : handle no model case
-        # print("palettizing thread ended")
+        if self.project.reference_image_model is None:
+            # exec error message
+            box = QMessageBox(self)
+            box.setWindowTitle("Error: Missing Reference Image")
+            box.setText(
+                "This action requires a reference image. You can choose"
+                + "a reference image in File > Select Reference Image."
+            )
+            _ = box.exec()
+            return
 
-        # print("result image :", labeled_image.shape, labeled_image.dtype)
-
-        assert self.project.reference_image_model is not None
         self.project.reference_image_model.mats.update_labels(labeled_image, self.project.configuration.shades)
 
         self.viewer.update_palettized(msg_on_fail=False)
