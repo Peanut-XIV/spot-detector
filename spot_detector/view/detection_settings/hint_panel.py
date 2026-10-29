@@ -1,23 +1,24 @@
 import sys
 from enum import IntEnum
 
-from PySide6.QtWidgets import (
-    QLabel,
-    QScrollArea,
-    QWidget,
-    QApplication,
-    QHBoxLayout,
-)
 from PySide6.QtCore import (
     QFile,
     QIODevice,
-    QTextStream,
     Qt,
+    QTextStream,
     Slot,
+)
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QWidget,
 )
 
 # //////// DO NOT REMOVE ////////
-from spot_detector import rc_resources, rc_documentation  # noqa: F401 WARN: Do not remove
+from spot_detector import rc_documentation, rc_resources  # noqa: F401 WARN: Do not remove
+
 
 class Hint(IntEnum):
     DEFAULT = 0
@@ -50,7 +51,7 @@ class Hint(IntEnum):
                 return "not_found.html"
 
             case other:
-                print(f"Hint {other.__str__} not recognised")
+                print(f"Hint {other.name} not recognised")
                 return "not_found.html"
 
     @staticmethod

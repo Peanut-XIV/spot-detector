@@ -1,25 +1,23 @@
-from typing_extensions import override
 from random import randint
+from typing import override
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QLabel,
-    QVBoxLayout,
-    QHBoxLayout,
-    QCheckBox,
-    QGroupBox,
-    QDoubleSpinBox,
-    QLineEdit,
+from PySide6.QtCore import (
+    Qt,
+    Signal,
+    Slot,
 )
-
 from PySide6.QtGui import (
     QMouseEvent,
 )
-
-from PySide6.QtCore import (
-    Signal,
-    Slot,
-    Qt,
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from spot_detector.model.models import DetParams, SimpleParam
@@ -151,23 +149,28 @@ class SimpleParamWidget(QGroupBox):
         self.mini_spinbox.setSingleStep(step)
         self.mini_spinbox.setEnabled(self.model.enabled)
         mini_layout.addWidget(self.mini_spinbox)
+
         layout.addLayout(mini_layout)
 
         maxi_layout = QHBoxLayout()
+
         self.maxi_enabled_checkbox: QCheckBox = QCheckBox("Maximum", self)
         check_state = bool2CheckState(self.model.maxi is not None)
         self.maxi_enabled_checkbox.setCheckState(check_state)
         maxi_layout.addWidget(self.maxi_enabled_checkbox)
+
         self.maxi_spinbox: QDoubleSpinBox = QDoubleSpinBox(self)
         self.maxi_spinbox.setMinimum(self.model.mini)
-        maxi_value = self.model.maxi or maximum or self.model.mini
-        self.maxi_spinbox.setValue(maxi_value)
         if maximum is not None:
             self.maxi_spinbox.setMaximum(maximum)
         self.maxi_spinbox.setSingleStep(step)
+
+        maxi_value = self.model.maxi or maximum or self.model.mini
+        self.maxi_spinbox.setValue(maxi_value)
         enabled = self.model.enabled and (self.model.maxi is not None)
         self.maxi_spinbox.setEnabled(enabled)
         maxi_layout.addWidget(self.maxi_spinbox)
+
         layout.addLayout(maxi_layout)
 
         self.setLayout(layout)
