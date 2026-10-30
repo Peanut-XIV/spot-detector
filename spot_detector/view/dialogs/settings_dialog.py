@@ -1,11 +1,14 @@
 import sys
 
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from spot_detector.view.detection_settings.detection_settings import DetectionSettings
 from spot_detector.model.models import ColorAndParams, DetParams
-from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog, DialogExitStatus
+from spot_detector.view.detection_settings.detection_settings import DetectionSettings
+from spot_detector.view.dialogs.custom_dialog_base import (
+    CustomModalDialog,
+    DialogExitStatus,
+)
 
 
 class SettingsWindow(CustomModalDialog):

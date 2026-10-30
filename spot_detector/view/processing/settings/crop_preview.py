@@ -1,15 +1,21 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPalette, QPixmap
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 from numpy import uint8
 from numpy.typing import NDArray
-
-from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPalette, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from spot_detector import rc_resources  # pyright: ignore[reportUnusedImport]  # noqa: F401
+from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog
 
 
 class ImageListPreview(CustomModalDialog):

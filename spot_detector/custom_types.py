@@ -1,21 +1,21 @@
 from typing import Literal
+
+import numpy as np
 from numpy import (
-    ndarray,
     dtype,
+    float32,
+    float64,
     generic,
     int8,
     int16,
     int32,
     int64,
+    ndarray,
     uint8,
     uint16,
     uint32,
     uint64,
-    float32,
-    float64,
 )
-
-import numpy as np
 
 type ShapeType = (
     tuple[()]

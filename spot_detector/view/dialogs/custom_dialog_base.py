@@ -1,8 +1,8 @@
-
 from enum import Enum
 
-from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QWidget
+
 
 class DialogExitStatus(Enum):
     Accepted = 0

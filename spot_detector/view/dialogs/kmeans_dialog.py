@@ -1,25 +1,27 @@
 import sys
-from PySide6.QtWidgets import (
-    QApplication,
-    QLabel,
-    QMainWindow,
-    QDialog,
-    QSpinBox,
-    QWidget,
-    QPushButton,
-    QHBoxLayout,
-    QVBoxLayout,
-)
+
+from numpy.typing import NDArray
 from PySide6.QtCore import (
-    Slot,
-    Qt,
     QObject,
+    Qt,
     QThread,
     Signal,
+    Slot,
 )
-from numpy.typing import NDArray
-from spot_detector.processing.transformations import get_k_means
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
 from spot_detector.model.reference_image import to_3_channel_mat, to_uint16_mat
+from spot_detector.processing.transformations import get_k_means
 
 
 class KMeansDialog(QDialog):

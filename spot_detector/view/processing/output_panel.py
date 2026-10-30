@@ -1,11 +1,17 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from spot_detector.model.processing_settings_models import ProcessingOutputSettings
 from spot_detector.view.path_line_widget import PathEdit, PathType
-
-from pathlib import Path
-
 from spot_detector.view.processing.settings.settings_box import as_checked, is_checked
 
 
