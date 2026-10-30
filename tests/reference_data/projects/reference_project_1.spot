@@ -1,0 +1,182 @@
+{
+  "name": "Reference Project 1",
+  "latest_save_path": "~/Github/spot-detector/tests/reference_data/projects/reference_project_1.spot",
+  "reference_image_model": {
+    "path": "~/Github/spot-detector/tests/reference_data/images/processed/C0.5.tiff"
+  },
+  "configuration": {
+    "shades": [
+      {
+        "b": 5162,
+        "g": 322,
+        "r": 2429,
+        "label_id": 0
+      },
+      {
+        "b": 14817,
+        "g": 4322,
+        "r": 13668,
+        "label_id": 0
+      },
+      {
+        "b": 18183,
+        "g": 17045,
+        "r": 36041,
+        "label_id": 1
+      },
+      {
+        "b": 25694,
+        "g": 2357,
+        "r": 10333,
+        "label_id": 0
+      },
+      {
+        "b": 11828,
+        "g": 1118,
+        "r": 6616,
+        "label_id": 0
+      },
+      {
+        "b": 34128,
+        "g": 51131,
+        "r": 62995,
+        "label_id": 1
+      },
+      {
+        "b": 478,
+        "g": 51,
+        "r": 72,
+        "label_id": 0
+      },
+      {
+        "b": 2080,
+        "g": 1658,
+        "r": 7802,
+        "label_id": 0
+      },
+      {
+        "b": 34404,
+        "g": 3073,
+        "r": 13961,
+        "label_id": 0
+      },
+      {
+        "b": 8855,
+        "g": 725,
+        "r": 3789,
+        "label_id": 0
+      },
+      {
+        "b": 22241,
+        "g": 26084,
+        "r": 46040,
+        "label_id": 1
+      },
+      {
+        "b": 15313,
+        "g": 7012,
+        "r": 20038,
+        "label_id": 1
+      },
+      {
+        "b": 13497,
+        "g": 1458,
+        "r": 681,
+        "label_id": 0
+      },
+      {
+        "b": 14725,
+        "g": 10682,
+        "r": 27857,
+        "label_id": 1
+      },
+      {
+        "b": 30626,
+        "g": 36212,
+        "r": 56813,
+        "label_id": 1
+      },
+      {
+        "b": 3747,
+        "g": 250,
+        "r": 2003,
+        "label_id": 0
+      },
+      {
+        "b": 8502,
+        "g": 1567,
+        "r": 7817,
+        "label_id": 0
+      },
+      {
+        "b": 612,
+        "g": 354,
+        "r": 2305,
+        "label_id": 0
+      },
+      {
+        "b": 17940,
+        "g": 1868,
+        "r": 8604,
+        "label_id": 0
+      },
+      {
+        "b": 13885,
+        "g": 1617,
+        "r": 4907,
+        "label_id": 0
+      },
+      {
+        "b": 8896,
+        "g": 5010,
+        "r": 3234,
+        "label_id": 0
+      },
+      {
+        "b": 4756,
+        "g": 301,
+        "r": 255,
+        "label_id": 0
+      },
+      {
+        "b": 14163,
+        "g": 1329,
+        "r": 7516,
+        "label_id": 0
+      },
+      {
+        "b": 13425,
+        "g": 2558,
+        "r": 9857,
+        "label_id": 0
+      },
+      {
+        "b": 8240,
+        "g": 4250,
+        "r": 15859,
+        "label_id": 1
+      }
+    ],
+    "det_params": [
+      {
+        "color_name": "Orange",
+        "min_dist": 0.01,
+        "area": {
+          "enabled": true,
+          "mini": 1.0,
+          "maxi": 99.99
+        },
+        "circ": {
+          "enabled": false,
+          "mini": 0.0,
+          "maxi": 1.0
+        },
+        "convex": {
+          "enabled": false,
+          "mini": 0.0,
+          "maxi": 1.0
+        }
+      }
+    ]
+  }
+}
