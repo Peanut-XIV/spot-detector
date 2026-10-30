@@ -66,7 +66,7 @@ class BlurResult:
     def __str__(self):
         msg = (
             "BlurResult("
-            + f"state:{str(self.state)},"
+            + f"state:{self.state!s},"
             + f"score:{self.score},"
             + f"channel:{["blue", "green", "red"][self.channel]},"
             + f"n_particles:{self.n_particles},"

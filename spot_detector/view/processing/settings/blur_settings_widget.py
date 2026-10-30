@@ -1,15 +1,29 @@
+from pathlib import Path
 from typing import final
 
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QCheckBox, QDialog, QDoubleSpinBox, QFileDialog, QGridLayout, QLabel, QMessageBox, QPushButton, QSpinBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDialog,
+    QDoubleSpinBox,
+    QFileDialog,
+    QGridLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
+from spot_detector.controller.worker_thread import BlurCalibrationProcessor
+from spot_detector.custom_types import ShadeTable
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import BlurDetectionSettings
-from spot_detector.controller.worker_thread import BlurCalibrationProcessor
 from spot_detector.processing.image_validation.blur_calibration import (
     PARAMETER_RANGES,
     BlurCalibration,
 )
-from spot_detector.types import ShadeTable
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
     as_checked,
@@ -17,7 +31,6 @@ from spot_detector.view.processing.settings.settings_box import (
     recommended_range_tooltip,
 )
 
-from pathlib import Path
 
 @final
 class BlurReportingBox(BaseSettingsBox):

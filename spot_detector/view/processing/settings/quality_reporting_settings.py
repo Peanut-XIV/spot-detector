@@ -1,23 +1,30 @@
+from pathlib import Path
 from typing import final, override
 
 from PySide6.QtCore import Signal, Slot
-from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
+
+from spot_detector.custom_types import ShadeTable
 from spot_detector.model.processing_settings_models import QualityReportingSettings
-from spot_detector.types import ShadeTable
+from spot_detector.view.processing.settings.blur_settings_widget import BlurReportingBox
+from spot_detector.view.processing.settings.overexposure_settings_widget import (
+    OverexposureBox,
+)
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
     as_checked,
     is_checked,
     recommended_range_tooltip,
 )
-from spot_detector.view.processing.settings.blur_settings_widget import BlurReportingBox
-from spot_detector.view.processing.settings.overexposure_settings_widget import OverexposureBox
-
-from pathlib import Path
-
-
-
-
 
 
 @final

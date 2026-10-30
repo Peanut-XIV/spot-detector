@@ -1,10 +1,11 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
+
+from spot_detector.custom_types import ShadeTable
 from spot_detector.model.processing_settings_models import BaseProcessingSettings
 from spot_detector.processing.image_validation.blur_calibration import PARAMETER_RANGES
-from spot_detector.types import ShadeTable
-
-from pathlib import Path
 
 
 def is_checked(state: Qt.CheckState) -> bool:

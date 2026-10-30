@@ -4,8 +4,6 @@ concentration. Le collier est choisi pour minimiser la dependance a la densite ;
 le seuil est place entre le signal net et un flou tout juste inacceptable.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from math import sqrt

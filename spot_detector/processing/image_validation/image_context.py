@@ -17,6 +17,7 @@ import numpy as np
 from numpy import uint8, uint16
 from numpy.typing import NDArray
 
+from spot_detector.custom_types import Bool2D, CommonInt_T, ImageRGB, ShadeTable
 from spot_detector.processing.image_validation.blur_detection import (
     get_roi_mask,
     signal_mask_from_labels,
@@ -25,7 +26,6 @@ from spot_detector.processing.transformations import (
     convert_mat_uint16,
     label_img_fastest_uint16,
 )
-from spot_detector.types import Bool2D, CommonInt_T, ImageRGB, ShadeTable
 
 # Les deux drapeaux vont toujours ensemble : COLOR_BGR garantit trois canaux
 # meme pour un fichier gris, ANYDEPTH preserve les 16 bits par canal. L'un
