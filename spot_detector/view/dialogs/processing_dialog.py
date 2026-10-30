@@ -22,7 +22,6 @@ from spot_detector.model.config_fingerprint import (
     create_session,
     end_session,
 )
-from spot_detector.model.models import ColorAndParams
 from spot_detector.model.processing_settings_models import ProcessingSettingsModel
 from spot_detector.model.project import Project
 from spot_detector.processing.processing_task_manager import ProcessingTaskManager

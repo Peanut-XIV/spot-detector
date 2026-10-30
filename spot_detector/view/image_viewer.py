@@ -1,6 +1,6 @@
 import sys
 
-from PySide6.QtCore import QRectF, Slot, Signal
+from PySide6.QtCore import QRectF, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QIcon,
@@ -14,12 +14,14 @@ from PySide6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QMessageBox,
+    QToolBar,
     QVBoxLayout,
     QWidget,
-    QToolBar,
 )
+
+from spot_detector import rc_icons, rc_resources  # noqa: F401 WARN: Do not remove
 from spot_detector.model.project import Project
-from spot_detector import rc_resources, rc_icons  # noqa: F401 WARN: Do not remove
+
 
 class ImageView(QGraphicsView):
     max_exponent = 40

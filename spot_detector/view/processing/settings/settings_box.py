@@ -1,8 +1,9 @@
+from pathlib import Path
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
-from spot_detector.model.processing_settings_models import BaseProcessingSettings
 
-from pathlib import Path
+from spot_detector.model.processing_settings_models import BaseProcessingSettings
 
 
 def is_checked(state: Qt.CheckState) -> bool:

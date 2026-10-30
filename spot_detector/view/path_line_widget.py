@@ -1,7 +1,8 @@
 from enum import Enum
 from pathlib import Path
-from PySide6.QtWidgets import QFileDialog, QWidget, QLineEdit, QPushButton
+
 from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QFileDialog, QLineEdit, QPushButton, QWidget
 
 from spot_detector.file_utils import VALID_CSV_TYPES, VALID_IMAGE_TYPES
 from spot_detector.view.dialogs.dialogs import (
@@ -9,6 +10,7 @@ from spot_detector.view.dialogs.dialogs import (
     ReadOnlyImageFileDialog,
     SaveProcessingFileDialog,
 )
+
 
 class PathType(Enum):
     ReadOnlyImage = 0

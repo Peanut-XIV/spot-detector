@@ -1,10 +1,23 @@
-from PySide6.QtCore import Qt, Slot, Signal
-from PySide6.QtWidgets import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QWidget,
+)
+
 from spot_detector.model.processing_settings_models import DustFilterSettings
 from spot_detector.view.path_line_widget import PathEdit, PathType
-from spot_detector.view.processing.settings.settings_box import BaseSettingsBox, is_checked, as_checked
+from spot_detector.view.processing.settings.settings_box import (
+    BaseSettingsBox,
+    as_checked,
+    is_checked,
+)
 
-from pathlib import Path
 
 class FilterSettingsBox(BaseSettingsBox):
     dust_filter_test_requested: Signal = Signal(str)

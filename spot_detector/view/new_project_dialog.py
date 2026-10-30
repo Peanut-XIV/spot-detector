@@ -1,25 +1,26 @@
 import sys
-from PySide6.QtWidgets import (
-    QApplication,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QMessageBox,
-    QVBoxLayout,
-    QWidget,
-    QDialog,
-    QLineEdit,
-    QPushButton,
-)
+
+from pydantic import ValidationError
 from PySide6.QtCore import (
     Qt,
     Slot,
 )
-from pydantic import ValidationError
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from spot_detector.model.project import Project
-from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
 from spot_detector.view.path_line_widget import PathEdit
+from spot_detector.view.welcome_window_interface import WelcomeWindowInterface
 
 
 class NewProjectDialog(QDialog):

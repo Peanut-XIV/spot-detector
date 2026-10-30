@@ -1,11 +1,15 @@
+from pathlib import Path
 from typing import final
 
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QGridLayout, QLabel, QWidget
-from spot_detector.model.processing_settings_models import OverExposureDetectionSettings
-from spot_detector.view.processing.settings.settings_box import BaseSettingsBox, as_checked, is_checked
 
-from pathlib import Path
+from spot_detector.model.processing_settings_models import OverExposureDetectionSettings
+from spot_detector.view.processing.settings.settings_box import (
+    BaseSettingsBox,
+    as_checked,
+    is_checked,
+)
 
 
 @final

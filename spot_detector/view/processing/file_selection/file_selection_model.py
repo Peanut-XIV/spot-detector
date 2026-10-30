@@ -1,24 +1,30 @@
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, TypeVar
-
-
-from typing_extensions import override
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, TypeVar, override
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRichComparison
 
 from pathlib import Path
+
+from PySide6.QtCore import (
+    QAbstractItemModel,
+    QModelIndex,
+    QObject,
+    QPersistentModelIndex,
+    Qt,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QColor
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 
 from spot_detector.view.processing.file_selection.file_selection_items import (
-    BaseItem,
     BaseEntryItem,
-    DirFilesPair,
+    BaseItem,
     DirectoryEntryItem,
-    RootItem,
+    DirFilesPair,
     FileEntryItem,
     GenericStatus,
+    RootItem,
     StatusUpdate,
 )
 

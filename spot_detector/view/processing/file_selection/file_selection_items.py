@@ -1,8 +1,6 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Self, TypeAlias
-
-from typing_extensions import override
+from typing import TYPE_CHECKING, Self, override
 
 from spot_detector.misc import canonical_path
 
@@ -12,8 +10,7 @@ if TYPE_CHECKING:
 from enum import Flag, IntEnum
 from pathlib import Path
 
-
-DirFilesPair: TypeAlias = tuple[Path | None, list[Path]]
+type DirFilesPair = tuple[Path | None, list[Path]]
 
 
 class GenericStatus(IntEnum):

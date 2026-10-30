@@ -4,11 +4,11 @@ from typing import TypeGuard
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QImage, QKeyEvent, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QListWidget,
     QListWidgetItem,
-    QWidget,
     QMainWindow,
-    QApplication,
+    QWidget,
 )
 
 from spot_detector.model.models import Shade, homogenous_color_table

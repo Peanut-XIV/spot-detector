@@ -1,7 +1,11 @@
-from collections.abc import Sequence, Callable
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
+import cv2 as cv
+from numpy import uint8
+from numpy.typing import NDArray
+from PySide6.QtCore import QModelIndex, Qt, Slot
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -15,19 +19,28 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PySide6.QtCore import QModelIndex, Qt, Slot
-
-import cv2 as cv
-from numpy import uint8
-from numpy.typing import NDArray
 
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 from spot_detector.misc import canonical_path
-from spot_detector.model.processing_settings_models import CroppingSettings, UserSelectedDir
-from spot_detector.view.processing.file_selection.file_selection_model import FileSelectionModel
-from spot_detector.view.processing.file_selection.file_selection_items import DirFilesPair, StatusUpdate
-from spot_detector.processing.image_validation.checks import check_file_access, make_autocropping_checker, make_dust_filter_compat_checker, weird_tee
+from spot_detector.model.processing_settings_models import (
+    CroppingSettings,
+    UserSelectedDir,
+)
+from spot_detector.processing.image_validation.checks import (
+    check_file_access,
+    make_autocropping_checker,
+    make_dust_filter_compat_checker,
+    weird_tee,
+)
+from spot_detector.view.processing.file_selection.file_selection_items import (
+    DirFilesPair,
+    StatusUpdate,
+)
+from spot_detector.view.processing.file_selection.file_selection_model import (
+    FileSelectionModel,
+)
 from spot_detector.view.processing.settings.crop_preview import ImageListPreview
+
 
 class FileSelectionWidget(QWidget):
     def __init__(

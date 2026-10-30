@@ -1,12 +1,14 @@
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QLabel, QScrollArea, QVBoxLayout, QWidget
-from spot_detector.model.processing_settings_models import PreprocessingSettings
-from spot_detector.view.processing.settings.filter_settings import FilterSettingsBox
-from spot_detector.view.processing.settings.cropping_settings import CroppingSettingsBox
-from spot_detector.view.processing.settings.quality_reporting_settings import QualityReportingBox
-
 from pathlib import Path
 
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QLabel, QScrollArea, QVBoxLayout, QWidget
+
+from spot_detector.model.processing_settings_models import PreprocessingSettings
+from spot_detector.view.processing.settings.cropping_settings import CroppingSettingsBox
+from spot_detector.view.processing.settings.filter_settings import FilterSettingsBox
+from spot_detector.view.processing.settings.quality_reporting_settings import (
+    QualityReportingBox,
+)
 
 
 class ProcessingSettingsPanel(QWidget):

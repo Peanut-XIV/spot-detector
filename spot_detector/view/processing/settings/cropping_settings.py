@@ -1,10 +1,24 @@
-from PySide6.QtCore import Qt, Slot, Signal
-from PySide6.QtWidgets import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, QSpinBox, QWidget
+from pathlib import Path
+
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QSpinBox,
+    QWidget,
+)
+
 from spot_detector.model.processing_settings_models import CroppingSettings
 from spot_detector.view.path_line_widget import PathEdit, PathType
-from spot_detector.view.processing.settings.settings_box import BaseSettingsBox, as_checked, is_checked
+from spot_detector.view.processing.settings.settings_box import (
+    BaseSettingsBox,
+    as_checked,
+    is_checked,
+)
 
-from pathlib import Path
 
 class CroppingSettingsBox(BaseSettingsBox):
 
