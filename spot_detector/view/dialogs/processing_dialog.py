@@ -4,7 +4,7 @@ from time import monotonic
 from typing import override
 
 from PySide6.QtCore import Qt, QTimer, Slot
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, QDesktopServices
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -354,7 +354,17 @@ class ProcessingDialog(CustomModalDialog):
             title = "Processing complete"
             body = f"{written} images were processed."
 
-        _ = QMessageBox.information(self, title, f"{body}\n\nResults folder:\n{directory}")
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setText(title)
+        msg.setInformativeText(f"{body}\n\nResults folder:\n{directory}")
+        msg.setStandardButtons(QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok)
+        msg.setDefaultButton(QMessageBox.StandardButton.Open)
+        out = msg.exec()
+
+        if out == QMessageBox.StandardButton.Open:
+            _ = QDesktopServices.openUrl(session.results_path.as_uri())
+
 
     @override
     def closeEvent(self, event: QCloseEvent) -> None:
