@@ -37,6 +37,7 @@ from spot_detector.processing.image_validation.checks import (
     make_dust_filter_compat_checker,
     weird_tee,
 )
+from spot_detector.processing.image_validation.image_context import ImageContext
 from spot_detector.view.processing.file_selection.file_selection_items import (
     DirFilesPair,
     StatusUpdate,
@@ -124,7 +125,7 @@ class FileSelectionWidget(QWidget):
         model.remove_indexes(selection)
 
     @Slot(object)
-    def check_highlighted_items(self, check_function: Callable[[Path], StatusUpdate]):
+    def check_highlighted_items(self, check_function: Callable[[ImageContext], StatusUpdate]):
         selection = self.get_selection()
         model = self._list_view.model()
         if not isinstance(model, FileSelectionModel):
