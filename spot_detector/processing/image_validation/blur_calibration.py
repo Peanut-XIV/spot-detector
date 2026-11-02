@@ -85,7 +85,7 @@ def calibrate_blur(
                         + "n'est pas vérifiable, collier laissé au defaut.")
 
     def collar_of(diam: int) -> int:
-        return max(int(round(diam * collar_fraction)), 1)
+        return max(round(diam * collar_fraction), 1)
 
     def score_at(i: int, collar: int) -> float:
         ev = bd.dilate_mask(masks[i], collar) & rois[i]

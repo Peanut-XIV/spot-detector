@@ -244,7 +244,7 @@ def assess_blur_from_masks(
     if not is_applicable(n_particles, occupation, min_particles, min_occupation):
         return BlurResult(BlurState.NOT_APPLICABLE, None, channel, n_particles, occupation)
 
-    collar_px = max(int(round(expected_diameter_px * collar_fraction)), 1)
+    collar_px = max(round(expected_diameter_px * collar_fraction), 1)
     eval_mask = dilate_mask(signal_mask, collar_px) & roi_mask
 
     norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
@@ -293,6 +293,7 @@ def assess_blur(
 
 if __name__ == "__main__":
     import sys
+
     from spot_detector.model.project import Project
 
     img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)

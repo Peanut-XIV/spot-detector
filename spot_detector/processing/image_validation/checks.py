@@ -1,6 +1,5 @@
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TypeVar
 
 import numpy as np
 from numpy import uint8
@@ -40,13 +39,13 @@ def check_file_access(context: ImageContext) -> StatusUpdate:
             _: bytes = f.read(10)
 
     except FileNotFoundError:
-        update.error_messages.append(f"Error: file '{str(file_path)}' could not be found")
+        update.error_messages.append(f"Error: file '{file_path!s}' could not be found")
         update.file_status = FileStatus.NotFound
         return update
 
     except PermissionError:
         update.error_messages.append(
-            f"Error: file '{str(file_path)}' could not be opened "
+            f"Error: file '{file_path!s}' could not be opened "
             + "because the application does not have the permission"
         )
         update.file_status = FileStatus.NoAuth
@@ -55,7 +54,7 @@ def check_file_access(context: ImageContext) -> StatusUpdate:
     if context.raw is None:
         update.file_status = FileStatus.BadFormat
         update.error_messages.append(
-            f"Error: file '{str(file_path)}' can be read but does not contain "
+            f"Error: file '{file_path!s}' can be read but does not contain "
             + "a valid image. Please make sure the file is in one of the "
             + f"following formats : {VALID_IMAGE_TYPES} and that the file"
             + " extension was not modified."
@@ -99,11 +98,11 @@ def check_dust_filter_compat(
     if mat is None:
         return file_error_in_quality_check(context)
 
-    if list(mat.shape) != list(shape) or mat.dtype != data_type:  # pyright: ignore[reportAny]
+    if list(mat.shape) != list(shape) or mat.dtype != data_type:
         flag_value |= QualityFlag.FilterFailsMatch
         update.error_messages.append(
-            f"Warning: image located at '{str(file_path)}' has shape "
-            + f"{mat.shape} and datatype {mat.dtype} but the dust "  # pyright: ignore[reportAny]
+            f"Warning: image located at '{file_path!s}' has shape "
+            + f"{mat.shape} and datatype {mat.dtype} but the dust "
             + f"filter has shape {shape} and datatype {data_type}, "
             + "the filter cannot and will not be applied to this image"
         )
@@ -146,7 +145,7 @@ def check_autocropping(
     mini = config.min_radius_value if config.min_radius_enabled else -1
     maxi = config.max_radius_value if config.max_radius_enabled else -1
 
-    print(f"before: {image_mat.shape}:{image_mat.dtype}")  # pyright: ignore[reportAny]
+    print(f"before: {image_mat.shape}:{image_mat.dtype}")
 
     cropped_image = crop_to_dish_roi(image_mat, (mini, maxi)).astype(np.uint8)
 
@@ -157,15 +156,13 @@ def check_autocropping(
 
     return cropped_image, status
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
 
-def weird_tee(func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],V]]:
+def weird_tee[T, U, V](func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],V]]:
     def teed_func(t: T) -> tuple[tuple[T,U],V]:
         u, v = func(t)
         return ((t,u),v)
     return teed_func
+
 
 def check_blur(
     context: ImageContext,
