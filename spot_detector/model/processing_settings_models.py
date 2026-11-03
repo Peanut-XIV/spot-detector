@@ -75,10 +75,10 @@ class PreprocessingSettings(BaseProcessingSettings):
 
 class UserSelectedDir(BaseProcessingSettings):
     path: str = Field()
-    files: list[str] = Field(default_factory=lambda: list())
+    files: list[str] = Field(default_factory=list)
 
 
 class ProcessingSettingsModel(BaseProcessingSettings):
-    entries: list[str | UserSelectedDir] = Field(default_factory=lambda : list())
+    entries: list[str | UserSelectedDir] = Field(default_factory=list)
     preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
     output: ProcessingOutputSettings = Field(default_factory=ProcessingOutputSettings)
