@@ -41,17 +41,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from logging import INFO, FileHandler, Formatter, Logger, getLogger
-from math import isfinite
 from pathlib import Path
-from typing import Annotated
-
-from pydantic import BeforeValidator
 
 from spot_detector.errors import UnsetCriticalSettingsError
+from spot_detector.model.canonical_types import JSONValue, canonical_repr
 from spot_detector.model.models import ColorAndParams, DetParams, SimpleParam
 from spot_detector.model.processing_settings_models import (
     PreprocessingSettings,
@@ -62,69 +58,10 @@ from spot_detector.model.project import Project
 
 # Fingerprint schema version. Bump it whenever the contents of the canonical
 # view change, otherwise a change of the rules would read as a change of the
-# configuration.
+# configuration. Includes SIGNIFICANT_DIGITS in canonical_types.py too.
 SCHEMA_VERSION = 2
-
-SIGNIFICANT_DIGITS = 6
 DIGEST_BITS = 48        # 12 hexadecimal digits
 GROUP_SIZE = 4          # AF83-4E4D-0C71
-
-type JSONValue = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
-
-
-# --- Float quantization -----------------------------------------------------
-
-def quantize_float(value: object) -> object:
-    """Reduce a float to SIGNIFICANT_DIGITS significant digits.
-
-    Exponential notation is preferred over rounding to N decimal places, which
-    would flatten very small quantities to zero: the minimum occupation of the
-    signal mask sits around 1e-4 and nothing forbids a future quantity from
-    going lower. Adding 0.0 turns -0.0 into 0.0, the two being equal yet
-    yielding two different fingerprints.
-
-    Non-finite values are rejected here rather than at serialization time: NaN
-    equals no value at all, not even itself, and has no place in a
-    configuration.
-    """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        return value
-    number = float(value) + 0.0
-    if not isfinite(number):
-        raise ValueError("non-finite value in configuration")
-    return float(f"{number:.{SIGNIFICANT_DIGITS - 1}e}")
-
-
-CanonicalFloat = Annotated[float, BeforeValidator(quantize_float)]
-"""Annotation to put on the float fields of the models.
-
-Quantizing at setting time rather than at digest time puts normalization at the
-entry boundary of the model, where dubious values arrive. The displayed value,
-the stored value and the digested value then become the same one. Remember to
-enable `validate_assignment` on the models involved: without it, an assignment
-made after construction bypasses validation, and the interface writes in
-exactly that way.
-"""
-
-
-def _canonical(value: object) -> JSONValue:
-    """Recursively normalize a structure before serialization."""
-    if value is None or isinstance(value, bool):
-        return value
-    if isinstance(value, int):
-        return value
-    if isinstance(value, float):
-        return quantize_float(value)  # pyright: ignore[reportReturnType]
-    if isinstance(value, str):
-        return unicodedata.normalize("NFC", value)
-    if isinstance(value, (list, tuple)):
-        return [_canonical(item) for item in value]  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
-    if isinstance(value, dict):
-        return {
-            unicodedata.normalize("NFC", str(key)): _canonical(item)  # pyright: ignore[reportUnknownArgumentType]
-            for key, item in value.items()  # pyright: ignore[reportUnknownVariableType]
-        }
-    raise TypeError(f"unserializable type in the canonical view: {type(value)!r}")
 
 
 # --- Canonical view of the detection parameters -----------------------------
@@ -248,7 +185,7 @@ def canonical_payload(
         document["preprocessing"] = preprocessing_view(preprocessing, dust_filter_digest)
 
     return json.dumps(
-        _canonical(document),
+        canonical_repr(document),
         sort_keys=True,
         separators=(",", ":"),
         ensure_ascii=False,
