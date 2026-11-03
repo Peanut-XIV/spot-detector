@@ -26,11 +26,7 @@ from spot_detector.custom_types import (
     NVec,
     ShadeTable,
 )
-
-# Fonction de labellisation deja disponible dans le projet. Adapter le chemin
-# d'import a l'arborescence reelle.
-#   label_image_fastest_uint16(img: NDArray[np.uint16],
-#                              palette: NDArray[np.uint16]) -> NDArray[np.uint8]
+from spot_detector.model.result_datastructures import CheckID, CheckReport, CheckStatus
 from spot_detector.processing.transformations import (
     convert_mat_uint16,
     label_img_fastest_uint16,
@@ -73,6 +69,34 @@ class BlurResult:
             + f"occupation:{self.occupation}"
         )
         return msg
+
+    def to_CheckReport(self):
+        status: CheckStatus
+        message = ""
+
+        match self.state:
+            case BlurState.SHARP:
+                status = CheckStatus.Success
+
+            case BlurState.BLURRY:
+                status = CheckStatus.Fail
+                message = (
+                    "Sharpness score below threshold. During estimation,"
+                    + f"{self.n_particles} particles were found, occupying "
+                    + f"{self.occupation * 100:.4}% of the area of the ROI."
+                )
+
+            case BlurState.NOT_APPLICABLE:
+                status = CheckStatus.NotApplicable
+
+        report = CheckReport(
+            CheckID.Sharpness,
+            status,
+            self.score,
+            message
+        )
+        return report
+
 
 
 # --- Etape 1 : choix du canal porteur du signal ----------------------------

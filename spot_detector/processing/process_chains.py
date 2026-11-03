@@ -25,16 +25,20 @@ from spot_detector.model.processing_settings_models import (
     CroppingSettings,
     DustFilterSettings,
     PreprocessingSettings,
+    QualityReportingSettings,
 )
 from spot_detector.model.result_datastructures import (
     CheckID,
     CheckReport,
     CheckStatus,
+    ImageMetaData,
     ImageResult,
     ImageTask,
     ROIData,
 )
 from spot_detector.processing.image_info import load_image_for_processing
+from spot_detector.processing.image_validation.blur_detection import assess_blur
+from spot_detector.processing.image_validation.checks import check_blur
 from spot_detector.processing.transformations import (
     compute_dish_ROI_mask,
     convert_mat_uint16,
@@ -122,7 +126,6 @@ def img_processer(
         values = count_spots_fourth_method(image_16, color_table, config.det_params)
         result: DataElement = (folder_row, depth_col, values)
         out_queue.put(result)
-
 
 
 def init_workers(
@@ -282,6 +285,52 @@ def save_cropped_image(image: ImageBGR[uint16], roi_settings: CroppingSettings, 
     return report
 
 
+def report_sharpness(image: ImageBGR[uint16], roi: Bool2D | None, settings: QualityReportingSettings, shade_table: ShadeTable) -> CheckReport:
+    if not settings.blur.enabled:
+        return CheckReport(CheckID.Sharpness, CheckStatus.Disabled, None, "")
+
+    blur_result = assess_blur(
+        image,
+        shade_table,
+        settings.blur.reference_threshold,
+        roi,
+        settings.expected_diameter_px,
+        settings.collar_fraction,
+        settings.blur.min_particles,
+        settings.blur.min_occupation,
+    )
+
+    return blur_result.to_CheckReport()
+
+
+def report_overexposure(image: ImageBGR[uint16], roi: Bool2D | None, settings: QualityReportingSettings) -> CheckReport:
+    if not settings.overexposure.enabled:
+        return CheckReport(CheckID.Overexposure, CheckStatus.Disabled, None, "")
+
+    return CheckReport(CheckID.Overexposure, CheckStatus.Fail, None, "Not implemented yet!")
+
+
+def report_average_brightness(image: ImageBGR[uint16], roi: Bool2D  | None, settings: QualityReportingSettings) -> CheckReport:
+    if not settings.overexposure.enabled:
+        return CheckReport(CheckID.Average_Brightness, CheckStatus.Disabled, None, "")
+
+    return CheckReport(CheckID.Average_Brightness, CheckStatus.Fail, None, "Not implemented yet!")
+
+
+
+def report_lossy(metadata: ImageMetaData | None) -> CheckReport:
+    if metadata is None:
+        return CheckReport(CheckID.Data_Loss, CheckStatus.NotApplicable, None, "")
+
+    status = CheckStatus.Success
+    message = ""
+
+    if metadata.has_lossy_compression:
+        status = CheckStatus.Fail
+        message = f"Image uses a lossy codec or format: codec={metadata.image_codec}, format={metadata.image_format}"
+
+    return CheckReport(CheckID.Data_Loss, status, None, message)
+
 
 def process_image(
     task: ImageTask,
@@ -302,23 +351,43 @@ def process_image(
         image, metadata = None, None
 
     if image is None:
-        res = ImageResult( task, None,
-            ROIData(CheckStatus.Fail, None, None, None),
-            checks, proc_date, metadata, error_cause, error_detail)
+        res = ImageResult(
+            image_task=task,
+            counts=None,
+            roi_data=ROIData(CheckStatus.Fail, None, None, None),
+            checks=checks,
+            processing_date=proc_date,
+            metadata=metadata,
+            error=error_cause,
+            error_detail=error_detail,
+        )
         return res
 
-    filtered, report = filter_image_dust(image, preproc_settings.dust_filter)
-    checks[report.check_id] = report
+    shade_table = np.array([shade.as_row() for shade in detection_settings.shades])
+
+    filtered, dust_filter_report = filter_image_dust(image, preproc_settings.dust_filter)
+    checks[dust_filter_report.check_id] = dust_filter_report
 
     res = compute_roi(filtered, preproc_settings.cropping)
-    # V V V checks requiring ROI and an uncropped image go here V V V
+    mask = None if res is None else res[0]
 
-    # Λ Λ Λ ================== END OF CHECKS ================== Λ Λ Λ
-    cropped, roi_data, report = apply_roi(filtered, res, preproc_settings.cropping)
-    report = save_cropped_image(cropped, preproc_settings.cropping, report, task)
+    lossy_report = report_lossy(metadata)
+    checks[lossy_report.check_id] = lossy_report
 
-    color_table = np.array([shade.as_row() for shade in detection_settings.shades])
-    counts = count_spots_fourth_method(cropped, color_table, detection_settings.det_params)
+    blur_report = report_sharpness(image, mask, preproc_settings.reporting, shade_table)
+    checks[blur_report.check_id] = blur_report
+
+    overex_report = report_overexposure(image, mask, preproc_settings.reporting)
+    checks[overex_report.check_id] = overex_report
+
+    avg_brightness_report = report_average_brightness(image, mask, preproc_settings.reporting)
+    checks[avg_brightness_report.check_id] = avg_brightness_report
+
+    cropped, roi_data, crop_report = apply_roi(filtered, res, preproc_settings.cropping)
+    crop_report = save_cropped_image(cropped, preproc_settings.cropping, crop_report, task)
+    checks[crop_report.check_id] = crop_report
+
+    counts = count_spots_fourth_method(cropped, shade_table, detection_settings.det_params)
 
     result = ImageResult(
         image_task=task,
