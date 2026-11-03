@@ -32,10 +32,9 @@ from spot_detector.processing.image_validation.checks import (
     CheckFn,
     check_file_access,
     combine_checks,
-    make_autocropping_checker,
+    make_autocropping_checker_2,
     make_blur_checker,
     make_dust_filter_compat_checker,
-    weird_tee,
 )
 from spot_detector.processing.image_validation.image_context import ImageContext
 from spot_detector.view.processing.file_selection.file_selection_items import (
@@ -334,16 +333,14 @@ class FileSelectionPanel(QWidget):
 
     @Slot(CroppingSettings)
     def check_selection_for_cropping(self, parameters: CroppingSettings) -> None:
-        check_function = weird_tee(make_autocropping_checker(parameters))
+        check_function = make_autocropping_checker_2(parameters)
         selection = self._list_widget.get_selection()
         mat_list: list[tuple[Path, NDArray[uint8] | None]] = []
 
         for index in selection:
             if res := self._model.check_entry_2(index, check_function):
-                # weird_tee rend desormais (contexte, image), et l'apercu
-                # n'attend qu'un chemin.
                 context, cropped = res
-                print(f"adding {str(context.path)}")
+                print(f"adding {context.path!s}")
                 mat_list.append((context.path, cropped))
 
         crop_preview_dialog = ImageListPreview(mat_list, self)

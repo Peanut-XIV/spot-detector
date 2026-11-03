@@ -1,3 +1,4 @@
+from ast import Tuple
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -129,6 +130,13 @@ def make_autocropping_checker(
         return check_autocropping(context, config)
     return checker
 
+def make_autocropping_checker_2(
+    config: CroppingSettings
+) -> Callable[[ImageContext], tuple[tuple[ImageContext, NDArray[uint8] | None], StatusUpdate]]:
+    def checker(context: ImageContext) -> tuple[tuple[ImageContext, NDArray[uint8] | None], StatusUpdate]:
+        array, status = check_autocropping(context, config)
+        return ((context, array), status)
+    return checker
 
 def check_autocropping(
     context: ImageContext,
@@ -155,13 +163,6 @@ def check_autocropping(
         (QualityFlag.Checked | QualityFlag.RoiFail, QualityFlag.Checked), [],)
 
     return cropped_image, status
-
-
-def weird_tee[T, U, V](func: Callable[[T],tuple[U,V]]) -> Callable[[T], tuple[tuple[T,U],V]]:
-    def teed_func(t: T) -> tuple[tuple[T,U],V]:
-        u, v = func(t)
-        return ((t,u),v)
-    return teed_func
 
 
 def check_blur(
