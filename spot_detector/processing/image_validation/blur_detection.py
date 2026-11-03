@@ -26,11 +26,7 @@ from spot_detector.custom_types import (
     NVec,
     ShadeTable,
 )
-
-# Fonction de labellisation deja disponible dans le projet. Adapter le chemin
-# d'import a l'arborescence reelle.
-#   label_image_fastest_uint16(img: NDArray[np.uint16],
-#                              palette: NDArray[np.uint16]) -> NDArray[np.uint8]
+from spot_detector.model.result_datastructures import CheckID, CheckReport, CheckStatus
 from spot_detector.processing.transformations import (
     convert_mat_uint16,
     label_img_fastest_uint16,
@@ -66,13 +62,41 @@ class BlurResult:
     def __str__(self):
         msg = (
             "BlurResult("
-            + f"state:{str(self.state)},"
+            + f"state:{self.state!s},"
             + f"score:{self.score},"
             + f"channel:{["blue", "green", "red"][self.channel]},"
             + f"n_particles:{self.n_particles},"
             + f"occupation:{self.occupation}"
         )
         return msg
+
+    def to_CheckReport(self):
+        status: CheckStatus
+        message = ""
+
+        match self.state:
+            case BlurState.SHARP:
+                status = CheckStatus.Success
+
+            case BlurState.BLURRY:
+                status = CheckStatus.Fail
+                message = (
+                    "Sharpness score below threshold. During estimation,"
+                    + f"{self.n_particles} particles were found, occupying "
+                    + f"{self.occupation * 100:.4}% of the area of the ROI."
+                )
+
+            case BlurState.NOT_APPLICABLE:
+                status = CheckStatus.NotApplicable
+
+        report = CheckReport(
+            CheckID.Sharpness,
+            status,
+            self.score,
+            message
+        )
+        return report
+
 
 
 # --- Etape 1 : choix du canal porteur du signal ----------------------------
@@ -117,14 +141,25 @@ def get_roi_mask(img: ImageRGB[uint16], roi: Bool2D | None) -> Bool2D:
 
 # --- Etape 3 : masque du signal --------------------------------------------
 
+def signal_mask_from_labels(
+    labels: NDArray[np.uint8],
+    hue_table: ShadeTable,
+    roi_mask: Bool2D,
+) -> Bool2D:
+    """Deduit le masque de signal d'une labellisation deja calculee. Separe de
+    compute_signal_mask pour qu'un appelant disposant deja des etiquettes,
+    ImageContext par exemple, n'ait pas a refaire la labellisation."""
+    is_signal_hue = cast(NDArray[np.bool], hue_table[:, 3] != 0)  # N, bool
+    signal_mask = is_signal_hue[labels]                           # H x W, bool
+    return signal_mask & roi_mask
+
+
 def compute_signal_mask(img: ImageRGB[uint16], hue_table: ShadeTable, roi_mask: Bool2D) -> Bool2D:
     """Segmente les pixels de luminophores via la labellisation K-moyennes, puis
     restreint a la ROI. Une teinte est du signal si sa categorie est non nulle."""
     palette = np.ascontiguousarray(hue_table[:, :3])              # N x 3, uint16
     labels = label_img_fastest_uint16(img, palette)               # H x W, index de teinte
-    is_signal_hue = cast(NDArray[np.bool], hue_table[:, 3] != 0)  # N, bool
-    signal_mask = is_signal_hue[labels]                           # H x W, bool
-    return signal_mask & roi_mask
+    return signal_mask_from_labels(labels, hue_table, roi_mask)
 
 
 # --- Etape 4 : dilatation en collier ---------------------------------------
@@ -187,6 +222,13 @@ def contrast_normalized_channel(
     background = float(np.percentile(roi_values, bg_percentile))
     peak = float(np.percentile(signal_values, peak_percentile))
     dynamic = max(peak - background, 1.0)
+
+    print("== Debug: ==")
+    print("background:", background)
+    print("peak:", peak)
+    print("dynamic (peak - background):", dynamic)
+    print("Laplacien:", dynamic * dynamic / peak)
+
     return (ch - background) / dynamic
 
 
@@ -205,6 +247,38 @@ def sharpness_score(norm_channel: Double2D, eval_mask: Bool2D) -> float:
 
 # --- Orchestration ---------------------------------------------------------
 
+def assess_blur_from_masks(
+    img: ImageRGB[uint16],
+    hue_table: ShadeTable,
+    roi_mask: Bool2D,
+    signal_mask: Bool2D,
+    reference_threshold: float,
+    expected_diameter_px: int = 10,
+    collar_fraction: float = 0.5,
+    min_particles: int = 30,
+    min_occupation: float = 1e-3,
+) -> BlurResult:
+    """Coeur de la mesure, a partir de masques deja calcules. Separe
+    d'assess_blur pour qu'un appelant qui partage un contexte entre plusieurs
+    controles ne refasse pas la labellisation, de loin le calcul le plus cher.
+    """
+    channel = select_signal_channel(hue_table)
+
+    n_particles, occupation = estimate_density(signal_mask, roi_mask)
+    if not is_applicable(n_particles, occupation, min_particles, min_occupation):
+        return BlurResult(BlurState.NOT_APPLICABLE, None, channel, n_particles, occupation)
+
+    collar_px = max(round(expected_diameter_px * collar_fraction), 1)
+    eval_mask = dilate_mask(signal_mask, collar_px) & roi_mask
+
+    norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
+    score = sharpness_score(norm, eval_mask)
+    print("sharpness score:", score)
+
+    state = BlurState.SHARP if score >= reference_threshold else BlurState.BLURRY
+    return BlurResult(state, score, channel, n_particles, occupation)
+
+
 def assess_blur(
     img: ImageRGB[uint16],
     hue_table: ShadeTable,
@@ -219,31 +293,31 @@ def assess_blur(
 
     reference_threshold : seuil sur la variance du Laplacien normalise, calibre
         sur la serie nette de reference avec ce meme code.
-    expected_diameter_px : diametre attendu de particule ; a deriver de la
-        convention en fraction du cercle inscrit, non code en dur.
+    expected_diameter_px : diametre attendu de particule, en pixels. Le seuil
+        etant lui-meme lie a l'echantillonnage, l'exprimer en fraction d'une
+        reference geometrique ne rendrait pas le reglage transferable.
     collar_fraction : rayon du collier de dilatation, en fraction du diametre.
     min_particles, min_occupation : seuils de bascule vers NOT_APPLICABLE.
     """
-    channel = select_signal_channel(hue_table)
     roi_mask = get_roi_mask(img, roi)
     signal_mask = compute_signal_mask(img, hue_table, roi_mask)
 
-    n_particles, occupation = estimate_density(signal_mask, roi_mask)
-    if not is_applicable(n_particles, occupation, min_particles, min_occupation):
-        return BlurResult(BlurState.NOT_APPLICABLE, None, channel, n_particles, occupation)
-
-    collar_px = max(int(round(expected_diameter_px * collar_fraction)), 1)
-    eval_mask = dilate_mask(signal_mask, collar_px) & roi_mask
-
-    norm = contrast_normalized_channel(img, channel, signal_mask, roi_mask)
-    score = sharpness_score(norm, eval_mask)
-
-    state = BlurState.SHARP if score >= reference_threshold else BlurState.BLURRY
-    return BlurResult(state, score, channel, n_particles, occupation)
+    return assess_blur_from_masks(
+        img,
+        hue_table,
+        roi_mask,
+        signal_mask,
+        reference_threshold,
+        expected_diameter_px,
+        collar_fraction,
+        min_particles,
+        min_occupation,
+    )
 
 
 if __name__ == "__main__":
     import sys
+
     from spot_detector.model.project import Project
 
     img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR_BGR | cv2.IMREAD_ANYDEPTH)

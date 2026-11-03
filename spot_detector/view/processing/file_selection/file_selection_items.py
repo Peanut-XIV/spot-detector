@@ -98,8 +98,13 @@ class QualityFlag(Flag):
     UnderExposed = 0x08
     RoiFail = 0x10
     FilterFailsMatch = 0x20
+    BlurNotApplicable = 0x40
 
     def to_generic(self) -> GenericStatus:
+        # Checked seul signifie qu'un controle a tourne sans rien trouver.
+        # Tout autre bit leve, y compris BlurNotApplicable, tombe dans le cas
+        # general et rend Warning : un controle esquive faute de donnees ne
+        # doit pas se confondre avec un controle passe.
         match self:
             case self.Unchecked:
                 return GenericStatus.Unchecked
@@ -126,6 +131,7 @@ class QualityFlag(Flag):
             (self.UnderExposed, "UnderExp"),
             (self.RoiFail, "RoiFail"),
             (self.FilterFailsMatch, "BadShape"),
+            (self.BlurNotApplicable, "BlurNA"),
         ]
 
         for bit, name in state_bit_name:
@@ -148,6 +154,14 @@ class QualityFlag(Flag):
             return "No Defect"
 
         return self.__repr__()
+
+
+# Masque des bits que le controle de flou possede. Il sert des deux cotes de
+# apply_quality_status : sans BlurNotApplicable dans le masque, un
+# NOT_APPLICABLE ancien survivrait a une nouvelle mesure nette.
+BLUR_CHECK_FLAGS = (
+    QualityFlag.Checked | QualityFlag.Blurry | QualityFlag.BlurNotApplicable
+)
 
 
 @dataclass
@@ -444,9 +458,11 @@ class FileEntryItem(BaseEntryItem):
 
 
     def apply_status(self, update: StatusUpdate):
-        if status := update.file_status:
+        # FileStatus.Ok vaut 0, donc un test de verite ecarte precisement le
+        # cas ou le controle a reussi : le fichier restait Unchecked.
+        if (status := update.file_status) is not None:
             self.file_status = status
 
-        if status := update.quality_status:
-            mask, value = status
+        if (quality := update.quality_status) is not None:
+            mask, value = quality
             self.apply_quality_status(mask, value)

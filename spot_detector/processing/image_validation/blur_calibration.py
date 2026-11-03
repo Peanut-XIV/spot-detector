@@ -4,8 +4,6 @@ concentration. Le collier est choisi pour minimiser la dependance a la densite ;
 le seuil est place entre le signal net et un flou tout juste inacceptable.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from math import sqrt
@@ -87,7 +85,7 @@ def calibrate_blur(
                         + "n'est pas vérifiable, collier laissé au defaut.")
 
     def collar_of(diam: int) -> int:
-        return max(int(round(diam * collar_fraction)), 1)
+        return max(round(diam * collar_fraction), 1)
 
     def score_at(i: int, collar: int) -> float:
         ev = bd.dilate_mask(masks[i], collar) & rois[i]

@@ -20,18 +20,23 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from spot_detector.custom_types import ShadeTable
 from spot_detector.file_utils import VALID_IMAGE_MIME_TYPES
 from spot_detector.misc import canonical_path
 from spot_detector.model.processing_settings_models import (
     CroppingSettings,
+    QualityReportingSettings,
     UserSelectedDir,
 )
 from spot_detector.processing.image_validation.checks import (
+    CheckFn,
     check_file_access,
-    make_autocropping_checker,
+    combine_checks,
+    make_autocropping_checker_2,
+    make_blur_checker,
     make_dust_filter_compat_checker,
-    weird_tee,
 )
+from spot_detector.processing.image_validation.image_context import ImageContext
 from spot_detector.view.processing.file_selection.file_selection_items import (
     DirFilesPair,
     StatusUpdate,
@@ -119,7 +124,7 @@ class FileSelectionWidget(QWidget):
         model.remove_indexes(selection)
 
     @Slot(object)
-    def check_highlighted_items(self, check_function: Callable[[Path], StatusUpdate]):
+    def check_highlighted_items(self, check_function: Callable[[ImageContext], StatusUpdate]):
         selection = self.get_selection()
         model = self._list_view.model()
         if not isinstance(model, FileSelectionModel):
@@ -277,6 +282,10 @@ class FileSelectionPanel(QWidget):
         self._previous_directory = canonical_path(dialog.selectedFiles()[0]).parent
 
 
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        self._model.set_shades(shades)
+
     @Slot()
     def check_all_files_for_access(self) -> None:
         self._model.check_all(check_file_access)
@@ -298,16 +307,41 @@ class FileSelectionPanel(QWidget):
         self._model.check_all(compat_checker)
 
 
+    @Slot(QualityReportingSettings)
+    def check_selection_for_quality(self, settings: QualityReportingSettings) -> None:
+        checks: list[CheckFn] = []
+
+        if settings.blur.enabled:
+            checks.append(make_blur_checker(settings))
+
+        if not checks:
+            self._feedback_box.append_messages(
+                ["No quality check is enabled, nothing to test."]
+            )
+            return
+
+        selection = self._list_widget.get_selection()
+        if not selection:
+            self._feedback_box.append_messages(
+                ["Select at least one file to test the quality checks on."]
+            )
+            return
+
+        # Un seul controle compose, donc un seul contexte par fichier et une
+        # seule labellisation, quel que soit le nombre de controles actifs.
+        self._model.check_entries(selection, combine_checks(checks))
+
     @Slot(CroppingSettings)
     def check_selection_for_cropping(self, parameters: CroppingSettings) -> None:
-        check_function = weird_tee(make_autocropping_checker(parameters))
+        check_function = make_autocropping_checker_2(parameters)
         selection = self._list_widget.get_selection()
         mat_list: list[tuple[Path, NDArray[uint8] | None]] = []
 
         for index in selection:
             if res := self._model.check_entry_2(index, check_function):
-                print(f"adding {str(res[0])}")
-                mat_list.append(res)
+                context, cropped = res
+                print(f"adding {context.path!s}")
+                mat_list.append((context.path, cropped))
 
         crop_preview_dialog = ImageListPreview(mat_list, self)
         crop_preview_dialog.show()

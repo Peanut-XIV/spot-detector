@@ -17,6 +17,8 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QColor
 
+from spot_detector.custom_types import ShadeTable
+from spot_detector.processing.image_validation.image_context import ImageContext
 from spot_detector.view.processing.file_selection.file_selection_items import (
     BaseEntryItem,
     BaseItem,
@@ -41,6 +43,7 @@ class FileSelectionModel(QAbstractItemModel):
 
         self._rootItem: RootItem = RootItem()
         self._rootData: list[str] = self._rootItem.data
+        self._shades: ShadeTable | None = None
 
         _ = self.rowsInserted.connect(self._refresh_file_count)
         _ = self.rowsRemoved.connect(self._refresh_file_count)
@@ -444,7 +447,17 @@ class FileSelectionModel(QAbstractItemModel):
 
         self.dataChanged.emit(from_cell, to_cell, roles)
 
-    def check_entry(self, index: QModelIndex, check_function: Callable[[Path], StatusUpdate]):
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        self._shades = shades
+
+    def _context_for(self, item: FileEntryItem) -> ImageContext:
+        """Contexte partage par les controles appliques a un meme fichier. Un
+        seul point de construction, pour que ce qui l'alimente n'ait a etre
+        branche qu'ici."""
+        return ImageContext(item.path, self._shades)
+
+    def check_entry(self, index: QModelIndex, check_function: Callable[[ImageContext], StatusUpdate]):
         """
         index must point to a FileEntryItem instance, otherwise does nothing
         """
@@ -452,15 +465,15 @@ class FileSelectionModel(QAbstractItemModel):
         if not isinstance(item, FileEntryItem):
             return
 
-        result = check_function(item.path)
+        result = check_function(self._context_for(item))
 
         self.new_error_messages.emit(result.error_messages)
 
-        if status := result.file_status:
+        if (status := result.file_status) is not None:
             item.file_status = status
 
-        if status := result.quality_status:
-            mask, value = status
+        if (quality := result.quality_status) is not None:
+            mask, value = quality
             item.apply_quality_status(mask, value)
 
         row = index.row()
@@ -477,7 +490,7 @@ class FileSelectionModel(QAbstractItemModel):
 
         self.update_dir_status(parent_index)
 
-    def check_entry_2(self, index: QModelIndex, check_function: Callable[[Path], tuple[T, StatusUpdate]]) -> T | None:
+    def check_entry_2(self, index: QModelIndex, check_function: Callable[[ImageContext], tuple[T, StatusUpdate]]) -> T | None:
         """
         index must point to a FileEntryItem instance, otherwise does nothing
         """
@@ -485,15 +498,15 @@ class FileSelectionModel(QAbstractItemModel):
         if not isinstance(item, FileEntryItem) or index.column() != 1:
             return None
 
-        output, result = check_function(item.path)
+        output, result = check_function(self._context_for(item))
 
         self.new_error_messages.emit(result.error_messages)
 
-        if status := result.file_status:
+        if (status := result.file_status) is not None:
             item.file_status = status
 
-        if status := result.quality_status:
-            mask, value = status
+        if (quality := result.quality_status) is not None:
+            mask, value = quality
             item.apply_quality_status(mask, value)
 
         row = index.row()
@@ -510,18 +523,27 @@ class FileSelectionModel(QAbstractItemModel):
 
         return output
 
-    def check_entries(self, entries: list[QModelIndex], check_function: Callable[[Path], StatusUpdate]):
+    def check_entries(self, entries: list[QModelIndex], check_function: Callable[[ImageContext], StatusUpdate]):
         """
         Applies a check function on a set of items designated by their QModelIndexes,
         then reports the check status to them.
         """
-        items = [self._item_from_index(idx) for idx in entries]
-        file_items = [it for it in items if isinstance(it, FileEntryItem)]
+        # selectedIndexes rend un index par cellule, donc autant d'index que de
+        # colonnes pour une meme ligne. Sans dedoublonnage, le fichier serait
+        # relu et relabellise une fois par colonne.
+        seen: set[int] = set()
+        file_items: list[FileEntryItem] = []
+        for index in entries:
+            item = self._item_from_index(index)
+            if isinstance(item, FileEntryItem) and id(item) not in seen:
+                seen.add(id(item))
+                file_items.append(item)
+
         parent_items = [it.parent for it in file_items]
         dir_items = [ it for it in parent_items if isinstance(it, DirectoryEntryItem)]
 
         for item in file_items:
-            update = check_function(item.path)
+            update = check_function(self._context_for(item))
             item.apply_status(update)
             self.new_error_messages.emit(update.error_messages)
 
@@ -540,7 +562,7 @@ class FileSelectionModel(QAbstractItemModel):
             roles = [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.BackgroundRole]
             self.dataChanged.emit(cell, cell, roles)
 
-    def check_all(self, check_function: Callable[[Path], StatusUpdate]):
+    def check_all(self, check_function: Callable[[ImageContext], StatusUpdate]):
         items = self._rootItem.flattened_tree()
 
         file_items = [item for item in items if isinstance(item, FileEntryItem)]
@@ -549,8 +571,7 @@ class FileSelectionModel(QAbstractItemModel):
         self.beginResetModel()
 
         for item in file_items:
-            fp = item.path
-            update = check_function(fp)
+            update = check_function(self._context_for(item))
             item.apply_status(update)
             self.new_error_messages.emit(update.error_messages)
 

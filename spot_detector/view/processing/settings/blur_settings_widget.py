@@ -16,12 +16,19 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from spot_detector.controller.worker_thread import BlurCalibrationProcessor
+from spot_detector.custom_types import ShadeTable
 from spot_detector.file_utils import VALID_IMAGE_TYPES
 from spot_detector.model.processing_settings_models import BlurDetectionSettings
+from spot_detector.processing.image_validation.blur_calibration import (
+    PARAMETER_RANGES,
+    BlurCalibration,
+)
 from spot_detector.view.processing.settings.settings_box import (
     BaseSettingsBox,
     as_checked,
     is_checked,
+    recommended_range_tooltip,
 )
 
 
@@ -33,6 +40,12 @@ class BlurReportingBox(BaseSettingsBox):
             parent: QWidget | None = None
     ):
         super().__init__("Blur reporting", previous_directory, parent)
+
+        # Geometrie de particule detenue par la boite parente, poussee ici a
+        # chaque changement. La calibration la respecte au lieu de la deduire.
+        self._expected_diameter_px: int = int(PARAMETER_RANGES["expected_diameter_px"][2])
+        self._collar_fraction: float = float(PARAMETER_RANGES["collar_fraction"][2])
+
         self._init_layout()
 
         _ = self.enable_checkbox.checkStateChanged.connect(self.on_enabled_changed)
@@ -47,9 +60,28 @@ class BlurReportingBox(BaseSettingsBox):
 
         self.enable_checkbox = QCheckBox("Enable blur detection")
         self.calibrate_threshold_button = QPushButton("Calibrate", self)
-        self.reference_threshold_spinbox = QDoubleSpinBox(self, minimum=0.0)
-        self.min_particle_spinbox = QSpinBox(self, minimum=0)
-        self.min_occupation_spinbox = QDoubleSpinBox(self, minimum=0.0, maximum=100.0, suffix="%")
+
+        # QDoubleSpinBox vaut par defaut decimals=2 et maximum=99.99, ce qui
+        # tronque un seuil calibre de 0.112 a 0.11 et une occupation de
+        # 8.3e-4 a 8e-4. Les deux sont donc fixes explicitement, sur des bornes
+        # plus larges que la plage recommandee rappelee en infobulle.
+        self.reference_threshold_spinbox = QDoubleSpinBox(
+            self, minimum=0.0, maximum=100.0, decimals=4, singleStep=0.001
+        )
+        self.min_particle_spinbox = QSpinBox(self, minimum=0, maximum=10000)
+        self.min_occupation_spinbox = QDoubleSpinBox(
+            self, minimum=0.0, maximum=100.0, decimals=4, singleStep=0.01, suffix="%"
+        )
+
+        self.reference_threshold_spinbox.setToolTip(
+            recommended_range_tooltip("reference_threshold")
+        )
+        self.min_particle_spinbox.setToolTip(
+            recommended_range_tooltip("min_particles")
+        )
+        self.min_occupation_spinbox.setToolTip(
+            recommended_range_tooltip("min_occupation", as_percent=True)
+        )
 
         # Row 0
         layout.addWidget(self.enable_checkbox, 0, 0)
@@ -89,19 +121,50 @@ class BlurReportingBox(BaseSettingsBox):
         self.min_particle_spinbox.setEnabled(enabled_state)
         self.min_occupation_spinbox.setEnabled(enabled_state)
 
+    @Slot(int, float)
+    def set_particle_geometry(self, expected_diameter_px: int, collar_fraction: float) -> None:
+        self._expected_diameter_px = expected_diameter_px
+        self._collar_fraction = collar_fraction
+
     @Slot()
     def run_calibration(self):
-        dialog = CalibrateBlurDialog(self._previous_directory, self)
-        if dialog.exec():
-            thresh = dialog.threshold_value
-            if thresh is not None:
-                self.reference_threshold_spinbox.setValue(thresh)
+        if self._shades is None:
+            _ = QMessageBox.warning(
+                self,
+                "No palette available",
+                "The blur threshold is calibrated against the project palette, "
+                "which is not available here. Define the project shades first.",
+            )
+            return
+
+        dialog = CalibrateBlurDialog(
+            self._shades,
+            self._expected_diameter_px,
+            self._collar_fraction,
+            self._previous_directory,
+            self,
+        )
+        if not dialog.exec():
+            return
+
+        calibration = dialog.calibration
+        if calibration is None:
+            return
+
+        # Le diametre n'est pas relu : il est partage avec la surexposition et
+        # reste la propriete de l'utilisatrice. Seul ce que la calibration
+        # derive vraiment est repris.
+        self.reference_threshold_spinbox.setValue(calibration.reference_threshold)
+        self.min_occupation_spinbox.setValue(calibration.min_occupation * 100)
 
 
 @final
 class CalibrateBlurDialog(QDialog):
     def __init__(
         self,
+        shades: ShadeTable,
+        expected_diameter_px: int,
+        collar_fraction: float,
         /,
         previous_directory: Path | None = None,
         parent: QWidget | None = None,
@@ -112,9 +175,14 @@ class CalibrateBlurDialog(QDialog):
     ) -> None:
         super().__init__(parent, f, sizeGripEnabled=sizeGripEnabled, modal=modal)
         self.setWindowTitle("Blur detection calibration")
+        self._shades: ShadeTable = shades
+        self._expected_diameter_px: int = expected_diameter_px
+        self._collar_fraction: float = collar_fraction
         self._previous_directory = previous_directory
         self.selected_files: list[Path] = []
         self.threshold_value: float | None = None
+        self.calibration: BlurCalibration | None = None
+        self._thread: BlurCalibrationProcessor | None = None
         self._init_layout()
 
 
@@ -122,7 +190,12 @@ class CalibrateBlurDialog(QDialog):
         layout = QVBoxLayout(self)
         self.compute_button = QPushButton("Compute reference threshold", self)
         self.select_button = QPushButton("Select reference images (0 selected)", self)
-        self.maximum_blur_radius_spinbox = QDoubleSpinBox(self, suffix="px", minimum=0)
+        self.maximum_blur_radius_spinbox = QDoubleSpinBox(
+            self, suffix="px", minimum=0.0, maximum=100.0, decimals=2, singleStep=0.1
+        )
+        # Rayon du flou gaussien de rejet, celui qu'une image tout juste
+        # inacceptable presenterait. C'est le reject_sigma de calibrate_blur.
+        self.maximum_blur_radius_spinbox.setValue(1.5)
         self.cancel_button = QPushButton("Cancel", self)
 
         layout.addWidget(self.select_button)
@@ -154,20 +227,73 @@ class CalibrateBlurDialog(QDialog):
             self.select_button.setText(f"Select reference images ({file_count} selected)")
 
     def _on_compute_threshold(self):
-        # TODO: Actually compute the calibrated threshold value
+        if not self.selected_files:
+            _ = QMessageBox.warning(
+                self,
+                "No reference image",
+                "Select at least one sharp reference image before calibrating.",
+            )
+            return
 
+        self._set_busy(True)
 
+        # Un seul diametre candidat : celui saisi. Le balayage d'origine
+        # minimisait le rapport max/min des scores nets, un critere quasi plat
+        # dans le regime epars, dont l'argmin est donc choisi par le bruit.
+        thread = BlurCalibrationProcessor(
+            self.selected_files,
+            self._shades,
+            reject_sigma=self.maximum_blur_radius_spinbox.value(),
+            candidate_diameters_px=(self._expected_diameter_px,),
+            collar_fraction=self._collar_fraction,
+            parent=self,
+        )
+        _ = thread.result_ready.connect(self._on_calibration_ready)
+        _ = thread.failed.connect(self._on_calibration_failed)
+        _ = thread.finished.connect(lambda: self._set_busy(False))
+        _ = thread.finished.connect(thread.deleteLater)
 
+        self._thread = thread
+        thread.start()
 
+    def _set_busy(self, busy: bool) -> None:
+        self.compute_button.setEnabled(not busy)
+        self.select_button.setEnabled(not busy)
+        self.maximum_blur_radius_spinbox.setEnabled(not busy)
+        self.compute_button.setText(
+            "Computing..." if busy else "Compute reference threshold"
+        )
 
-        computed_threshold_value = 0.1
+    @Slot(str)
+    def _on_calibration_failed(self, message: str) -> None:
+        _ = QMessageBox.warning(self, "Calibration failed", message)
+
+    @Slot(object)
+    def _on_calibration_ready(self, calibration: BlurCalibration) -> None:
+        self.calibration = calibration
+
+        details = (
+            f"The calibrated threshold value is {calibration.reference_threshold:.4f}.\n"
+            + f"Minimum occupation: {calibration.min_occupation:.2e}\n"
+            + f"Collar: {calibration.chosen_collar_px} px "
+            + f"(expected diameter {calibration.expected_diameter_px} px)\n"
+            + f"Sharp scores: {[round(score, 4) for score in calibration.sharp_scores]}\n"
+            + f"Blurred scores: {[round(score, 4) for score in calibration.blurred_scores]}"
+        )
+        if calibration.warnings:
+            details += "\n\n" + "\n".join(calibration.warnings)
+        details += "\n\nDo you wish to apply it?"
+
         query_to_user = QMessageBox(
             QMessageBox.Icon.Question,
             "Calibration Done",
-            f"The calibrated threshold value is {computed_threshold_value}. Do you wish to apply it?",
-            QMessageBox.StandardButton.Apply | QMessageBox.StandardButton.Cancel
+            details,
+            QMessageBox.StandardButton.Apply | QMessageBox.StandardButton.Cancel,
+            self,
         )
-        if query_to_user.exec():
-            self.threshold_value = computed_threshold_value
+        # exec rend l'identifiant du bouton clique, non nul dans les deux cas :
+        # un simple test de verite appliquait le seuil meme sur Cancel.
+        if query_to_user.exec() == QMessageBox.StandardButton.Apply:
+            self.threshold_value = calibration.reference_threshold
             self.accept()
 

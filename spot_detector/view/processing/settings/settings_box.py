@@ -1,9 +1,11 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtWidgets import QGroupBox, QSizePolicy, QWidget
 
+from spot_detector.custom_types import ShadeTable
 from spot_detector.model.processing_settings_models import BaseProcessingSettings
+from spot_detector.processing.image_validation.blur_calibration import PARAMETER_RANGES
 
 
 def is_checked(state: Qt.CheckState) -> bool:
@@ -17,6 +19,28 @@ def is_checked(state: Qt.CheckState) -> bool:
 
 def as_checked(predicate: bool) -> Qt.CheckState:
     return Qt.CheckState.Checked if predicate else  Qt.CheckState.Unchecked
+
+
+def recommended_range_tooltip(name: str, as_percent: bool = False) -> str:
+    """Infobulle rappelant le champ de valeur documente d'un parametre.
+
+    PARAMETER_RANGES est la source unique de ces plages : les bornes des
+    widgets sont volontairement plus larges, pour qu'une calibration sortant
+    de la plage recommandee reste representable plutot que tronquee.
+    """
+    minimum, maximum, default, unit, description = PARAMETER_RANGES[name]
+
+    if as_percent:
+        minimum, maximum, default = minimum * 100, maximum * 100, default * 100
+        unit = "%"
+
+    unit_suffix = "" if unit in ("-", "") else f" {unit}"
+
+    return (
+        f"{description}\n"
+        + f"Recommended range: {minimum:g} to {maximum:g}{unit_suffix} "
+        + f"(default {default:g}{unit_suffix})"
+    )
 
 
 
@@ -36,3 +60,11 @@ class BaseSettingsBox(QGroupBox):
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._previous_directory: Path = previous_directory or Path.home()
+        self._shades: ShadeTable | None = None
+
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        """Palette du projet. Les controles qui segmentent l'image en ont
+        besoin ; les boites qui n'en font rien l'ignorent. Les boites
+        composites redefinissent la methode pour la transmettre."""
+        self._shades = shades

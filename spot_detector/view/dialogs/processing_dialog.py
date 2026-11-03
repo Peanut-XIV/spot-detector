@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from spot_detector.custom_types import ShadeTable
 from spot_detector.misc import canonical_path
 from spot_detector.model.config_fingerprint import (
     ProcessingSession,
@@ -33,6 +34,12 @@ from spot_detector.view.dialogs.custom_dialog_base import (
 from spot_detector.view.processing.file_selection.file_selection_panel import (
     FileSelectionPanel,
 )
+
+#
+# from spot_detector.view.dialogs.custom_dialog_base import CustomModalDialog, DialogExitStatus
+#
+# from spot_detector.view.processing.file_selection.file_selection_panel import FileSelectionPanel
+# >>>>>>> 393ebc6 (Route the project palette down to the checks and the calibration)
 from spot_detector.view.processing.output_panel import OutputFilePanel
 from spot_detector.view.processing.settings.processing_settings_panel import (
     ProcessingSettingsPanel,
@@ -75,6 +82,16 @@ class ProcessingDialog(CustomModalDialog):
 
         _ = self._settings_panel.filter_box.dust_filter_test_requested.connect(self._selection_panel.check_all_files_for_filter_compat)
         _ = self._settings_panel.cropping_box.cropping_test_requested.connect(self._selection_panel.check_selection_for_cropping)
+        _ = self._settings_panel.reporting_box.quality_test_requested.connect(self._selection_panel.check_selection_for_quality)
+
+        # Le dialogue est le seul point qui connaisse le projet : c'est de lui
+        # que part la palette, vers les controles comme vers la calibration.
+        self.set_shades(self.project.configuration.shade_table())
+
+    @Slot(object)
+    def set_shades(self, shades: ShadeTable | None) -> None:
+        self._selection_panel.set_shades(shades)
+        self._settings_panel.set_shades(shades)
 
 
 

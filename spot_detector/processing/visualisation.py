@@ -115,10 +115,10 @@ def _mask_blobs(
     acc = np.zeros(image_quantized.shape, dtype=np.uint8)
     for point in key_points:
         x_axis, y_axis = point.pt
-        rayon = max(1, int(round(point.size * radius_factor / 2.0)))
+        rayon = max(1, round(point.size * radius_factor / 2.0))
         _ = cv2.circle(
             acc,
-            (int(round(x_axis)), int(round(y_axis))),
+            (round(x_axis), round(y_axis)),
             rayon,
             color=1,
             thickness=-1,

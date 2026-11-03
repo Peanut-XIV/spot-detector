@@ -26,8 +26,6 @@ from spot_detector.processing.tsv_writer import TSVWriter
 
 
 class ProcessingTaskManager:
-    """
-    """
     def __init__(self, session: ProcessingSession, writer: TSVWriter) -> None:
         self.session: ProcessingSession = session
         self.writer: TSVWriter = writer

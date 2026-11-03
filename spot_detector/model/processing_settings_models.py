@@ -33,26 +33,33 @@ class CroppingSettings(BaseProcessingSettings):
         return max_radius_value
 
 
+# Les valeurs par defaut ci-dessous reprennent celles de PARAMETER_RANGES dans
+# spot_detector/processing/image_validation/blur_calibration.py, qui reste la
+# source documentee des champs de valeur. Elles ne sont pas importees de la
+# pour ne pas faire dependre la couche modele d'OpenCV.
 class BlurDetectionSettings(BaseProcessingSettings):
-    enabled: bool
-    reference_threshold: float  # Computed or selected threshold beneath which an image is too blurry
-    min_particles: int = Field(ge=0)
-    min_occupation: float = Field(ge=0.0)
+    enabled: bool = Field(default=False)
+    reference_threshold: float = Field(default=0.10)  # Computed or selected threshold beneath which an image is too blurry
+    min_particles: int = Field(ge=0, default=30)
+    min_occupation: float = Field(ge=0.0, default=1e-3)
 
 
 class OverExposureDetectionSettings(BaseProcessingSettings):
-    enabled: bool
-    area_threshold: float  # between 0% overexposed area allowed to 100% overexposed area allowed
-    brightness_sensitivity: float  # proportion of most exposed values considered overexposed
+    # Le controle de surexposition n'est pas encore implemente : ces deux
+    # valeurs ne servent qu'a rendre le bloc constructible tant que enabled
+    # est faux, et restent a fixer avec le controle lui-meme.
+    enabled: bool = Field(default=False)
+    area_threshold: float = Field(default=0.0)  # between 0% overexposed area allowed to 100% overexposed area allowed
+    brightness_sensitivity: float = Field(default=0.0)  # proportion of most exposed values considered overexposed
 
 
 class QualityReportingSettings(BaseProcessingSettings):
-    expected_diameter_px: int = Field(ge=0)  # minimum radius of the bright spots within the image
-    collar_fraction: float = Field(ge=0.0)   # fraction of the expected diameter. increases the measured area to better detect blur and overexposure
+    expected_diameter_px: int = Field(ge=0, default=6)  # expected diameter of the bright spots within the image
+    collar_fraction: float = Field(ge=0.0, default=0.5)   # fraction of the expected diameter. increases the measured area to better detect blur and overexposure
 
-    blur: BlurDetectionSettings
-    overexposure: OverExposureDetectionSettings
-    average_brightness: bool
+    blur: BlurDetectionSettings = Field(default_factory=BlurDetectionSettings)
+    overexposure: OverExposureDetectionSettings = Field(default_factory=OverExposureDetectionSettings)
+    average_brightness: bool = Field(default=False)
 
 
 class ProcessingOutputSettings(BaseProcessingSettings):
@@ -61,17 +68,17 @@ class ProcessingOutputSettings(BaseProcessingSettings):
 
 
 class PreprocessingSettings(BaseProcessingSettings):
-    dust_filter: DustFilterSettings = Field()
-    cropping: CroppingSettings = Field()
-    reporting: QualityReportingSettings = Field()
+    dust_filter: DustFilterSettings = Field(default_factory=DustFilterSettings)
+    cropping: CroppingSettings = Field(default_factory=CroppingSettings)
+    reporting: QualityReportingSettings = Field(default_factory=QualityReportingSettings)
 
 
 class UserSelectedDir(BaseProcessingSettings):
     path: str = Field()
-    files: list[str] = Field(default_factory=lambda: list())
+    files: list[str] = Field(default_factory=list)
 
 
 class ProcessingSettingsModel(BaseProcessingSettings):
-    entries: list[str | UserSelectedDir] = Field(default_factory=lambda : list())
-    preprocessing: PreprocessingSettings = Field()
-    output: ProcessingOutputSettings = Field()
+    entries: list[str | UserSelectedDir] = Field(default_factory=list)
+    preprocessing: PreprocessingSettings = Field(default_factory=PreprocessingSettings)
+    output: ProcessingOutputSettings = Field(default_factory=ProcessingOutputSettings)
